@@ -26,9 +26,11 @@ export function ageDescriptor(age: number, gender: Gender): string {
 }
 
 const STYLE_BASE = [
-  "Transform the child from the reference photo into a soft, hand-painted watercolor children's picture-book illustration.",
+  // "그림책 캐릭터로 변환"이라고 하면 만화 얼굴로 뭉개짐 —
+  // "실제 아이를 수채화로 그린 초상"이라는 프레임이 닮음을 훨씬 잘 지킴.
+  "A skilled portrait artist paints THIS real child (from the reference photo) in watercolor, placing them inside a storybook scene. The face is a faithful watercolor PORTRAIT OF THE PHOTOGRAPH — the same face at the same proportions, only rendered in paint.",
+  "TOP PRIORITY — PORTRAIT LIKENESS: anyone who knows the child must recognize them instantly. Keep the photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. Stylize only the MEDIUM (watercolor brushwork, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins.",
   "Style: gentle classic storybook watercolor — soft washes, warm golden light, delicate ink linework, dreamy pastel palette, subtle paper texture, cozy and whimsical (in the spirit of timeless bedtime picture books).",
-  "CRITICAL — likeness: keep the child's real face shape, eyes, nose, mouth, skin tone, hairstyle and gentle expression clearly recognizable and faithful to the photo. This is a portrait of THIS specific child, not a generic character.",
   "IMPORTANT — costume: do NOT copy the outfit from the photo. Instead, dress the child in the outfit and accessories described in the scene below, like a storybook character in costume. Only the face, hair and skin come from the photo; the clothing comes from the scene description.",
   "The child is the main character, captured MID-ACTION in a lively storybook moment — riding, flying, playing, discovering, hugging — together with the companion characters and creatures described in the scene. Never show the child just standing still alone in front of an empty background; the scene must feel alive and full of story.",
   "Absolutely NO text, NO words, NO letters, NO captions, NO watermark anywhere in the image.",
