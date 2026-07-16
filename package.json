@@ -1,0 +1,26 @@
+{
+  "name": "story-hero",
+  "version": "0.1.0",
+  "private": true,
+  "description": "우리 아이가 주인공 — 사진과 이름을 넣으면 수채화 동화책 주인공이 되는 앱",
+  "scripts": {
+    "dev": "next dev -p 3466",
+    "build": "next build",
+    "start": "next start -p 3466",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@tosspayments/tosspayments-sdk": "^2.7.1",
+    "jspdf": "^4.2.1",
+    "next": "16.2.10",
+    "openai": "^4.77.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}
