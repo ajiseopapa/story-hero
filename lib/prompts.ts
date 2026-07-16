@@ -70,6 +70,12 @@ export const THEMES = [
   { id: "dino", label: "공룡 시대", emoji: "🦕", ko: "공룡 시대 — 순하고 다정한 공룡들과 함께하는 아주 옛날 모험" },
   { id: "forest", label: "마법의 숲", emoji: "🧚", ko: "마법의 숲 — 요정, 반짝이는 꽃, 신비한 오두막이 있는 숲" },
   { id: "cloud", label: "구름 위 모험", emoji: "☁️", ko: "구름 위 모험 — 폭신한 구름, 달님과 별님을 만나는 하늘 여행" },
+  { id: "treasure", label: "보물섬 탐험", emoji: "🗺️", ko: "보물섬 탐험 — 낡은 지도, 수수께끼, 반짝이는 보물을 찾아 떠나는 섬 모험" },
+  { id: "winter", label: "눈의 나라", emoji: "⛄", ko: "눈의 나라 — 눈사람 친구, 오로라, 반짝이는 얼음 궁전이 있는 겨울 왕국" },
+  { id: "candy", label: "과자 나라", emoji: "🍭", ko: "과자 나라 — 사탕 꽃, 초콜릿 강, 폭신한 마시멜로 언덕의 달콤한 세계" },
+  { id: "castle", label: "왕국과 성", emoji: "🏰", ko: "왕국과 성 — 오래된 성, 다정한 용, 용감한 기사와 공주가 있는 왕국 이야기" },
+  { id: "train", label: "마법 기차", emoji: "🚂", ko: "마법 기차 — 밤하늘을 달리는 신비한 기차를 타고 정거장마다 새로운 세계를 만나는 여행" },
+  { id: "jungle", label: "정글 탐험", emoji: "🦁", ko: "정글 탐험 — 우거진 밀림, 신비한 폭포, 씩씩한 동물 친구들과 함께하는 탐험" },
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];
