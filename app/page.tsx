@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { THEMES, type ThemeId } from "@/lib/prompts";
 import { downloadStoryPdf } from "@/lib/pdf";
+import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 
 type Gender = "girl" | "boy";
@@ -509,6 +510,8 @@ function BookViewer({
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false); // 소리책 만드는 중
+  const [exportStep, setExportStep] = useState("");
 
   // ----- 읽어주기 -----
   const [voiceMode, setVoiceMode] = useState<VoiceMode>("ai"); // 샘플 목소리 / 내 목소리
@@ -731,6 +734,50 @@ function BookViewer({
     el.play().catch(() => setReading(false));
   }, [current, getAudioUrl]);
 
+  // ----- 소리책(그림+글+음성 단일 HTML) 내보내기 -----
+  const exportSoundBook = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    setAudioError(null);
+    setReadNote(null);
+    try {
+      const audios: (string | null)[] = [];
+      for (let i = 0; i < pages.length; i++) {
+        setExportStep(`목소리 담는 중… ${i + 1} / ${pages.length}`);
+        if (voiceMode === "mine") {
+          const rec = recordings.get(i);
+          audios.push(rec ? await blobToDataUrl(rec) : null);
+        } else {
+          // TTS — 재생 캐시(objectURL)가 있으면 재사용, 없으면 생성
+          const url = await getAudioUrl(i);
+          if (!url) {
+            audios.push(null);
+          } else {
+            const blob = await fetch(url).then((r) => r.blob());
+            audios.push(await blobToDataUrl(blob));
+          }
+        }
+      }
+      setExportStep("소리책 파일 만드는 중…");
+      downloadSoundBook(
+        title,
+        pages.map((p, i) => ({
+          kind: p.kind,
+          text: p.kind === "cover" ? title : p.text,
+          image: p.image,
+          audio: audios[i],
+        })),
+      );
+    } catch (err) {
+      setAudioError(
+        err instanceof Error ? err.message : "소리책 저장에 실패했어요. 다시 시도해주세요.",
+      );
+    } finally {
+      setExporting(false);
+      setExportStep("");
+    }
+  }, [exporting, pages, title, voiceMode, recordings, getAudioUrl]);
+
   const switchMode = (m: VoiceMode) => {
     if (reading || audioLoading) stopReading();
     if (recording) stopRecording();
@@ -928,18 +975,36 @@ function BookViewer({
             {PRICE.toLocaleString()}원 결제하고 전체 보기 🔓
           </button>
         ) : (
-          <button className="btn" onClick={savePdf} disabled={saving || !allDone}>
-            {saving
-              ? "PDF 만드는 중… 📄"
-              : !allDone
-                ? "삽화 완성 중… 잠시만요"
-                : "PDF로 저장 📄"}
-          </button>
+          <>
+            <button className="btn" onClick={savePdf} disabled={saving || !allDone}>
+              {saving
+                ? "PDF 만드는 중… 📄"
+                : !allDone
+                  ? "삽화 완성 중… 잠시만요"
+                  : "PDF로 저장 📄"}
+            </button>
+            <button
+              className="btn soundbook"
+              onClick={exportSoundBook}
+              disabled={exporting || !allDone}
+            >
+              {exporting ? exportStep || "소리책 만드는 중… 🔊" : "소리책으로 저장 🔊"}
+            </button>
+          </>
         )}
         <button className="btn secondary" onClick={onReset}>
           새 동화 만들기
         </button>
       </div>
+      {paid && (
+        <div className="hint" style={{ textAlign: "center", marginTop: 8 }}>
+          소리책은 파일 하나에 그림과{" "}
+          {voiceMode === "mine"
+            ? "직접 녹음한 목소리"
+            : `${NARRATOR_LIST.find((n) => n.id === narrator)?.label} 목소리`}
+          가 담겨요. 인터넷 없이 열리고 가족에게 보낼 수 있어요.
+        </div>
+      )}
 
       {paid && (
         <div className="upsell">

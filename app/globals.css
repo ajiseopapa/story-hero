@@ -252,6 +252,10 @@ input[type="text"]:focus,
   opacity: 0.55;
   cursor: not-allowed;
 }
+.btn.soundbook {
+  background: linear-gradient(135deg, #a8bd96, #9bb08a 60%, #8ba37a);
+  box-shadow: 0 12px 26px -12px var(--accent-2);
+}
 .btn.secondary {
   background: #fff;
   color: var(--accent);
