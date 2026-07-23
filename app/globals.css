@@ -633,6 +633,70 @@ input[type="text"]:focus,
   padding: 10px;
 }
 
+/* ---------- 가격 앵커링 ---------- */
+.price-anchor {
+  text-align: center;
+  margin-top: 12px;
+  font-family: var(--sans);
+  font-size: 15px;
+}
+.price-anchor s {
+  color: var(--ink-soft);
+  opacity: 0.75;
+  margin-right: 10px;
+}
+.price-anchor b {
+  color: var(--accent);
+  font-size: 19px;
+  font-weight: 800;
+}
+
+/* ---------- 인쇄본 업셀 ---------- */
+.upsell {
+  margin-top: 22px;
+  background: #fdf8ec;
+  border: 1.5px dashed var(--gold);
+  border-radius: 18px;
+  padding: 22px 18px;
+  text-align: center;
+}
+.upsell .upsell-emoji {
+  font-size: 38px;
+  margin-bottom: 6px;
+}
+.upsell .upsell-title {
+  font-family: var(--hand);
+  font-size: 21px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.upsell .upsell-sub {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.upsell .upsell-sub b {
+  color: var(--gold);
+  font-size: 16px;
+}
+.upsell .upsell-btn {
+  display: inline-block;
+  text-decoration: none;
+  font-family: var(--hand);
+  font-size: 18px;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #eabf74, var(--gold) 60%, #d9a54e);
+  box-shadow: 0 10px 22px -12px var(--gold);
+  transition: transform 0.12s;
+}
+.upsell .upsell-btn:hover {
+  transform: translateY(-1px);
+}
+
 .actions {
   display: flex;
   gap: 12px;

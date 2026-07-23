@@ -32,8 +32,9 @@ type Draft = {
   gender?: Gender;
 };
 
-const FREE_SCENES = 2; // 무료 샘플: 표지 + 2장면
-const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "4900");
+const FREE_SCENES = 1; // 무료 샘플: 표지 + 1장면 (샘플 원가 절감)
+const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "9900");
+const LIST_PRICE = 14900; // 앵커링용 정가 표시
 
 // ----- 읽어주기 목소리 -----
 type VoiceMode = "ai" | "mine"; // 샘플 목소리 / 직접 녹음 (추후 "clone" AI 복제 추가 여지)
@@ -420,8 +421,12 @@ export default function Home() {
             무료 샘플 만들기 🪄
           </button>
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
-            표지 + 2장면을 무료로 보여드려요. 마음에 들면 {PRICE.toLocaleString()}원으로
-            전체 동화책(6장면)과 PDF를 받아보세요.
+            표지 + {FREE_SCENES}장면을 무료로 보여드려요. 마음에 들면 전체 동화책(6장면) +
+            읽어주기 + PDF를 받아보세요.
+          </div>
+          <div className="price-anchor">
+            <s>정가 {LIST_PRICE.toLocaleString()}원</s>
+            <b>출시 기념 {PRICE.toLocaleString()}원</b>
           </div>
         </section>
       )}
@@ -770,7 +775,11 @@ function BookViewer({
               <div className="lock-sub">
                 결제하면 남은 {total - 1 - FREE_SCENES}개 장면과
                 <br />
-                PDF 다운로드가 열립니다
+                읽어주기, PDF 다운로드가 열립니다
+              </div>
+              <div className="price-anchor">
+                <s>정가 {LIST_PRICE.toLocaleString()}원</s>
+                <b>출시 기념 {PRICE.toLocaleString()}원</b>
               </div>
               <button className="btn lock-btn" onClick={onPay}>
                 {PRICE.toLocaleString()}원으로 전체 열기 🔓
@@ -907,6 +916,12 @@ function BookViewer({
         </div>
       )}
 
+      {!paid && (
+        <div className="price-anchor" style={{ marginTop: 18 }}>
+          <s>정가 {LIST_PRICE.toLocaleString()}원</s>
+          <b>출시 기념 {PRICE.toLocaleString()}원</b>
+        </div>
+      )}
       <div className="actions">
         {!paid ? (
           <button className="btn" onClick={onPay}>
@@ -925,6 +940,29 @@ function BookViewer({
           새 동화 만들기
         </button>
       </div>
+
+      {paid && (
+        <div className="upsell">
+          <div className="upsell-emoji">📖</div>
+          <div className="upsell-title">실물 동화책으로도 소장하세요</div>
+          <div className="upsell-sub">
+            양장 제본 인쇄본 <b>29,900원</b> — 지금 준비 중이에요.
+            <br />
+            사전 신청하시면 준비되는 대로 가장 먼저 알려드릴게요.
+          </div>
+          <a
+            className="upsell-btn"
+            href={`mailto:sensitivetk@gmail.com?subject=${encodeURIComponent(
+              `[동화책 인쇄본 사전신청] ${title}`,
+            )}&body=${encodeURIComponent(
+              "실물 인쇄본이 준비되면 연락 주세요!\n연락 받으실 이메일 또는 전화번호를 남겨주세요:\n",
+            )}`}
+          >
+            인쇄본 사전 신청하기 ✉️
+          </a>
+        </div>
+      )}
+
       {(saveError || error) && <div className="error">{saveError || error}</div>}
     </section>
   );
