@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+export type NarratorId = "grandpa" | "grandma" | "dad" | "mom";
+
+// gpt-4o-mini-tts: voice(음색) + instructions(말투)로 낭독 페르소나를 만든다.
+// ash/echo는 남성 저음, coral/nova는 여성 음색.
+const NARRATORS: Record<NarratorId, { voice: string; instructions: string }> = {
+  grandpa: {
+    voice: "ash",
+    instructions:
+      "너는 손주에게 옛날이야기를 들려주는 다정한 한국인 할아버지야. 낮고 그윽한 목소리로, 아주 천천히, 구수하고 정감 있게 읽어줘. 중요한 대목에서는 잠시 뜸을 들여.",
+  },
+  grandma: {
+    voice: "coral",
+    instructions:
+      "너는 손주를 무릎에 앉히고 동화를 들려주는 포근한 한국인 할머니야. 부드럽고 따뜻한 목소리로 천천히, 다정하게 어르듯 읽어줘.",
+  },
+  dad: {
+    voice: "echo",
+    instructions:
+      "너는 잠자리에서 아이에게 동화책을 읽어주는 다정한 한국인 아빠야. 듬직하면서도 따뜻한 목소리로, 등장인물마다 목소리를 살짝 바꿔가며 실감 나게 읽어줘.",
+  },
+  mom: {
+    voice: "nova",
+    instructions:
+      "너는 아이를 재우며 동화책을 읽어주는 상냥한 한국인 엄마야. 맑고 부드러운 목소리로 천천히, 사랑을 담아 읽어줘.",
+  },
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    const { text, narrator } = (await req.json()) as {
+      text?: string;
+      narrator?: string;
+    };
+
+    const trimmed = (text ?? "").trim().slice(0, 1000); // 장면 텍스트는 짧음 — 과금 방어용 상한
+    if (!trimmed) {
+      return NextResponse.json({ error: "읽을 문장이 없어요." }, { status: 400 });
+    }
+    const persona = NARRATORS[narrator as NarratorId];
+    if (!persona) {
+      return NextResponse.json({ error: "목소리를 선택해주세요." }, { status: 400 });
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "OPENAI_API_KEY 환경변수가 없습니다." }, { status: 500 });
+    }
+
+    // openai SDK(4.77) 타입에 instructions 파라미터가 없어 REST를 직접 호출한다.
+    const res = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice: persona.voice,
+        input: trimmed,
+        instructions: persona.instructions,
+        response_format: "mp3",
+      }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      console.error("TTS 실패:", res.status, detail);
+      return NextResponse.json(
+        { error: "목소리를 만들지 못했어요. 잠시 후 다시 시도해주세요." },
+        { status: 502 },
+      );
+    }
+
+    const audio = await res.arrayBuffer();
+    return new NextResponse(audio, {
+      headers: {
+        "Content-Type": "audio/mpeg",
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "알 수 없는 오류";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
