@@ -361,9 +361,11 @@ input[type="text"]:focus,
 }
 .page .caption {
   padding: 20px 22px 24px;
-  font-size: clamp(16px, 3.6vw, 19px);
+  font-size: clamp(17px, 3.8vw, 20px);
   line-height: 1.85;
-  color: var(--ink);
+  /* 명조 400은 획이 가늘어 흐려 보임 — 700 + 진한 잉크색으로 또렷하게 */
+  font-weight: 700;
+  color: #3a2e22;
   text-align: center;
   word-break: keep-all;
 }
