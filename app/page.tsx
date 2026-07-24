@@ -113,6 +113,7 @@ export default function Home() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const restoredRef = useRef(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const canSubmit =
     name.trim().length > 0 && gender !== null && theme !== null && photo !== null;
@@ -395,7 +396,14 @@ export default function Home() {
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
             {photo ? (
-              <div style={{ textAlign: "center" }}>
+              <div
+                style={{ textAlign: "center" }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleFile(e.dataTransfer.files?.[0]);
+                }}
+              >
                 <div className="preview-photo">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={photo} alt="업로드한 아이 사진" />
@@ -405,10 +413,27 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="upload" onClick={() => fileRef.current?.click()}>
+              <div
+                className={`upload ${dragOver ? "drag" : ""}`}
+                onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  handleFile(e.dataTransfer.files?.[0]);
+                }}
+              >
                 <div className="up-emoji">📷</div>
-                <div className="up-title">사진 올리기</div>
-                <div className="up-sub">얼굴이 또렷하게 나온 정면 사진일수록 예뻐요</div>
+                <div className="up-title">{dragOver ? "여기에 놓아주세요!" : "사진 올리기"}</div>
+                <div className="up-sub">
+                  {dragOver
+                    ? "사진을 놓으면 바로 올라가요"
+                    : "클릭하거나 사진을 끌어다 놓아주세요 · 정면 사진일수록 예뻐요"}
+                </div>
               </div>
             )}
             <div className="hint">

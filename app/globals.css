@@ -198,6 +198,13 @@ input[type="text"]:focus,
   border-color: var(--accent);
   background: #fffaf6;
 }
+.upload.drag {
+  border-color: var(--accent);
+  border-style: solid;
+  background: #fff5f2;
+  transform: scale(1.02);
+  box-shadow: 0 10px 26px -14px var(--accent);
+}
 .upload .up-emoji {
   font-size: 34px;
 }
