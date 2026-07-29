@@ -6,17 +6,17 @@ export const maxDuration = 60;
 export type NarratorId = "grandpa" | "grandma" | "dad" | "mom";
 
 // gpt-4o-mini-tts: voice(음색) + instructions(말투)로 낭독 페르소나를 만든다.
-// ash/echo는 남성 저음, coral/nova는 여성 음색.
+// 음색은 실제 한국어 청취 비교로 선정 (onyx/echo 남성 저음, sage/marin 여성).
 const NARRATORS: Record<NarratorId, { voice: string; instructions: string }> = {
   grandpa: {
-    voice: "ash",
+    voice: "onyx",
     instructions:
-      "너는 손주에게 옛날이야기를 들려주는 다정한 한국인 할아버지야. 낮고 그윽한 목소리로, 아주 천천히, 구수하고 정감 있게 읽어줘. 중요한 대목에서는 잠시 뜸을 들여.",
+      "너는 손주에게 옛날이야기를 들려주는 다정한 한국인 할아버지야. 낮고 그윽한 목소리로 아주 천천히, 정감 있게 읽어줘. 정확하고 자연스러운 표준 한국어 발음으로.",
   },
   grandma: {
-    voice: "coral",
+    voice: "sage",
     instructions:
-      "너는 손주를 무릎에 앉히고 동화를 들려주는 포근한 한국인 할머니야. 부드럽고 따뜻한 목소리로 천천히, 다정하게 어르듯 읽어줘.",
+      "너는 손주를 무릎에 앉히고 동화를 들려주는 포근한 한국인 할머니야. 부드럽고 따뜻한 목소리로 천천히 다정하게 읽어줘. 정확하고 자연스러운 표준 한국어 발음으로.",
   },
   dad: {
     voice: "echo",
@@ -24,9 +24,9 @@ const NARRATORS: Record<NarratorId, { voice: string; instructions: string }> = {
       "너는 잠자리에서 아이에게 동화책을 읽어주는 다정한 한국인 아빠야. 듬직하면서도 따뜻한 목소리로, 등장인물마다 목소리를 살짝 바꿔가며 실감 나게 읽어줘.",
   },
   mom: {
-    voice: "nova",
+    voice: "marin",
     instructions:
-      "너는 아이를 재우며 동화책을 읽어주는 상냥한 한국인 엄마야. 맑고 부드러운 목소리로 천천히, 사랑을 담아 읽어줘.",
+      "너는 아이를 재우며 동화책을 읽어주는 상냥한 한국인 엄마야. 맑고 부드러운 목소리로 천천히, 사랑을 담아 읽어줘. 정확하고 자연스러운 표준 한국어 발음으로.",
   },
 };
 
