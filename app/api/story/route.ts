@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import {
+  MAX_CHILDREN,
   buildStorySystemPrompt,
   buildStoryUserPrompt,
   koreanCallName,
   themeDescription,
   type Gender,
+  type StoryChild,
 } from "@/lib/prompts";
 
 export const runtime = "nodejs";
@@ -20,7 +22,7 @@ type StoryResult = {
   scenes: StoryScene[];
 };
 
-const SCENE_COUNT = 6;
+const SCENE_COUNT = 10;
 
 // 모델이 프롬프트를 무시하고 쓰는 대명사(그녀/그는 등)를 호칭으로 확정 치환.
 // "그 순간", "그런" 같은 지시어는 건드리지 않도록 단어 단위로만 매칭.
@@ -46,22 +48,35 @@ function normalizeTitle(title: string, callName: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, gender, age, theme } = (await req.json()) as {
+    const { name, gender, age, theme, children } = (await req.json()) as {
       name?: string;
       gender?: Gender;
       age?: number;
       theme?: string;
+      children?: { name?: string; gender?: Gender; age?: number }[];
     };
 
-    const trimmed = (name ?? "").trim();
-    if (!trimmed) {
-      return NextResponse.json({ error: "아이 이름을 입력해주세요." }, { status: 400 });
+    // 신버전은 children 배열(1~3명), 구버전 단일 필드도 그대로 수용
+    const rawKids =
+      Array.isArray(children) && children.length > 0
+        ? children.slice(0, MAX_CHILDREN)
+        : [{ name, gender, age }];
+
+    const kids: StoryChild[] = [];
+    for (const k of rawKids) {
+      const trimmed = (k.name ?? "").trim();
+      if (!trimmed) {
+        return NextResponse.json({ error: "아이 이름을 입력해주세요." }, { status: 400 });
+      }
+      if (k.gender !== "girl" && k.gender !== "boy") {
+        return NextResponse.json({ error: "성별을 선택해주세요." }, { status: 400 });
+      }
+      // 나이는 0~10세 범위로 보정 (미지정 시 6세 기본, 0세는 유효한 값)
+      const n = Number(k.age);
+      const safeAge = Math.min(10, Math.max(0, Number.isFinite(n) ? Math.round(n) : 6));
+      kids.push({ name: trimmed, gender: k.gender, age: safeAge });
     }
-    if (gender !== "girl" && gender !== "boy") {
-      return NextResponse.json({ error: "성별을 선택해주세요." }, { status: 400 });
-    }
-    // 나이는 3~13세 범위로 보정 (미지정 시 6세 기본)
-    const safeAge = Math.min(13, Math.max(3, Math.round(Number(age) || 6)));
+
     const themeKo = themeDescription(theme ?? "");
     if (!themeKo) {
       return NextResponse.json({ error: "이야기 주제를 선택해주세요." }, { status: 400 });
@@ -76,7 +91,7 @@ export async function POST(req: NextRequest) {
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: buildStorySystemPrompt() },
-        { role: "user", content: buildStoryUserPrompt(trimmed, gender, safeAge, SCENE_COUNT, themeKo) },
+        { role: "user", content: buildStoryUserPrompt(kids, SCENE_COUNT, themeKo) },
       ],
     });
 
@@ -100,14 +115,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const callName = koreanCallName(trimmed);
+    // 대명사 확정 치환·제목 보정은 단일 주인공일 때만 안전 (다인은 "그녀"가 누구인지 특정 불가,
+    // 프롬프트에서 대명사 금지를 지시했으므로 그대로 신뢰)
+    if (kids.length === 1) {
+      const callName = koreanCallName(kids[0].name);
+      return NextResponse.json({
+        title: normalizeTitle(replacePronouns(parsed.title, callName), callName),
+        cover: parsed.cover,
+        scenes: scenes.map((s) => ({
+          ...s,
+          text: replacePronouns(s.text, callName),
+        })),
+      } satisfies StoryResult);
+    }
     return NextResponse.json({
-      title: normalizeTitle(replacePronouns(parsed.title, callName), callName),
+      title: parsed.title,
       cover: parsed.cover,
-      scenes: scenes.map((s) => ({
-        ...s,
-        text: replacePronouns(s.text, callName),
-      })),
+      scenes,
     } satisfies StoryResult);
   } catch (err) {
     const message = err instanceof Error ? err.message : "알 수 없는 오류";

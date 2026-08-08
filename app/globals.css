@@ -81,6 +81,59 @@ body {
 .field {
   margin-bottom: 20px;
 }
+
+/* 아이 카드 (형제·자매 다인 입력) */
+.child-card {
+  border: 1.5px solid #e3d5bc;
+  background: #fffdf8;
+  border-radius: 18px;
+  padding: 18px 16px;
+  margin-bottom: 16px;
+}
+.child-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.child-title {
+  font-family: var(--hand);
+  font-size: 21px;
+  color: var(--ink);
+}
+.child-remove {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid #ddceb3;
+  border-radius: 10px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.child-remove:hover {
+  color: #c0564a;
+  border-color: #e0a89f;
+  background: #fff5f2;
+}
+.add-child {
+  width: 100%;
+  border: 2px dashed #d6c6a8;
+  background: #fff;
+  border-radius: 16px;
+  padding: 15px;
+  font-family: var(--hand);
+  font-size: 18px;
+  color: var(--ink);
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.add-child:hover {
+  border-color: var(--accent);
+  background: #fffaf6;
+}
 .field > label {
   display: block;
   font-family: var(--hand);

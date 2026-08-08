@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
 import { getOpenAI } from "@/lib/openai";
-import { buildCoverPrompt, buildScenePrompt } from "@/lib/prompts";
+import { MAX_CHILDREN, buildCoverPrompt, buildScenePrompt, type ChildSpec } from "@/lib/prompts";
 
 export const runtime = "nodejs";
 // gpt-image-1은 한 장에 60~90초 걸릴 수 있음 (Vercel Fluid Compute에서 Hobby도 최대 300초 허용)
@@ -16,41 +16,58 @@ function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null 
 
 export async function POST(req: NextRequest) {
   try {
-    const { photo, imagePrompt, kind, age, gender } = (await req.json()) as {
-      photo?: string;
+    const { photo, photos, imagePrompt, kind, age, gender, children } = (await req.json()) as {
+      photo?: string; // 구버전 단일 사진 (결제 복원 초안 호환)
+      photos?: string[]; // 신버전: 아이별 사진 1~3장 (children과 같은 순서)
       imagePrompt?: string;
       kind?: "cover" | "scene";
       age?: number;
       gender?: "girl" | "boy";
+      children?: { age?: number; gender?: "girl" | "boy" }[];
     };
 
-    if (!photo) {
+    const photoList = (
+      Array.isArray(photos) && photos.length > 0 ? photos : photo ? [photo] : []
+    ).slice(0, MAX_CHILDREN);
+    if (photoList.length === 0) {
       return NextResponse.json({ error: "사진이 필요합니다." }, { status: 400 });
     }
     if (!imagePrompt) {
       return NextResponse.json({ error: "장면 설명이 없습니다." }, { status: 400 });
     }
 
-    const parsed = parseDataUrl(photo);
-    if (!parsed) {
-      return NextResponse.json({ error: "사진 형식이 올바르지 않습니다." }, { status: 400 });
+    const files = [];
+    for (let i = 0; i < photoList.length; i++) {
+      const parsed = parseDataUrl(photoList[i]);
+      if (!parsed) {
+        return NextResponse.json({ error: "사진 형식이 올바르지 않습니다." }, { status: 400 });
+      }
+      const ext = parsed.mime.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
+      files.push(await toFile(parsed.buffer, `child${i + 1}.${ext}`, { type: parsed.mime }));
     }
 
-    const ext = parsed.mime.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
-    const file = await toFile(parsed.buffer, `child.${ext}`, { type: parsed.mime });
+    // 나이/성별은 예전 초안(결제 복원)엔 없을 수 있어 기본값으로 보정 (0세는 유효)
+    const clampAge = (v: unknown) => {
+      const n = Number(v);
+      return Math.min(10, Math.max(0, Number.isFinite(n) ? Math.round(n) : 6));
+    };
+    const rawKids =
+      Array.isArray(children) && children.length > 0 ? children : [{ age, gender }];
+    // 사진 수와 아이 수를 맞춘다 (모자라면 기본값으로 채움)
+    const cast: ChildSpec[] = photoList.map((_, i) => ({
+      age: clampAge(rawKids[i]?.age),
+      gender: rawKids[i]?.gender === "boy" ? "boy" : "girl",
+    }));
 
-    // 나이/성별은 예전 초안(결제 복원)엔 없을 수 있어 기본값으로 보정
-    const safeAge = Math.min(13, Math.max(3, Math.round(Number(age) || 6)));
-    const safeGender: "girl" | "boy" = gender === "boy" ? "boy" : "girl";
     const prompt =
       kind === "cover"
-        ? buildCoverPrompt(imagePrompt, safeAge, safeGender)
-        : buildScenePrompt(imagePrompt, safeAge, safeGender);
+        ? buildCoverPrompt(imagePrompt, cast)
+        : buildScenePrompt(imagePrompt, cast);
 
     const openai = getOpenAI();
     const result = await openai.images.edit({
       model: "gpt-image-1.5", // ChatGPT 이미지 생성과 같은 계열 모델
-      image: file,
+      image: files.length === 1 ? files[0] : files,
       prompt,
       size: "1024x1536", // 세로형 동화책 판형
       quality: kind === "cover" ? "high" : "medium", // 표지는 고품질
