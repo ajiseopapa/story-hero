@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MAX_CHILDREN, THEMES, joinCallNames, type ThemeId } from "@/lib/prompts";
+import { BUSINESS } from "@/lib/business";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
@@ -584,6 +585,22 @@ export default function Home() {
         수채화 삽화는 AI가 사진을 참고해 새로 그린 그림이에요.
         <br />
         만든 이야기는 아이와 함께 읽어주세요 💛
+        <div className="legal-links">
+          <a href="/terms">이용약관</a>
+          <a href="/refund">환불정책</a>
+          <a href="/privacy">
+            <b>개인정보처리방침</b>
+          </a>
+        </div>
+        <div className="biz-info">
+          {BUSINESS.name} · 대표 {BUSINESS.owner} · 사업자등록번호 {BUSINESS.regNo}
+          <br />
+          통신판매업신고 {BUSINESS.mailOrderNo}
+          <br />
+          {BUSINESS.address}
+          <br />
+          {BUSINESS.tel} · {BUSINESS.email}
+        </div>
       </footer>
     </main>
   );
