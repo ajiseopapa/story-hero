@@ -4,7 +4,7 @@ export const BUSINESS = {
   owner: "김태경",
   regNo: "432-04-02843",
   mailOrderNo: "제2023-부산동래-0295호",
-  address: "부산광역시 동래구 사직로 80, 117동 104호",
+  address: "부산광역시 동래구 사직로 80",
   tel: "070-4517-1789",
   email: "sensitivetk@gmail.com",
   service: "동화 주인공",
