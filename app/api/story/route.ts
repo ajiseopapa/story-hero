@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       // 이야기 품질이 핵심이라 상위 모델 사용 (이야기당 몇십 원 수준).
       // gpt-5 계열은 temperature 커스텀 미지원 → 기본값 사용.
       model: "gpt-5.5",
-      reasoning_effort: "low", // 창작 위주라 낮은 추론으로 지연 최소화
+      reasoning_effort: "medium", // low는 나열형 밋밋한 글이 나옴 — 구성력을 위해 medium (2026-08-08)
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: buildStorySystemPrompt() },
