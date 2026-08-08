@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
 import { getOpenAI } from "@/lib/openai";
 import { MAX_CHILDREN, buildCoverPrompt, buildScenePrompt, type ChildSpec } from "@/lib/prompts";
+import { IMAGE_DAILY_LIMIT, consumeQuota } from "@/lib/limits";
 
 export const runtime = "nodejs";
 // gpt-image-1은 한 장에 60~90초 걸릴 수 있음 (Vercel Fluid Compute에서 Hobby도 최대 300초 허용)
@@ -58,6 +59,14 @@ export async function POST(req: NextRequest) {
       age: clampAge(rawKids[i]?.age),
       gender: rawKids[i]?.gender === "boy" ? "boy" : "girl",
     }));
+
+    // 일일 삽화 생성 백스톱 (직접 호출 남용·폭주 방지, 정상 사용량보다 넉넉하게)
+    if (!(await consumeQuota("image", IMAGE_DAILY_LIMIT))) {
+      return NextResponse.json(
+        { error: "오늘 그림을 그릴 수 있는 양이 모두 소진됐어요. 잠시 후 다시 시도해주세요." },
+        { status: 429 },
+      );
+    }
 
     const prompt =
       kind === "cover"

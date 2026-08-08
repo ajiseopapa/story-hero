@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import {
+  FREE_DAILY_LIMIT,
+  FREE_IP_DAILY_LIMIT,
+  consumeQuota,
+  ipBucket,
+} from "@/lib/limits";
+import {
   MAX_CHILDREN,
   buildStorySystemPrompt,
   buildStoryUserPrompt,
@@ -80,6 +86,20 @@ export async function POST(req: NextRequest) {
     const themeKo = themeDescription(theme ?? "");
     if (!themeKo) {
       return NextResponse.json({ error: "이야기 주제를 선택해주세요." }, { status: 400 });
+    }
+
+    // 일일 무료 샘플 한도 (IP별 → 전체 순서로 소진)
+    if (!(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))) {
+      return NextResponse.json(
+        { error: "오늘 이 기기에서 만들 수 있는 무료 샘플을 모두 사용했어요. 내일 다시 만나요 🌙" },
+        { status: 429 },
+      );
+    }
+    if (!(await consumeQuota("story", FREE_DAILY_LIMIT))) {
+      return NextResponse.json(
+        { error: "오늘 준비된 무료 샘플이 모두 소진됐어요. 내일 다시 찾아와주세요 🌙" },
+        { status: 429 },
+      );
     }
 
     const openai = getOpenAI();

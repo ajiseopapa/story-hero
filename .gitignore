@@ -12,3 +12,5 @@ next-env.d.ts
 
 .vercel
 voice-samples/
+
+.env*
