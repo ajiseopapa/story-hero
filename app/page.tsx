@@ -67,8 +67,8 @@ function draftToKids(draft: Draft): ChildForm[] {
 }
 
 const FREE_SCENES = 1; // 무료 샘플: 표지 + 1장면 (샘플 원가 절감)
-const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "9900");
-const LIST_PRICE = 14900; // 앵커링용 정가 표시
+const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "12900");
+const LIST_PRICE = 19900; // 앵커링용 정가 표시
 
 // ----- 읽어주기 목소리 -----
 type VoiceMode = "ai" | "mine"; // 샘플 목소리 / 직접 녹음 (추후 "clone" AI 복제 추가 여지)
