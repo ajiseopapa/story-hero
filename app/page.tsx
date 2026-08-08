@@ -685,6 +685,13 @@ function BookViewer({
     stopReading();
     setAudioError(null);
     setReadNote(null);
+    // 인앱 브라우저(카톡 등)·구형 브라우저는 getUserMedia 자체가 없음
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setAudioError(
+        "이 브라우저에서는 녹음을 지원하지 않아요. 크롬이나 사파리로 열어주세요. (카카오톡 안에서 열었다면 오른쪽 아래 메뉴에서 '다른 브라우저로 열기'를 눌러주세요)",
+      );
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream);
@@ -710,8 +717,24 @@ function BookViewer({
       mr.start();
       mediaRecRef.current = mr;
       setRecording(true);
-    } catch {
-      setAudioError("마이크를 사용할 수 없어요. 브라우저의 마이크 권한을 허용해주세요.");
+    } catch (err) {
+      // 원인별 안내 — 뭉뚱그린 메시지는 사용자가 어디를 고쳐야 할지 알 수 없음
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setAudioError(
+          "마이크 권한이 차단되어 있어요. 주소창 왼쪽 자물쇠(🔒)를 눌러 '마이크'를 허용으로 바꾼 뒤 새로고침해주세요.",
+        );
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setAudioError(
+          "연결된 마이크를 찾지 못했어요. 마이크(이어폰)를 연결했는지, Windows 설정 → 개인 정보 → 마이크에서 앱의 마이크 접근이 켜져 있는지 확인해주세요.",
+        );
+      } else if (name === "NotReadableError") {
+        setAudioError(
+          "다른 프로그램이 마이크를 사용 중이에요. 통화·녹음 앱을 닫고 다시 시도해주세요.",
+        );
+      } else {
+        setAudioError("마이크를 사용할 수 없어요. 브라우저의 마이크 권한을 허용해주세요.");
+      }
     }
   }, [current, stopReading, persistRecordings]);
 
