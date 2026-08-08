@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "12900");
+const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "14900");
 
 // 토스페이먼츠 결제 승인. 클라이언트 successUrl로 돌아온 뒤 반드시 서버에서 승인해야 결제 완료.
 export async function POST(req: NextRequest) {
