@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 앱 아이콘: 펼친 동화책 위로 별과 하트가 피어오르는 모습 (앱 팔레트와 동일) -->
+  <defs>
+    <clipPath id="squircle">
+      <rect x="0" y="0" width="512" height="512" rx="112"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <!-- 크림 종이 배경 + 은은한 수채 얼룩 -->
+    <rect width="512" height="512" fill="#f7efe2"/>
+    <circle cx="108" cy="96" r="130" fill="#f5ddc9" opacity="0.55"/>
+    <circle cx="430" cy="420" r="150" fill="#ece0c2" opacity="0.6"/>
+    <circle cx="440" cy="80" r="90" fill="#f0e4cd" opacity="0.5"/>
+
+    <!-- 펼친 책 -->
+    <path d="M256 300 C214 268 148 263 110 284 L110 400 C148 379 214 384 256 416 C298 384 364 379 402 400 L402 284 C364 263 298 268 256 300 Z"
+          fill="#fffdf8" stroke="#4a3f35" stroke-width="16" stroke-linejoin="round"/>
+    <line x1="256" y1="300" x2="256" y2="416" stroke="#4a3f35" stroke-width="11" stroke-linecap="round"/>
+    <!-- 페이지 글줄 -->
+    <path d="M146 318 C176 308 212 310 234 320" fill="none" stroke="#c4b096" stroke-width="9" stroke-linecap="round"/>
+    <path d="M146 348 C176 338 212 340 234 350" fill="none" stroke="#c4b096" stroke-width="9" stroke-linecap="round"/>
+    <path d="M278 320 C300 310 336 308 366 318" fill="none" stroke="#c4b096" stroke-width="9" stroke-linecap="round"/>
+    <path d="M278 350 C300 340 336 338 366 348" fill="none" stroke="#c4b096" stroke-width="9" stroke-linecap="round"/>
+
+    <!-- 책에서 피어오르는 큰 별 -->
+    <polygon points="256,102 271.3,145 315,147 280.7,175 292.4,218 256,193 219.6,218 231.3,175 197,147 240.7,145"
+             fill="#e3b15f" stroke="#4a3f35" stroke-width="12" stroke-linejoin="round"/>
+
+    <!-- 작은 하트 -->
+    <path d="M362 128 C362 112 344 104 334 116 C327 124 332 138 362 158 C392 138 397 124 390 116 C380 104 362 112 362 128 Z"
+          fill="#e08a7b" stroke="#4a3f35" stroke-width="10" stroke-linejoin="round"/>
+
+    <!-- 반짝이 -->
+    <path d="M150 120 L157 141 L150 162 L143 141 Z M129 141 L150 134 L171 141 L150 148 Z" fill="#e3b15f"/>
+    <circle cx="196" cy="230" r="9" fill="#e08a7b" opacity="0.85"/>
+    <circle cx="330" cy="226" r="7" fill="#e3b15f"/>
+  </g>
+</svg>
