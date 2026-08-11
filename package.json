@@ -2,7 +2,7 @@
   "name": "story-hero",
   "version": "0.1.0",
   "private": true,
-  "description": "우리 아이가 주인공 — 사진과 이름을 넣으면 수채화 동화책 주인공이 되는 앱",
+  "description": "키즈북 — 사진과 이름을 넣으면 우리 아이가 수채화 동화책 주인공이 되는 앱",
   "scripts": {
     "dev": "next dev -p 3466",
     "build": "next build",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalShell from "../legal-shell";
 import { BUSINESS } from "@/lib/business";
 
-export const metadata: Metadata = { title: "개인정보처리방침 · 동화 주인공" };
+export const metadata: Metadata = { title: "개인정보처리방침 · 키즈북" };
 
 export default function PrivacyPage() {
   return (

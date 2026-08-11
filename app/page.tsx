@@ -356,7 +356,7 @@ export default function Home() {
   return (
     <main className="wrap">
       <header className="hero">
-        <span className="badge">우리 아이가 주인공 ✨</span>
+        <span className="badge">키즈북 ✨</span>
         <h1>동화책 속 주인공이 되어보아요</h1>
         <p>
           아이 이름과 사진을 넣으면,
@@ -593,13 +593,16 @@ export default function Home() {
           </a>
         </div>
         <div className="biz-info">
-          {BUSINESS.name} · 대표 {BUSINESS.owner} · 사업자등록번호 {BUSINESS.regNo}
+          ‘{BUSINESS.service}’은 {BUSINESS.name}이 운영하는 서비스입니다.
+          <br />
+          상호 {BUSINESS.name} · 대표 {BUSINESS.owner} · 사업자등록번호 {BUSINESS.regNo}
           <br />
           통신판매업신고 {BUSINESS.mailOrderNo}
           <br />
           {BUSINESS.address}
           <br />
           {BUSINESS.tel} · {BUSINESS.email}
+          <br />© 2026 {BUSINESS.name}
         </div>
       </footer>
     </main>

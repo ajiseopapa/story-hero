@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalShell from "../legal-shell";
 import { BUSINESS } from "@/lib/business";
 
-export const metadata: Metadata = { title: "환불정책 · 동화 주인공" };
+export const metadata: Metadata = { title: "환불정책 · 키즈북" };
 
 export default function RefundPage() {
   return (

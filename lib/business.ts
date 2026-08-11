@@ -7,5 +7,5 @@ export const BUSINESS = {
   address: "부산광역시 동래구 사직로 80",
   tel: "070-4517-1789",
   email: "sensitivetk@gmail.com",
-  service: "동화 주인공",
+  service: "키즈북",
 } as const;

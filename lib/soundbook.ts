@@ -81,7 +81,7 @@ export function buildSoundBookHtml(title: string, pages: SoundPage[]): string {
     <button id="play" class="play">▶ 여기부터 읽어주기</button>
     <button id="next">다음 →</button>
   </div>
-  <div class="foot">우리 아이가 주인공 · 소리책<br/>파일 하나에 그림과 목소리가 모두 담겨 있어요 💛</div>
+  <div class="foot">키즈북 · 소리책<br/>파일 하나에 그림과 목소리가 모두 담겨 있어요 💛</div>
 </div>
 <script>
   var PAGES = ${data};

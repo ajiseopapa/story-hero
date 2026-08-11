@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "우리 아이가 주인공 · 동화책",
+  title: "키즈북 · 우리 아이가 주인공인 동화책",
   description:
     "아이 이름과 사진을 넣으면, 우리 아이가 수채화 동화책의 주인공이 되는 그림동화를 만들어드려요.",
 };
