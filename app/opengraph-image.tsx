@@ -47,10 +47,18 @@ export default async function OpengraphImage() {
           >
             키즈북
           </div>
-          <div style={{ fontSize: 66, lineHeight: 1.35, marginBottom: 18 }}>
-            우리 아이가 주인공인
-            <br />
-            그림동화
+          {/* satori는 자식이 둘 이상인 div에 display를 요구한다 — <br/> 대신 줄마다 div로 */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              fontSize: 66,
+              lineHeight: 1.35,
+              marginBottom: 18,
+            }}
+          >
+            <div>우리 아이가 주인공인</div>
+            <div>그림동화</div>
           </div>
           <div style={{ fontSize: 35, color: "#7a6a58", lineHeight: 1.5 }}>
             사진과 이름을 넣으면 아이를 닮은 수채화 동화책이 됩니다
