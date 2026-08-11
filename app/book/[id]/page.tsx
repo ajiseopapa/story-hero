@@ -2,7 +2,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { formatExpiry, ID_RE, isExpired } from "@/lib/sharebook";
+import { coverImageUrl, formatExpiry, ID_RE, isExpired, SITE_ORIGIN } from "@/lib/sharebook";
 import { readManifest } from "@/lib/sharebook-server";
 import BookViewer from "./viewer";
 
@@ -16,9 +16,35 @@ const loadBook = cache(async (id: string) => (ID_RE.test(id) ? readManifest(id) 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const book = await loadBook(id);
+  if (!book || isExpired(book.createdAt)) {
+    return { title: "키즈북", robots: { index: false, follow: false } };
+  }
+
+  // 카톡·SNS로 링크를 보냈을 때 표지 그림이 미리보기로 뜨게 한다.
+  // (검색엔진에는 여전히 노출하지 않는다 — noindex는 그대로)
+  const title = `《 ${book.title} 》`;
+  const description = "우리 아이가 주인공인 그림동화예요. 그림을 넘기며 목소리로 들어보세요 💛";
+  const cover = book.pages[0]?.hasImage ? coverImageUrl(id) : undefined;
+
   return {
-    title: book ? `${book.title} · 키즈북` : "키즈북",
+    title: `${book.title} · 키즈북`,
+    description,
     robots: { index: false, follow: false },
+    openGraph: {
+      type: "article",
+      siteName: "키즈북",
+      url: `${SITE_ORIGIN}/book/${id}`,
+      title,
+      description,
+      locale: "ko_KR",
+      images: cover ? [{ url: cover, width: 1024, height: 1536, alt: book.title }] : undefined,
+    },
+    twitter: {
+      card: cover ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: cover ? [cover] : undefined,
+    },
   };
 }
 
