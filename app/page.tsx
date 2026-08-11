@@ -8,6 +8,7 @@ import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import ConsentBox from "./consent-box";
+import PhotoCropper from "./photo-cropper";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 
 type Gender = "girl" | "boy";
@@ -167,6 +168,7 @@ export default function Home() {
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
   const restoredRef = useRef(false);
   const [dragOver, setDragOver] = useState<number | null>(null); // 드래그 중인 아이 카드 index
+  const [cropping, setCropping] = useState<{ idx: number; src: string } | null>(null);
 
   // 법정 동의 (아동·민감정보·국외이전). 한 번 동의하면 이 브라우저에 기록해 다시 묻지 않는다.
   const [consents, setConsents] = useState<string[]>([]);
@@ -259,23 +261,21 @@ export default function Home() {
     }
   }, []);
 
-  const handleFile = useCallback(
-    async (idx: number, file: File | undefined) => {
-      if (!file) return;
-      if (!file.type.startsWith("image/")) {
-        setError("이미지 파일을 올려주세요.");
-        return;
-      }
-      try {
-        setError(null);
-        const dataUrl = await fileToScaledDataUrl(file);
-        patchKid(idx, { photo: dataUrl });
-      } catch {
-        setError("사진을 불러오지 못했어요. 다른 사진을 시도해주세요.");
-      }
-    },
-    [patchKid],
-  );
+  // 고른 사진은 바로 쓰지 않고 자르기 화면을 먼저 띄운다 (얼굴 비율이 닮음을 좌우)
+  const handleFile = useCallback(async (idx: number, file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("이미지 파일을 올려주세요.");
+      return;
+    }
+    try {
+      setError(null);
+      const dataUrl = await fileToScaledDataUrl(file, 1600); // 자르기 화면용 원본
+      setCropping({ idx, src: dataUrl });
+    } catch {
+      setError("사진을 불러오지 못했어요. 다른 사진을 시도해주세요.");
+    }
+  }, []);
 
   // ----- 샘플 생성 (표지 + FREE_SCENES 장면) -----
   const start = useCallback(async () => {
@@ -592,9 +592,25 @@ export default function Home() {
                     <div className="up-sub">
                       {dragOver === idx
                         ? "사진을 놓으면 바로 올라가요"
-                        : "클릭하거나 사진을 끌어다 놓아주세요 · 정면 사진일수록 예뻐요"}
+                        : "클릭하거나 사진을 끌어다 놓아주세요"}
                     </div>
                   </div>
+                )}
+                {!kid.photo && (
+                  <ul className="photo-guide">
+                    <li className="good">
+                      <span>✅</span> 정면을 보고 <b>얼굴이 크고 또렷한</b> 사진
+                    </li>
+                    <li>
+                      <span>❌</span> 옆모습·뒷모습, 눈을 감은 사진
+                    </li>
+                    <li>
+                      <span>❌</span> 여러 명이 함께 있거나 얼굴이 작게 나온 사진
+                    </li>
+                    <li>
+                      <span>❌</span> 모자·마스크·손으로 얼굴이 가려진 사진
+                    </li>
+                  </ul>
                 )}
                 <div className="hint">사진은 삽화를 그리는 데에만 쓰이고 저장하지 않아요.</div>
               </div>
@@ -688,6 +704,17 @@ export default function Home() {
           onPay={pay}
           onReset={reset}
           error={error}
+        />
+      )}
+
+      {cropping && (
+        <PhotoCropper
+          src={cropping.src}
+          onCancel={() => setCropping(null)}
+          onDone={(dataUrl) => {
+            patchKid(cropping.idx, { photo: dataUrl });
+            setCropping(null);
+          }}
         />
       )}
 
