@@ -885,8 +885,7 @@ input[type="text"]:focus,
 }
 /* 사업자 정보는 읽으라고 있는 표기라 가운데 정렬 대신 왼쪽 정렬 + 라벨/값 두 칸으로 */
 .biz-info {
-  max-width: 420px;
-  margin: 20px auto 0;
+  margin: 20px 0 0;
   padding-top: 16px;
   border-top: 1px solid #e5d9c4;
   text-align: left;
@@ -900,32 +899,13 @@ input[type="text"]:focus,
   font-size: 13.5px;
   color: var(--ink-soft);
 }
-.biz-info dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 12px;
-  margin: 0;
-}
-.biz-info dt {
-  color: #a99a85;
-  white-space: nowrap;
-}
-.biz-info dd {
-  margin: 0;
+.biz-info p {
+  margin: 0 0 3px;
 }
 .biz-info .biz-copy {
   margin: 12px 0 0;
   font-size: 12.5px;
   color: #a99a85;
-}
-@media (max-width: 380px) {
-  .biz-info dl {
-    grid-template-columns: 1fr;
-    gap: 0 0;
-  }
-  .biz-info dt {
-    margin-top: 6px;
-  }
 }
 
 /* 약관/정책 본문 */

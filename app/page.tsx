@@ -618,22 +618,13 @@ export default function Home() {
           <p className="biz-lead">
             ‘{BUSINESS.service}’은 {BUSINESS.name}이 운영하는 서비스입니다.
           </p>
-          <dl>
-            <dt>상호</dt>
-            <dd>{BUSINESS.name}</dd>
-            <dt>대표</dt>
-            <dd>{BUSINESS.owner}</dd>
-            <dt>사업자등록번호</dt>
-            <dd>{BUSINESS.regNo}</dd>
-            <dt>통신판매업신고</dt>
-            <dd>{BUSINESS.mailOrderNo}</dd>
-            <dt>주소</dt>
-            <dd>{BUSINESS.address}</dd>
-            <dt>연락처</dt>
-            <dd>
-              {BUSINESS.tel} · {BUSINESS.email}
-            </dd>
-          </dl>
+          <p>
+            상호 {BUSINESS.name} · 대표 {BUSINESS.owner} · 사업자등록번호 {BUSINESS.regNo} ·
+            통신판매업신고 {BUSINESS.mailOrderNo}
+          </p>
+          <p>
+            {BUSINESS.address} · {BUSINESS.tel} · {BUSINESS.email}
+          </p>
           <p className="biz-copy">© 2026 {BUSINESS.name}</p>
         </div>
       </footer>
