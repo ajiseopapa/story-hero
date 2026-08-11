@@ -328,6 +328,43 @@ input[type="text"]:focus,
   box-shadow: 0 12px 26px -12px #6b91c2;
 }
 
+/* ---------- 결제 전 동의 ---------- */
+.pay-consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 14px 0 12px;
+  padding: 12px 14px;
+  background: #fbf6ec;
+  border: 1px solid #e8dcc6;
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  word-break: keep-all;
+}
+.pay-consent input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.pay-consent a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.pay-consent.compact {
+  font-size: 13px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
 /* ---------- 공유 링크 ---------- */
 .share-box {
   margin-top: 16px;

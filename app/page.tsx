@@ -631,6 +631,36 @@ export default function Home() {
   );
 }
 
+// 결제 전 청약철회 제한 동의 — 전자상거래법 제17조 제2항 제5호는 "이용자의 동의를 받아
+// 콘텐츠 제공이 개시된 경우"에만 환불 제한을 인정하므로, 결제 버튼은 이 동의 없이 눌리지 않는다.
+function PayConsent({
+  checked,
+  onChange,
+  compact = false,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  compact?: boolean;
+}) {
+  return (
+    <label className={compact ? "pay-consent compact" : "pay-consent"}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span>
+        결제하면 남은 장면 생성이 바로 시작되며, <b>생성이 시작된 뒤에는 환불이 제한</b>되는 것에
+        동의합니다. (
+        <a href="/terms" target="_blank" rel="noreferrer">
+          이용약관
+        </a>
+        {" · "}
+        <a href="/refund" target="_blank" rel="noreferrer">
+          환불정책
+        </a>
+        )
+      </span>
+    </label>
+  );
+}
+
 // 이 브라우저에서 만든 공유 링크 목록 — 새 동화를 만든 뒤에도 지난 링크를 지울 수 있게 한다.
 function SavedShareList() {
   const [shares, setShares] = useState<SavedShare[]>([]);
@@ -716,6 +746,7 @@ function BookViewer({
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false); // 결제 전 청약철회 제한 동의
   const [exporting, setExporting] = useState(false); // 소리책 만드는 중
   const [exportStep, setExportStep] = useState("");
 
@@ -1145,7 +1176,8 @@ function BookViewer({
                 <s>정가 {LIST_PRICE.toLocaleString()}원</s>
                 <b>출시 기념 {PRICE.toLocaleString()}원</b>
               </div>
-              <button className="btn lock-btn" onClick={onPay}>
+              <PayConsent checked={agreed} onChange={setAgreed} compact />
+              <button className="btn lock-btn" onClick={onPay} disabled={!agreed}>
                 {PRICE.toLocaleString()}원으로 전체 열기 🔓
               </button>
             </div>
@@ -1286,9 +1318,10 @@ function BookViewer({
           <b>출시 기념 {PRICE.toLocaleString()}원</b>
         </div>
       )}
+      {!paid && <PayConsent checked={agreed} onChange={setAgreed} />}
       <div className="actions">
         {!paid ? (
-          <button className="btn" onClick={onPay}>
+          <button className="btn" onClick={onPay} disabled={!agreed}>
             {PRICE.toLocaleString()}원 결제하고 전체 보기 🔓
           </button>
         ) : (
