@@ -159,6 +159,8 @@ export default function Home() {
   const [current, setCurrent] = useState(0);
   const [paid, setPaid] = useState(false);
   const [unlocking, setUnlocking] = useState(false); // 결제 후 나머지 생성 중
+  // 이 브라우저에 저장된 지난 동화 — 자동으로 펼치지 않고 첫 화면에 "이어보기" 카드로만 안내
+  const [saved, setSaved] = useState<{ draft: Draft; paid: boolean } | null>(null);
 
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
   const restoredRef = useRef(false);
@@ -173,6 +175,17 @@ export default function Home() {
     setKids((prev) => prev.map((k, i) => (i === idx ? { ...k, ...patch } : k)));
   }, []);
 
+  // 저장된 동화를 화면에 펼친다 (결제 복귀 / 이어보기 공통)
+  const openDraft = useCallback((draft: Draft, isPaid: boolean) => {
+    setTitle(draft.title);
+    setKids(draftToKids(draft));
+    setPages(draft.pages);
+    setCurrent(Math.min(draft.current, draft.pages.length - 1));
+    setPaid(isPaid);
+    setSaved(null);
+    setPhase("book");
+  }, []);
+
   // ----- 결제 리다이렉트 후 복원 -----
   useEffect(() => {
     if (restoredRef.current) return;
@@ -182,20 +195,21 @@ export default function Home() {
       if (!draft) return;
       const paidOrder = await kvGet<string>("paidOrder");
       const q = new URLSearchParams(window.location.search);
-      const cameBack = q.has("paid") || q.has("resume") || paidOrder;
-      if (!cameBack) return;
-      window.history.replaceState(null, "", "/");
+      const fromPay = q.has("paid") || q.has("resume");
+      if (fromPay) window.history.replaceState(null, "", "/");
 
-      setTitle(draft.title);
-      setKids(draftToKids(draft));
-      setPages(draft.pages);
-      setCurrent(Math.min(draft.current, draft.pages.length - 1));
-      setPhase("book");
+      // 결제한 책인데 삽화가 덜 그려졌으면(생성 중 이탈) 바로 열어서 이어 그린다.
+      const unfinished = !!paidOrder && draft.pages.some((p) => !p.image);
 
-      if (paidOrder) {
-        setPaid(true);
-        await resumeGeneration(draft);
+      // 그냥 다시 들어온 경우엔 지난 동화를 자동으로 펼치지 않는다.
+      // (첫 화면은 언제나 "새로 만들기" — 지난 동화는 카드로 안내)
+      if (!fromPay && !unfinished) {
+        setSaved({ draft, paid: !!paidOrder });
+        return;
       }
+
+      openDraft(draft, !!paidOrder);
+      if (paidOrder) await resumeGeneration(draft);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -360,17 +374,29 @@ export default function Home() {
   const reset = useCallback(() => {
     setPhase("form");
     setKids([emptyChild()]);
+    setTheme(null);
     setPages([]);
     setTitle("");
     setCurrent(0);
     setPaid(false);
+    setSaved(null);
     setProgressPct(0);
     setProgressStep("");
     setError(null);
+    window.scrollTo({ top: 0 });
     kvDel("draft");
     kvDel("paidOrder");
     kvDel("recordings");
     // 공유 링크 목록("shares")은 지우지 않는다 — 새 동화를 만들어도 지난 링크를 지울 수 있어야 한다
+  }, []);
+
+  // 첫 화면의 "지난 동화" 카드 지우기 — 저장된 초안·결제기록·녹음을 함께 정리한다.
+  const dropSaved = useCallback(() => {
+    if (!confirm("저장된 지난 동화를 지울까요? 이 기기에서는 다시 열 수 없어요.")) return;
+    setSaved(null);
+    kvDel("draft");
+    kvDel("paidOrder");
+    kvDel("recordings");
   }, []);
 
   return (
@@ -386,6 +412,24 @@ export default function Home() {
           형제·자매가 <b>함께 주인공</b>이 될 수도 있어요 👧👦
         </p>
       </header>
+
+      {phase === "form" && saved && (
+        <section className="card resume-card">
+          <div className="resume-head">
+            <span className="resume-label">지난 동화 📖</span>
+            <button className="resume-drop" onClick={dropSaved}>
+              ✕ 지우기
+            </button>
+          </div>
+          <div className="resume-title">《 {saved.draft.title} 》</div>
+          <button className="btn secondary" onClick={() => openDraft(saved.draft, saved.paid)}>
+            이어서 보기
+          </button>
+          <div className="hint">
+            이 기기에만 저장돼 있어요. 아래에서 새 동화를 만들면 지난 동화는 지워집니다.
+          </div>
+        </section>
+      )}
 
       {phase === "form" && (
         <section className="card">
@@ -1392,22 +1436,29 @@ function BookViewer({
       {paid && (
         <div className="upsell">
           <div className="upsell-emoji">📖</div>
+          <div className="upsell-badge">1차 제작 30권 한정</div>
           <div className="upsell-title">실물 동화책으로도 소장하세요</div>
           <div className="upsell-sub">
-            양장 제본 인쇄본 <b>29,900원</b> — 지금 준비 중이에요.
+            양장 제본 인쇄본 <b>29,900원</b>
             <br />
-            사전 신청하시면 준비되는 대로 가장 먼저 알려드릴게요.
+            한 권씩 찍으면 값이 크게 올라서, 신청을 모아 <b>30권씩 한 번에</b>{" "}
+            제작해요.
+            <br />
+            1차 제작분은 신청하신 순서대로 배정해 드릴게요.
           </div>
           <a
             className="upsell-btn"
             href={`mailto:sensitivetk@gmail.com?subject=${encodeURIComponent(
-              `[동화책 인쇄본 사전신청] ${title}`,
+              `[동화책 인쇄본 1차 제작 신청] ${title}`,
             )}&body=${encodeURIComponent(
-              "실물 인쇄본이 준비되면 연락 주세요!\n연락 받으실 이메일 또는 전화번호를 남겨주세요:\n",
+              "1차 제작분으로 신청할게요!\n연락 받으실 이메일 또는 전화번호를 남겨주세요:\n",
             )}`}
           >
-            인쇄본 사전 신청하기 ✉️
+            1차 제작분 신청하기 ✉️
           </a>
+          <div className="upsell-note">
+            지금은 신청만 받아요. 결제는 제작이 확정된 뒤에 따로 안내드릴게요.
+          </div>
         </div>
       )}
 

@@ -395,6 +395,37 @@ input[type="text"]:focus,
   gap: 10px;
   margin-top: 12px;
 }
+/* ---------- 첫 화면의 "지난 동화 이어보기" 카드 ---------- */
+.resume-card {
+  padding: 18px 20px;
+}
+.resume-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.resume-label {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.resume-drop {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+  padding: 4px 6px;
+}
+.resume-title {
+  font-family: var(--hand);
+  font-size: 20px;
+  margin: 6px 0 14px;
+  word-break: keep-all;
+}
+
 .share-row {
   border-top: 1px dashed #e0d6c2;
   padding-top: 14px;
@@ -813,6 +844,19 @@ input[type="text"]:focus,
   font-size: 38px;
   margin-bottom: 6px;
 }
+.upsell .upsell-badge {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #b8862f;
+  background: #fbeecd;
+  border: 1px solid #eeda9f;
+  border-radius: 999px;
+  padding: 5px 12px;
+  margin-bottom: 10px;
+}
 .upsell .upsell-title {
   font-family: var(--hand);
   font-size: 21px;
@@ -844,6 +888,14 @@ input[type="text"]:focus,
 }
 .upsell .upsell-btn:hover {
   transform: translateY(-1px);
+}
+.upsell .upsell-note {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-soft);
+  opacity: 0.8;
+  line-height: 1.6;
+  margin-top: 12px;
 }
 
 .actions {

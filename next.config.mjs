@@ -10,6 +10,10 @@ const nextConfig = {
       bodySizeLimit: "12mb",
     },
   },
+  // OG 이미지 라우트가 폰트 파일을 fs로 읽으므로 번들에 확실히 포함시킨다
+  outputFileTracingIncludes: {
+    "/opengraph-image": ["./assets/fonts/**"],
+  },
   async redirects() {
     return LEGACY_HOSTS.map((host) => ({
       source: "/:path*",

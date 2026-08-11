@@ -1,10 +1,27 @@
 import type { Metadata, Viewport } from "next";
+import { SITE_ORIGIN } from "@/lib/sharebook";
 import "./globals.css";
 
+const DESCRIPTION =
+  "아이 이름과 사진을 넣으면, 우리 아이가 수채화 동화책의 주인공이 되는 그림동화를 만들어드려요.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN), // opengraph-image의 절대 주소 생성에 필요
   title: "키즈북 · 우리 아이가 주인공인 동화책",
-  description:
-    "아이 이름과 사진을 넣으면, 우리 아이가 수채화 동화책의 주인공이 되는 그림동화를 만들어드려요.",
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "키즈북",
+    url: SITE_ORIGIN,
+    title: "키즈북 · 우리 아이가 주인공인 동화책",
+    description: DESCRIPTION,
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "키즈북 · 우리 아이가 주인공인 동화책",
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
