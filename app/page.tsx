@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { SAMPLES, SAMPLE_H, SAMPLE_W } from "@/lib/samples";
 import { MAX_CHILDREN, THEMES, joinCallNames, type ThemeId } from "@/lib/prompts";
 import { BUSINESS } from "@/lib/business";
 import { downloadStoryPdf } from "@/lib/pdf";
@@ -454,6 +456,29 @@ export default function Home() {
           </li>
         </ul>
       </header>
+
+      {phase === "form" && (
+        <section className="sample-strip">
+          <div className="sample-strip-head">
+            <b>이런 그림이 나와요</b>
+            <a href="/samples">샘플 더 보기 →</a>
+          </div>
+          <div className="sample-strip-row">
+            {SAMPLES.slice(0, 4).map((s) => (
+              <a key={s.id} href="/samples" aria-label={`${s.label} 샘플 보기`}>
+                <Image
+                  src={`/samples/${s.id}.jpg`}
+                  alt={`${s.label} 주제의 수채화 삽화 샘플`}
+                  width={SAMPLE_W}
+                  height={SAMPLE_H}
+                  sizes="150px"
+                />
+                <span>{s.label}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {phase === "form" && saved && (
         <section className="card resume-card">

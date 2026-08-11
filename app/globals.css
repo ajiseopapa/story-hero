@@ -354,6 +354,90 @@ input[type="text"]:focus,
   box-shadow: 0 12px 26px -12px #6b91c2;
 }
 
+/* ---------- 샘플 갤러리 ---------- */
+.sample-strip {
+  margin-top: 22px;
+}
+.sample-strip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.sample-strip-head b {
+  font-family: var(--hand);
+  font-size: 19px;
+  color: var(--ink);
+}
+.sample-strip-head a,
+.sample-grid a {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.sample-strip-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.sample-strip-row a {
+  display: block;
+  text-align: center;
+}
+.sample-strip-row img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid #e8dcc6;
+  box-shadow: 0 8px 20px -14px var(--shadow);
+  display: block;
+}
+.sample-strip-row span {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.sample-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 8px 0 26px;
+}
+.sample-grid figure {
+  margin: 0;
+}
+.sample-grid img {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid #e8dcc6;
+  box-shadow: 0 14px 32px -20px var(--shadow);
+  display: block;
+}
+.sample-grid figcaption {
+  margin-top: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  text-align: center;
+  word-break: keep-all;
+}
+.sample-grid figcaption b {
+  display: block;
+  font-family: var(--hand);
+  font-size: 17px;
+  color: var(--ink);
+}
+@media (max-width: 560px) {
+  .sample-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* ---------- 사진 가이드 ---------- */
 .photo-guide {
   list-style: none;
