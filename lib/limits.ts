@@ -43,3 +43,6 @@ export function ipBucket(req: Request): string {
 export const FREE_DAILY_LIMIT = Number(process.env.FREE_DAILY_LIMIT ?? "100"); // 전체 무료 샘플/일
 export const FREE_IP_DAILY_LIMIT = Number(process.env.FREE_IP_DAILY_LIMIT ?? "3"); // IP당 무료 샘플/일
 export const IMAGE_DAILY_LIMIT = Number(process.env.IMAGE_DAILY_LIMIT ?? "1500"); // 삽화 생성/일 (유료 이어그리기 포함 백스톱)
+export const SHARE_DAILY_LIMIT = Number(process.env.SHARE_DAILY_LIMIT ?? "50"); // 공유 링크 생성/일 (전체)
+export const SHARE_IP_DAILY_LIMIT = Number(process.env.SHARE_IP_DAILY_LIMIT ?? "5"); // 공유 링크 생성/일 (IP당)
+export const SHARE_UPLOAD_DAILY_LIMIT = Number(process.env.SHARE_UPLOAD_DAILY_LIMIT ?? "1500"); // 공유용 파일 업로드/일 (한 권에 최대 22개)

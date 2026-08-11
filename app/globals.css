@@ -323,6 +323,52 @@ input[type="text"]:focus,
   box-shadow: none;
   font-size: 18px;
 }
+.btn.share {
+  background: linear-gradient(135deg, #8fb0d6, #7ba0cc 60%, #6b91c2);
+  box-shadow: 0 12px 26px -12px #6b91c2;
+}
+
+/* ---------- 공유 링크 ---------- */
+.share-box {
+  margin-top: 16px;
+  background: var(--paper-2);
+  border: 1px solid #e8dcc6;
+  border-radius: 18px;
+  padding: 18px 16px;
+  text-align: center;
+}
+.share-title {
+  font-family: var(--hand);
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+.share-url {
+  display: block;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: #4d6f9c;
+  word-break: break-all;
+  background: #fff;
+  border: 1px solid #e0d6c2;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.share-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.share-row {
+  border-top: 1px dashed #e0d6c2;
+  padding-top: 14px;
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+.share-row-title {
+  font-family: var(--hand);
+  font-size: 18px;
+}
 
 .error {
   background: #fdecea;

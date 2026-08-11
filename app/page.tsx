@@ -5,6 +5,7 @@ import { MAX_CHILDREN, THEMES, joinCallNames, type ThemeId } from "@/lib/prompts
 import { BUSINESS } from "@/lib/business";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
+import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 
 type Gender = "girl" | "boy";
@@ -23,6 +24,24 @@ type BookPage = {
   imagePrompt: string;
   image: string | null; // data URL
 };
+
+// 만들어 둔 공유 링크 (IndexedDB "shares" 목록에 보관 — deleteKey가 있어야 나중에 지울 수 있다)
+type SavedShare = { id: string; url: string; deleteKey: string; title: string; createdAt: number };
+
+async function loadShares(): Promise<SavedShare[]> {
+  return (await kvGet<SavedShare[]>("shares")) ?? [];
+}
+
+async function addShare(share: SavedShare): Promise<void> {
+  await kvSet("shares", [...(await loadShares()), share]);
+}
+
+async function dropShare(id: string): Promise<void> {
+  await kvSet(
+    "shares",
+    (await loadShares()).filter((s) => s.id !== id),
+  );
+}
 
 // 폼에서 편집하는 아이 한 명 (형제·자매 최대 MAX_CHILDREN명)
 type ChildForm = {
@@ -351,6 +370,7 @@ export default function Home() {
     kvDel("draft");
     kvDel("paidOrder");
     kvDel("recordings");
+    // 공유 링크 목록("shares")은 지우지 않는다 — 새 동화를 만들어도 지난 링크를 지울 수 있어야 한다
   }, []);
 
   return (
@@ -538,6 +558,8 @@ export default function Home() {
         </section>
       )}
 
+      {phase === "form" && <SavedShareList />}
+
       {phase === "generating" && (
         <section className="card">
           <div className="progress-wrap">
@@ -609,6 +631,62 @@ export default function Home() {
   );
 }
 
+// 이 브라우저에서 만든 공유 링크 목록 — 새 동화를 만든 뒤에도 지난 링크를 지울 수 있게 한다.
+function SavedShareList() {
+  const [shares, setShares] = useState<SavedShare[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadShares().then(setShares);
+  }, []);
+
+  if (shares.length === 0) return null;
+
+  const remove = async (s: SavedShare) => {
+    if (!confirm(`《 ${s.title} 》 공유 링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없어요.`))
+      return;
+    setBusy(s.id);
+    setError(null);
+    try {
+      await deleteShareLink(s.id, s.deleteKey);
+      await dropShare(s.id);
+      setShares((prev) => prev.filter((x) => x.id !== s.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "링크를 지우지 못했어요.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <section className="card">
+      <div className="field">
+        <label>내가 만든 공유 링크 🔗</label>
+        <div className="hint">
+          링크를 아는 사람만 볼 수 있고, 만든 날부터 1년 뒤 자동으로 지워져요.
+        </div>
+      </div>
+      {shares.map((s) => (
+        <div className="share-row" key={s.id}>
+          <div className="share-row-title">《 {s.title} 》</div>
+          <a className="share-url" href={s.url} target="_blank" rel="noreferrer">
+            {s.url}
+          </a>
+          <button
+            className="btn secondary"
+            onClick={() => remove(s)}
+            disabled={busy === s.id}
+          >
+            {busy === s.id ? "지우는 중…" : "링크 지우기"}
+          </button>
+        </div>
+      ))}
+      {error && <div className="error">{error}</div>}
+    </section>
+  );
+}
+
 function BookViewer({
   title,
   pages,
@@ -640,6 +718,12 @@ function BookViewer({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false); // 소리책 만드는 중
   const [exportStep, setExportStep] = useState("");
+
+  // ----- 공유 링크(웹 스토리북) — 누르지 않으면 아무것도 저장되지 않는 옵트인 -----
+  const [sharing, setSharing] = useState(false);
+  const [shareStep, setShareStep] = useState("");
+  const [share, setShare] = useState<SavedShare | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   // ----- 읽어주기 -----
   const [voiceMode, setVoiceMode] = useState<VoiceMode>("ai"); // 샘플 목소리 / 내 목소리
@@ -885,6 +969,25 @@ function BookViewer({
     el.play().catch(() => setReading(false));
   }, [current, getAudioUrl]);
 
+  // 페이지별 음성을 Blob으로 모은다 (소리책·공유 링크 공용)
+  // TTS는 재생 캐시(objectURL)가 있으면 재사용하고, 없으면 그때 생성한다.
+  const collectAudios = useCallback(
+    async (onStep: (i: number) => void): Promise<(Blob | null)[]> => {
+      const out: (Blob | null)[] = [];
+      for (let i = 0; i < pages.length; i++) {
+        onStep(i);
+        if (voiceMode === "mine") {
+          out.push(recordings.get(i) ?? null);
+        } else {
+          const url = await getAudioUrl(i);
+          out.push(url ? await fetch(url).then((r) => r.blob()) : null);
+        }
+      }
+      return out;
+    },
+    [pages.length, voiceMode, recordings, getAudioUrl],
+  );
+
   // ----- 소리책(그림+글+음성 단일 HTML) 내보내기 -----
   const exportSoundBook = useCallback(async () => {
     if (exporting) return;
@@ -892,23 +995,10 @@ function BookViewer({
     setAudioError(null);
     setReadNote(null);
     try {
-      const audios: (string | null)[] = [];
-      for (let i = 0; i < pages.length; i++) {
-        setExportStep(`목소리 담는 중… ${i + 1} / ${pages.length}`);
-        if (voiceMode === "mine") {
-          const rec = recordings.get(i);
-          audios.push(rec ? await blobToDataUrl(rec) : null);
-        } else {
-          // TTS — 재생 캐시(objectURL)가 있으면 재사용, 없으면 생성
-          const url = await getAudioUrl(i);
-          if (!url) {
-            audios.push(null);
-          } else {
-            const blob = await fetch(url).then((r) => r.blob());
-            audios.push(await blobToDataUrl(blob));
-          }
-        }
-      }
+      const blobs = await collectAudios((i) =>
+        setExportStep(`목소리 담는 중… ${i + 1} / ${pages.length}`),
+      );
+      const audios = await Promise.all(blobs.map((b) => (b ? blobToDataUrl(b) : null)));
       setExportStep("소리책 파일 만드는 중…");
       downloadSoundBook(
         title,
@@ -927,7 +1017,83 @@ function BookViewer({
       setExporting(false);
       setExportStep("");
     }
-  }, [exporting, pages, title, voiceMode, recordings, getAudioUrl]);
+  }, [exporting, pages, title, collectAudios]);
+
+  // 이 책으로 이미 만들어 둔 공유 링크가 있으면 되살린다 (결제 리다이렉트 복귀 등)
+  useEffect(() => {
+    loadShares().then((list) => {
+      const mine = list.filter((s) => s.title === title).pop();
+      if (mine) setShare(mine);
+    });
+  }, [title]);
+
+  // ----- 공유 링크 만들기 (여기서 처음으로 삽화·음성이 서버에 저장된다) -----
+  const makeShareLink = useCallback(async () => {
+    if (sharing) return;
+    setSharing(true);
+    setAudioError(null);
+    setReadNote(null);
+    setShareCopied(false);
+    try {
+      const audios = await collectAudios((i) =>
+        setShareStep(`목소리 담는 중… ${i + 1} / ${pages.length}`),
+      );
+      const id = newShareId();
+      const result = await createShareLink({
+        id,
+        title,
+        pages: pages.map((p, i) => ({
+          kind: p.kind,
+          text: p.kind === "cover" ? title : p.text,
+          image: p.image,
+          audio: audios[i],
+        })),
+        onProgress: (done, total) => setShareStep(`올리는 중… ${done} / ${total}`),
+      });
+      const saved: SavedShare = {
+        id,
+        url: result.url,
+        deleteKey: result.deleteKey,
+        title,
+        createdAt: Date.now(),
+      };
+      await addShare(saved);
+      setShare(saved);
+    } catch (err) {
+      setAudioError(
+        err instanceof Error ? err.message : "공유 링크를 만들지 못했어요. 다시 시도해주세요.",
+      );
+    } finally {
+      setSharing(false);
+      setShareStep("");
+    }
+  }, [sharing, collectAudios, pages, title]);
+
+  const copyShareLink = async () => {
+    if (!share) return;
+    try {
+      await navigator.clipboard.writeText(share.url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      setAudioError("복사에 실패했어요. 주소를 길게 눌러 직접 복사해주세요.");
+    }
+  };
+
+  const removeShareLink = async () => {
+    if (!share || sharing) return;
+    if (!confirm("공유 링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없어요.")) return;
+    setSharing(true);
+    try {
+      await deleteShareLink(share.id, share.deleteKey);
+      await dropShare(share.id);
+      setShare(null);
+    } catch (err) {
+      setAudioError(err instanceof Error ? err.message : "링크를 지우지 못했어요.");
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const switchMode = (m: VoiceMode) => {
     if (reading || audioLoading) stopReading();
@@ -1141,6 +1307,15 @@ function BookViewer({
             >
               {exporting ? exportStep || "소리책 만드는 중… 🔊" : "소리책으로 저장 🔊"}
             </button>
+            {!share && (
+              <button
+                className="btn share"
+                onClick={makeShareLink}
+                disabled={sharing || !allDone}
+              >
+                {sharing ? shareStep || "공유 링크 만드는 중… 🔗" : "링크로 공유하기 🔗"}
+              </button>
+            )}
           </>
         )}
         <button className="btn secondary" onClick={onReset}>
@@ -1148,12 +1323,35 @@ function BookViewer({
         </button>
       </div>
       {paid && (
-        <div className="hint" style={{ textAlign: "center", marginTop: 8 }}>
+        <div className="hint" style={{ textAlign: "center", marginTop: 8, lineHeight: 1.8 }}>
           소리책은 파일 하나에 그림과{" "}
           {voiceMode === "mine"
             ? "직접 녹음한 목소리"
             : `${NARRATOR_LIST.find((n) => n.id === narrator)?.label} 목소리`}
-          가 담겨요. 인터넷 없이 열리고 가족에게 보낼 수 있어요.
+          가 담겨요. 인터넷 없이 열립니다.
+          <br />
+          카톡으로 가족에게 보낼 거라면 <b>링크로 공유하기</b>가 편해요 — 폰에서 바로 열리고 소리도
+          나옵니다.
+        </div>
+      )}
+
+      {paid && share && (
+        <div className="share-box">
+          <div className="share-title">공유 링크가 준비됐어요 🔗</div>
+          <div className="share-url">{share.url}</div>
+          <div className="share-actions">
+            <button className="btn" onClick={copyShareLink}>
+              {shareCopied ? "복사됐어요 ✓" : "주소 복사하기"}
+            </button>
+            <button className="btn secondary" onClick={removeShareLink} disabled={sharing}>
+              링크 지우기
+            </button>
+          </div>
+          <div className="hint" style={{ marginTop: 10, lineHeight: 1.8 }}>
+            링크를 아는 사람만 볼 수 있어요(검색에는 잡히지 않아요).
+            <br />
+            만든 날부터 1년 뒤 자동으로 지워지고, 언제든 직접 지울 수도 있어요.
+          </div>
         </div>
       )}
 
