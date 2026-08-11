@@ -403,14 +403,37 @@ export default function Home() {
     <main className="wrap">
       <header className="hero">
         <span className="badge">키즈북 ✨</span>
-        <h1>동화책 속 주인공이 되어보아요</h1>
-        <p>
-          아이 이름과 사진을 넣으면,
+        <h1>
+          진짜 우리 아이가
           <br />
-          포근한 수채화 그림동화의 주인공이 됩니다.
+          주인공인 동화책
+        </h1>
+        <p>
+          사진 속 얼굴을 그대로 살려 수채화로 그립니다.
+          <br />
+          <b>표지는 무료</b>예요 — 얼굴을 먼저 보고 결제하세요.
           <br />
           형제·자매가 <b>함께 주인공</b>이 될 수도 있어요 👧👦
         </p>
+        <ul className="hero-points">
+          <li>
+            <span className="hp-emoji">👀</span>
+            결제 전<br />
+            얼굴 확인
+          </li>
+          <li>
+            <span className="hp-emoji">🔊</span>
+            엄마·아빠 목소리로
+            <br />
+            읽어주기
+          </li>
+          <li>
+            <span className="hp-emoji">💬</span>
+            카톡으로
+            <br />
+            조부모님께 바로
+          </li>
+        </ul>
       </header>
 
       {phase === "form" && saved && (
@@ -592,8 +615,8 @@ export default function Home() {
             무료 샘플 만들기 🪄
           </button>
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
-            표지 + {FREE_SCENES}장면을 무료로 보여드려요. 마음에 들면 전체 동화책(10장면) +
-            읽어주기 + PDF를 받아보세요.
+            표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요. 아이 얼굴이 마음에 들 때만
+            결제하시면, 전체 10장면과 읽어주기·PDF·공유 링크가 열립니다.
           </div>
           <div className="price-anchor">
             <s>정가 {LIST_PRICE.toLocaleString()}원</s>

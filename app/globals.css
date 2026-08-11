@@ -68,6 +68,32 @@ body {
   line-height: 1.75;
 }
 
+/* 히어로 아래 3가지 약속 — 저쪽에 없는 것만 골라 앞세운다 */
+.hero-points {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 0;
+}
+.hero-points li {
+  background: #fffdf8;
+  border: 1px solid #e8dcc6;
+  border-radius: 14px;
+  padding: 12px 8px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: keep-all;
+}
+.hero-points .hp-emoji {
+  display: block;
+  font-size: 22px;
+  margin-bottom: 5px;
+}
+
 /* ---------- 카드/폼 ---------- */
 .card {
   background: var(--paper-2);
