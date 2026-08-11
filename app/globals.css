@@ -354,6 +354,113 @@ input[type="text"]:focus,
   box-shadow: 0 12px 26px -12px #6b91c2;
 }
 
+/* ---------- 생성 전 법정 동의 ---------- */
+.consent {
+  border: 1px solid #e3d5bc;
+  background: #fffdf8;
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+  margin: 22px 0 18px;
+  font-family: var(--sans);
+}
+.consent input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.consent-all {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #ece1cc;
+  cursor: pointer;
+}
+.consent-all b {
+  font-size: 17px;
+  color: var(--ink);
+}
+.consent-all em {
+  display: block;
+  font-style: normal;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+.consent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.consent-list li {
+  padding: 12px 0;
+  border-bottom: 1px dashed #ece1cc;
+}
+.consent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.consent-row label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14.5px;
+  color: var(--ink);
+  word-break: keep-all;
+}
+.consent-req {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--accent);
+  margin-left: 2px;
+}
+.consent-more {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 4px;
+  text-decoration: underline;
+}
+.consent-summary {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 4px 0 0 30px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+.consent-body {
+  margin: 10px 0 2px 30px;
+  padding: 12px 14px;
+  background: #f8f2e6;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink);
+  word-break: keep-all;
+}
+.consent-body p {
+  margin: 0 0 6px;
+}
+.consent-body p:last-child {
+  margin-bottom: 0;
+}
+.consent > .hint {
+  margin-top: 12px;
+}
+.consent > .hint a {
+  color: var(--accent);
+}
+
 /* ---------- 결제 전 동의 ---------- */
 .pay-consent {
   display: flex;

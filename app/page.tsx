@@ -6,6 +6,8 @@ import { BUSINESS } from "@/lib/business";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
+import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
+import ConsentBox from "./consent-box";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 
 type Gender = "girl" | "boy";
@@ -166,8 +168,25 @@ export default function Home() {
   const restoredRef = useRef(false);
   const [dragOver, setDragOver] = useState<number | null>(null); // 드래그 중인 아이 카드 index
 
+  // 법정 동의 (아동·민감정보·국외이전). 한 번 동의하면 이 브라우저에 기록해 다시 묻지 않는다.
+  const [consents, setConsents] = useState<string[]>([]);
+  const consentDone = REQUIRED_CONSENT_IDS.every((id) => consents.includes(id));
+
+  useEffect(() => {
+    kvGet<{ version: string; ids: string[] }>("consent").then((saved) => {
+      if (saved?.version === CONSENT_VERSION) setConsents(saved.ids);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (consentDone) {
+      kvSet("consent", { version: CONSENT_VERSION, ids: consents, at: new Date().toISOString() });
+    }
+  }, [consentDone, consents]);
+
   const canSubmit =
     theme !== null &&
+    consentDone &&
     kids.length > 0 &&
     kids.every((k) => k.name.trim().length > 0 && k.gender !== null && k.photo !== null);
 
@@ -608,6 +627,8 @@ export default function Home() {
               ))}
             </div>
           </div>
+
+          <ConsentBox checked={consents} onChange={setConsents} />
 
           {error && <div className="error">{error}</div>}
 
