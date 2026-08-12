@@ -16,6 +16,7 @@ import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
+import { trackEvery, trackStep } from "@/lib/track";
 import ConsentBox from "./consent-box";
 import PhotoCropper from "./photo-cropper";
 import ReviewForm from "./review-form";
@@ -194,6 +195,11 @@ export default function Home() {
     });
   }, []);
 
+  // 퍼널 시작점. 세션당 한 번만 집계된다(lib/track.ts).
+  useEffect(() => {
+    trackStep("visit");
+  }, []);
+
   useEffect(() => {
     if (consentDone) {
       kvSet("consent", { version: CONSENT_VERSION, ids: consents, at: new Date().toISOString() });
@@ -303,6 +309,9 @@ export default function Home() {
     }));
     const photos = kids.map((k) => k.photo as string);
     setError(null);
+    trackStep("sample:start");
+    // 그림체·주제·아이 수는 고를 때마다 센다(퍼널 전환율 계산에는 안 씀)
+    trackEvery(`art:${art}`, `theme:${theme}`, `kids:${kids.length}`);
     setPhase("generating");
     setProgressPct(4);
     setProgressStep("이야기를 짓고 있어요…");
@@ -361,14 +370,18 @@ export default function Home() {
 
       setCurrent(0);
       setPhase("book");
+      trackStep("sample:done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "문제가 발생했어요. 다시 시도해주세요.");
       setPhase("form");
+      trackEvery("sample:fail"); // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다
     }
   }, [canSubmit, kids, theme, art]);
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
+    // 구매 의사는 결제창이 뜨기 전에 센다 — 결제 설정이 없어도 "사려고 했다"는 사실은 남아야 한다
+    trackStep("pay:click");
     try {
       setError(null);
       // 리다이렉트 전에 현재 상태 저장
@@ -779,6 +792,7 @@ export default function Home() {
           onDone={(dataUrl) => {
             patchKid(cropping.idx, { photo: dataUrl });
             setCropping(null);
+            trackStep("photo");
           }}
         />
       )}
@@ -1277,6 +1291,7 @@ function BookViewer({
       };
       await addShare(saved);
       setShare(saved);
+      trackEvery("share:create"); // 공유는 곧 유입 경로 — 몇 권이 밖으로 나가는지 센다
     } catch (err) {
       setAudioError(
         err instanceof Error ? err.message : "공유 링크를 만들지 못했어요. 다시 시도해주세요.",

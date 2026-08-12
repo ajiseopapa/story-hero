@@ -14,3 +14,6 @@ next-env.d.ts
 voice-samples/
 
 .env*
+
+# 보조 dev 서버 빌드 폴더
+.next-alt

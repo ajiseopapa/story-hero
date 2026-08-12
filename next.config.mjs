@@ -4,6 +4,9 @@ const LEGACY_HOSTS = ["my-storybook-kr.vercel.app", "story-hero-flame.vercel.app
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 여러 세션이 이 폴더를 동시에 쓴다. 두 dev 서버가 같은 .next를 공유하면 양쪽 다 깨지므로,
+  // 두 번째 서버는 NEXT_DIST_DIR로 빌드 폴더를 갈라서 띄운다. (배포에는 영향 없음)
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // 이미지 base64 payload가 크므로 서버 액션/라우트 바디 제한 여유있게
   experimental: {
     serverActions: {

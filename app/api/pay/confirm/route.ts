@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { track } from "@/lib/stats";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -41,6 +42,14 @@ export async function POST(req: NextRequest) {
         { error: data?.message ?? "결제 승인에 실패했습니다." },
         { status: res.status },
       );
+    }
+
+    // 실매출은 서버에서 센다 — 클라이언트가 리다이렉트 도중 죽어도 기록이 남아야 한다.
+    // 통계 실패가 결제 승인을 되돌리는 일은 없어야 하므로 오류는 삼킨다.
+    try {
+      await track(["pay:done"]);
+    } catch {
+      /* 통계는 조용히 실패한다 */
     }
 
     return NextResponse.json({
