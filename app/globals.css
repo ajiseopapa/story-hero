@@ -1,16 +1,16 @@
 :root {
   --paper: #f7efe2;
   --paper-2: #fbf6ec;
-  --ink: #4a3f35;
-  --ink-soft: #7a6a58;
+  --ink: #3d3329;
+  --ink-soft: #675746;
   --accent: #e08a7b;
   --accent-2: #9bb08a;
   --gold: #e3b15f;
   --shadow: rgba(74, 63, 53, 0.18);
   --serif: "Nanum Myeongjo", serif;
   --hand: "Gaegu", "Nanum Myeongjo", cursive;
-  /* 작은 안내 텍스트용: 명조/손글씨는 PC 저해상도에서 작은 크기일 때 획이 뭉개짐 */
-  --sans: "Gowun Dodum", "Malgun Gothic", sans-serif;
+  /* 작은 안내 텍스트용: 명조/손글씨는 작은 크기에서 획이 뭉개져 안 보임. 굵기가 있는 고딕으로 */
+  --sans: "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
 * {
@@ -64,8 +64,9 @@ body {
   margin: 0;
   color: var(--ink-soft);
   font-family: var(--sans);
-  font-size: 16px;
+  font-size: 17.5px;
   line-height: 1.75;
+  font-weight: 500;
 }
 
 /* 히어로 아래 3가지 약속 — 저쪽에 없는 것만 골라 앞세운다 */
@@ -83,10 +84,11 @@ body {
   border-radius: 14px;
   padding: 12px 8px;
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--ink);
   word-break: keep-all;
+  font-weight: 500;
 }
 .hero-points .hp-emoji {
   display: block;
@@ -124,12 +126,12 @@ body {
 }
 .child-title {
   font-family: var(--hand);
-  font-size: 21px;
+  font-size: 22px;
   color: var(--ink);
 }
 .child-remove {
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-soft);
   background: none;
   border: 1px solid #ddceb3;
@@ -163,17 +165,18 @@ body {
 .field > label {
   display: block;
   font-family: var(--hand);
-  font-size: 19px;
+  font-size: 21px;
   margin-bottom: 8px;
   color: var(--ink);
 }
 .hint {
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--ink-soft);
   margin-top: 6px;
   line-height: 1.7;
   word-break: keep-all;
+  font-weight: 500;
 }
 
 input[type="text"],
@@ -209,7 +212,7 @@ input[type="text"]:focus,
   padding: 16px 12px;
   text-align: center;
   font-family: var(--hand);
-  font-size: 20px;
+  font-size: 21px;
   transition: all 0.15s;
   user-select: none;
 }
@@ -243,7 +246,7 @@ input[type="text"]:focus,
   padding: 13px 8px;
   text-align: center;
   font-family: var(--hand);
-  font-size: 16px;
+  font-size: 17px;
   transition: all 0.15s;
   user-select: none;
 }
@@ -288,14 +291,14 @@ input[type="text"]:focus,
 .art b {
   display: block;
   font-family: var(--hand);
-  font-size: 16px;
+  font-size: 17px;
   color: var(--ink);
 }
 .art em {
   display: block;
   font-style: normal;
   font-family: var(--sans);
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--ink-soft);
   margin-top: 2px;
   word-break: keep-all;
@@ -312,7 +315,7 @@ input[type="text"]:focus,
   transform: translateX(-50%);
   font-style: normal;
   font-family: var(--sans);
-  font-size: 10.5px;
+  font-size: 12px;
   color: #fff;
   background: var(--accent);
   border-radius: 999px;
@@ -351,13 +354,14 @@ input[type="text"]:focus,
 }
 .upload .up-title {
   font-family: var(--hand);
-  font-size: 19px;
+  font-size: 20px;
   margin: 8px 0 2px;
 }
 .upload .up-sub {
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink-soft);
+  font-weight: 500;
 }
 .preview-photo {
   position: relative;
@@ -458,7 +462,7 @@ input[type="text"]:focus,
 .review-text {
   width: 100%;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--ink);
   padding: 12px 14px;
@@ -475,7 +479,7 @@ input[type="text"]:focus,
 .review-count {
   text-align: right;
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-soft);
   margin: 4px 0 10px;
 }
@@ -506,10 +510,11 @@ input[type="text"]:focus,
 .reviews li p {
   margin: 8px 0 0;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 16.5px;
   line-height: 1.75;
   color: var(--ink);
   word-break: keep-all;
+  font-weight: 500;
 }
 .review-head {
   display: flex;
@@ -519,7 +524,7 @@ input[type="text"]:focus,
 }
 .review-rate {
   color: var(--gold);
-  font-size: 15px;
+  font-size: 17px;
   letter-spacing: 1px;
 }
 .review-rate i {
@@ -528,8 +533,9 @@ input[type="text"]:focus,
 }
 .review-who {
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--ink-soft);
+  font-weight: 500;
 }
 .review-who em {
   font-style: normal;
@@ -537,7 +543,7 @@ input[type="text"]:focus,
 .review-date {
   margin-top: 8px;
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 13px;
   color: #a99a85;
 }
 
@@ -559,7 +565,7 @@ input[type="text"]:focus,
 .sample-strip-head a,
 .sample-grid a {
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--accent);
   text-decoration: none;
 }
@@ -584,7 +590,7 @@ input[type="text"]:focus,
   display: block;
   margin-top: 5px;
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--ink-soft);
 }
 /* 그림체 비교 (같은 아이·같은 장면) */
@@ -667,11 +673,12 @@ input[type="text"]:focus,
 .sample-grid figcaption {
   margin-top: 8px;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--ink-soft);
   line-height: 1.6;
   text-align: center;
   word-break: keep-all;
+  font-weight: 500;
 }
 .sample-grid figcaption b {
   display: block;
@@ -694,10 +701,11 @@ input[type="text"]:focus,
   border: 1px solid #e8dcc6;
   border-radius: 12px;
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.75;
   color: var(--ink-soft);
   word-break: keep-all;
+  font-weight: 500;
 }
 .photo-guide li {
   display: flex;
@@ -743,10 +751,11 @@ input[type="text"]:focus,
 }
 .crop-head span {
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--ink-soft);
   line-height: 1.6;
   word-break: keep-all;
+  font-weight: 500;
 }
 .crop-frame {
   position: relative;
@@ -788,7 +797,7 @@ input[type="text"]:focus,
   gap: 10px;
   margin-top: 14px;
   font-family: var(--sans);
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ink-soft);
 }
 .crop-zoom input {
@@ -807,7 +816,7 @@ input[type="text"]:focus,
   border-radius: 12px;
   padding: 8px 16px;
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   cursor: pointer;
 }
@@ -847,13 +856,13 @@ input[type="text"]:focus,
   cursor: pointer;
 }
 .consent-all b {
-  font-size: 17px;
+  font-size: 18px;
   color: var(--ink);
 }
 .consent-all em {
   display: block;
   font-style: normal;
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--ink-soft);
   margin-top: 2px;
 }
@@ -877,9 +886,10 @@ input[type="text"]:focus,
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  font-size: 14.5px;
+  font-size: 16px;
   color: var(--ink);
   word-break: keep-all;
+  font-weight: 500;
 }
 .consent-req {
   font-style: normal;
@@ -893,27 +903,29 @@ input[type="text"]:focus,
   border: none;
   color: var(--ink-soft);
   font-family: var(--sans);
-  font-size: 12.5px;
+  font-size: 14px;
   cursor: pointer;
   padding: 4px;
   text-decoration: underline;
 }
 .consent-summary {
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--ink-soft);
   margin: 4px 0 0 30px;
   line-height: 1.6;
   word-break: keep-all;
+  font-weight: 500;
 }
 .consent-body {
   margin: 10px 0 2px 30px;
   padding: 12px 14px;
   background: #f8f2e6;
   border-radius: 12px;
-  font-size: 13px;
+  font-size: 14.5px;
   line-height: 1.75;
   color: var(--ink);
   word-break: keep-all;
+  font-weight: 500;
 }
 .consent-body p {
   margin: 0 0 6px;
@@ -939,12 +951,13 @@ input[type="text"]:focus,
   border: 1px solid #e8dcc6;
   border-radius: 12px;
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15.5px;
   line-height: 1.65;
   color: var(--ink);
   cursor: pointer;
   text-align: left;
   word-break: keep-all;
+  font-weight: 500;
 }
 .pay-consent input {
   flex: 0 0 auto;
@@ -982,13 +995,14 @@ input[type="text"]:focus,
 .share-url {
   display: block;
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   color: #4d6f9c;
   word-break: break-all;
   background: #fff;
   border: 1px solid #e0d6c2;
   border-radius: 10px;
   padding: 10px 12px;
+  font-weight: 500;
 }
 .share-actions {
   display: flex;
@@ -1045,9 +1059,10 @@ input[type="text"]:focus,
   border-radius: 12px;
   padding: 12px 14px;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 16px;
   margin-top: 14px;
   line-height: 1.6;
+  font-weight: 500;
 }
 
 /* ---------- 생성 진행 ---------- */
@@ -1139,7 +1154,7 @@ input[type="text"]:focus,
 }
 .page .caption {
   padding: 20px 22px 24px;
-  font-size: clamp(17px, 3.8vw, 20px);
+  font-size: clamp(18px, 4vw, 22px);
   line-height: 1.85;
   /* 명조 400은 획이 가늘어 흐려 보임 — 700 + 진한 잉크색으로 또렷하게 */
   font-weight: 700;
@@ -1512,7 +1527,7 @@ input[type="text"]:focus,
   text-align: center;
   color: var(--ink-soft);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 15px;
   margin-top: 40px;
   line-height: 1.7;
 }
@@ -1541,14 +1556,15 @@ input[type="text"]:focus,
   padding-top: 16px;
   border-top: 1px solid #e5d9c4;
   text-align: left;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.8;
   color: #8b7c68;
   word-break: keep-all;
+  font-weight: 500;
 }
 .biz-info .biz-lead {
   margin: 0 0 10px;
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--ink-soft);
 }
 .biz-info p {
@@ -1556,14 +1572,14 @@ input[type="text"]:focus,
 }
 .biz-info .biz-copy {
   margin: 12px 0 0;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: #a99a85;
 }
 
 /* 약관/정책 본문 */
 .legal {
   font-family: var(--sans);
-  font-size: 14.5px;
+  font-size: 16px;
   line-height: 1.85;
   color: var(--ink);
   text-align: left;
