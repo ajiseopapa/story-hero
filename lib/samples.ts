@@ -1,5 +1,7 @@
 // 샘플 갤러리 — 결제 전에 "어떤 그림이 나오는지" 보여주기 위한 예시 삽화.
-// 실제 아이 사진 없이 생성한 것이라 얼굴이 특정되지 않는다.
+// 얼굴이 안 보이면 닮음(이 서비스의 유일한 해자)을 확인할 수 없어서,
+// AI로 만든 가상의 아이 얼굴 한 장을 기준 사진으로 삼아 실제 파이프라인 그대로 생성했다.
+// 기준 사진 자체는 공개하지 않는다 (2026-08-12).
 export type Sample = {
   id: string;
   label: string; // 이야기 주제
@@ -17,3 +19,13 @@ export const SAMPLES: Sample[] = [
 
 export const SAMPLE_W = 720;
 export const SAMPLE_H = 1080;
+
+// 그림체 비교 — 같은 아이·같은 장면(마법의 숲)을 그림체만 바꿔 그린 것.
+export type StyleSample = { id: string; label: string; sub: string };
+
+export const STYLE_SAMPLES: StyleSample[] = [
+  { id: "realistic", label: "사실적 그림", sub: "가장 닮게 · 기본" },
+  { id: "watercolor", label: "수채화", sub: "포근한 그림책" },
+  { id: "pencil", label: "색연필", sub: "부드럽고 따뜻하게" },
+  { id: "crayon", label: "크레파스", sub: "아이 그림책 질감" },
+];

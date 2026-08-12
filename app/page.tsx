@@ -483,7 +483,7 @@ export default function Home() {
               <a key={s.id} href="/samples" aria-label={`${s.label} 샘플 보기`}>
                 <Image
                   src={`/samples/${s.id}.jpg`}
-                  alt={`${s.label} 주제의 수채화 삽화 샘플`}
+                  alt={`${s.label} 주제의 동화 삽화 샘플`}
                   width={SAMPLE_W}
                   height={SAMPLE_H}
                   sizes="150px"
