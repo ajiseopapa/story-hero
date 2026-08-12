@@ -516,8 +516,6 @@ export default function Home() {
           사진 속 얼굴을 그대로 살려 그림동화로 그립니다.
           <br />
           <b>표지는 무료</b>예요 — 얼굴을 먼저 보고 결제하세요.
-          <br />
-          형제·자매가 <b>함께 주인공</b>이 될 수도 있어요 👧👦
         </p>
         <ul className="hero-points">
           <li>
@@ -544,7 +542,6 @@ export default function Home() {
         <section className="sample-strip">
           <div className="sample-strip-head">
             <b>이런 그림이 나와요</b>
-            <a href="/samples">샘플 더 보기 →</a>
           </div>
           <div className="sample-strip-row">
             {SAMPLES.slice(0, 4).map((s) => (
