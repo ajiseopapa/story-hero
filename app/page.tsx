@@ -395,6 +395,9 @@ export default function Home() {
           gender: k.gender ?? ("girl" as Gender),
           age: k.age,
         })),
+        // 그림체를 빠뜨리면 결제 후 이어그리는 장면이 기본값(수채화)으로 그려져
+        // 앞뒤 그림체가 다른 책이 나온다 — 반드시 함께 저장한다.
+        art,
       } satisfies Draft);
 
       const { loadTossPayments, ANONYMOUS } = await import(
@@ -418,7 +421,7 @@ export default function Home() {
       if (e?.code === "USER_CANCEL") return; // 사용자가 결제창을 닫음
       setError(e?.message || "결제 연결 중 오류가 발생했습니다.");
     }
-  }, [title, pages, current, kids]);
+  }, [title, pages, current, kids, art]);
 
   const reset = useCallback(() => {
     setPhase("form");
