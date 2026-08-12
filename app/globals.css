@@ -1743,6 +1743,81 @@ input[type="text"]:focus,
   text-decoration: underline;
 }
 
+/* ---------- 계좌이체 주문 ---------- */
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(40, 33, 26, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-card {
+  background: var(--paper-2);
+  border-radius: 20px;
+  padding: 22px 20px 20px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow: auto;
+}
+.modal-card h3 {
+  font-family: var(--display);
+  font-size: 21px;
+}
+.order-amount {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(155, 176, 138, 0.16);
+  font-family: var(--text);
+  font-size: 15px;
+  word-break: keep-all;
+}
+.order-amount b {
+  font-size: 19px;
+  white-space: nowrap;
+}
+.order-bank {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px dashed var(--accent);
+}
+.order-bank-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+}
+.order-bank-row b {
+  font-family: var(--text);
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  word-break: break-all;
+}
+.btn.small {
+  padding: 7px 12px;
+  font-size: 14px;
+  flex: 0 0 auto;
+}
+.order-no {
+  margin: 12px 0;
+  font-family: var(--text);
+  font-size: 15px;
+}
+.order-no b {
+  font-size: 21px;
+  letter-spacing: 0.08em;
+}
+
 @media (max-width: 480px) {
   .wrap {
     padding: 18px 14px 48px;

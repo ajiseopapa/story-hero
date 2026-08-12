@@ -1,16 +1,12 @@
 /**
  * 퍼널 통계 저장소.
  *
- * Upstash Redis의 REST API를 그대로 쓴다(추가 패키지 없음).
  * 키즈텔·정찰병·StaySide와 같은 Upstash 인스턴스를 공유하되 접두사로 분리한다.
- *
  * 개인정보는 저장하지 않는다 — 날짜별 이벤트 카운터뿐이다.
- *
- * 필요한 환경변수 (한 쌍):
- *   KV_REST_API_URL / KV_REST_API_TOKEN               (Vercel KV)
- *   UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN (Upstash)
- *   그 밖에 `*_REST_API_URL` + `*_REST_API_TOKEN` 형태면 접두어가 무엇이든 자동 인식한다.
  */
+import { isStoreConfigured, pipeline, restConfig, toRecord } from "@/lib/kv";
+
+export { isStoreConfigured };
 
 const PREFIX = "kidsbook:stat:";
 const RETENTION_DAYS = 180;
@@ -47,63 +43,16 @@ export const LEAK_EXCLUDE = new Set(["pay:done"]);
 
 /** 퍼널 밖 참고 지표 — 이탈 원인·비용 추적용 */
 export const EXTRA: { key: string; label: string }[] = [
+  { key: "order:submit", label: "계좌이체 주문 접수" },
   { key: "sample:fail", label: "샘플 생성 실패" },
   { key: "share:create", label: "공유 링크 생성" },
 ];
-
-/** 접두어를 붙여 만들어진 REST 자격증명을 환경변수에서 찾아낸다. */
-function findPrefixedRest(): { url: string; token: string } | null {
-  for (const [key, value] of Object.entries(process.env)) {
-    if (!key.endsWith("_REST_API_URL") || !value?.startsWith("http")) continue;
-    const token = process.env[`${key.slice(0, -"_URL".length)}_TOKEN`];
-    if (token) return { url: value, token };
-  }
-  return null;
-}
-
-function restConfig(): { url: string; token: string } | null {
-  const pair =
-    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
-      ? { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN }
-      : null) ??
-    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-      ? {
-          url: process.env.UPSTASH_REDIS_REST_URL,
-          token: process.env.UPSTASH_REDIS_REST_TOKEN,
-        }
-      : null) ??
-    findPrefixedRest();
-
-  if (!pair) return null;
-  return { url: pair.url.replace(/\/$/, ""), token: pair.token };
-}
-
-export function isStoreConfigured(): boolean {
-  return restConfig() !== null;
-}
 
 /** 인스턴스 메모리 폴백 (개발용 — 배포 환경에서는 유실되므로 대시보드에 경고를 띄운다) */
 const memory: Map<string, Map<string, number>> =
   (globalThis as { __kidsbookStats?: Map<string, Map<string, number>> }).__kidsbookStats ??
   new Map();
 (globalThis as { __kidsbookStats?: Map<string, Map<string, number>> }).__kidsbookStats = memory;
-
-async function pipeline(commands: (string | number)[][]): Promise<unknown[]> {
-  const cfg = restConfig();
-  if (!cfg) return [];
-  const res = await fetch(`${cfg.url}/pipeline`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${cfg.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(commands),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`stats store ${res.status}`);
-  const data = (await res.json()) as { result?: unknown; error?: string }[];
-  return data.map((d) => d.result ?? null);
-}
 
 /** 이벤트 이름은 화이트리스트 문자만 허용해 임의 키 생성이 안 되게 막는다. */
 export function isValidEvent(name: unknown): name is string {
@@ -152,16 +101,8 @@ export async function readStats(days = 30): Promise<{
 
   const results = await pipeline(dates.map((d) => ["HGETALL", PREFIX + d]));
   const daily = dates.map((date, i) => {
-    const raw = results[i];
     const counts: Record<string, number> = {};
-    // Upstash는 HGETALL을 [field, value, ...] 또는 객체로 돌려준다 — 둘 다 처리
-    if (Array.isArray(raw)) {
-      for (let j = 0; j < raw.length; j += 2) counts[String(raw[j])] = Number(raw[j + 1]) || 0;
-    } else if (raw && typeof raw === "object") {
-      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-        counts[k] = Number(v) || 0;
-      }
-    }
+    for (const [k, v] of Object.entries(toRecord(results[i]))) counts[k] = Number(v) || 0;
     return { date, counts };
   });
 

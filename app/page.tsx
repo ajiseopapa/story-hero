@@ -17,6 +17,7 @@ import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import { trackEvery, trackStep } from "@/lib/track";
+import BankOrderBox, { checkBankOrderPaid, clearBankOrder, loadBankOrder } from "./bank-order";
 import ConsentBox from "./consent-box";
 import PhotoCropper from "./photo-cropper";
 import ReviewForm from "./review-form";
@@ -104,6 +105,9 @@ function draftToKids(draft: Draft): ChildForm[] {
 
 const FREE_SCENES = 1; // 무료 샘플: 표지 + 1장면 (샘플 원가 절감)
 const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "14900");
+// 결제 방식. 토스 카드결제를 열기 전까지는 계좌이체로 받는다.
+// 라이브 키를 넣으면 NEXT_PUBLIC_PAY_MODE=card 로 바꾸면 된다.
+const PAY_MODE = process.env.NEXT_PUBLIC_PAY_MODE === "card" ? "card" : "bank";
 const LIST_PRICE = 24900; // 앵커링용 정가 표시
 
 // ----- 읽어주기 목소리 -----
@@ -184,6 +188,7 @@ export default function Home() {
   const restoredRef = useRef(false);
   const [dragOver, setDragOver] = useState<number | null>(null); // 드래그 중인 아이 카드 index
   const [cropping, setCropping] = useState<{ idx: number; src: string } | null>(null);
+  const [showBank, setShowBank] = useState(false); // 계좌이체 주문 창
 
   // 법정 동의 (아동·민감정보·국외이전). 한 번 동의하면 이 브라우저에 기록해 다시 묻지 않는다.
   const [consents, setConsents] = useState<string[]>([]);
@@ -235,7 +240,20 @@ export default function Home() {
     (async () => {
       const draft = await kvGet<Draft>("draft");
       if (!draft) return;
-      const paidOrder = await kvGet<string>("paidOrder");
+      let paidOrder = await kvGet<string>("paidOrder");
+
+      // 계좌이체로 주문해둔 게 있으면 그새 입금 확인이 됐는지 물어본다.
+      // 카드 결제와 같은 표식(paidOrder)으로 바꿔 두면 아래 흐름이 그대로 재사용된다.
+      // 표식을 옮긴 뒤 주문 기록은 지운다 — 남겨두면 다음에 만든 새 동화까지 열려버린다.
+      if (!paidOrder) {
+        const bank = await loadBankOrder();
+        if (bank && (await checkBankOrderPaid(bank))) {
+          paidOrder = `bank-${bank.orderNo}`;
+          await kvSet("paidOrder", paidOrder);
+          await clearBankOrder();
+        }
+      }
+
       const q = new URLSearchParams(window.location.search);
       const fromPay = q.has("paid") || q.has("resume");
       if (fromPay) window.history.replaceState(null, "", "/");
@@ -382,6 +400,15 @@ export default function Home() {
   const pay = useCallback(async () => {
     // 구매 의사는 결제창이 뜨기 전에 센다 — 결제 설정이 없어도 "사려고 했다"는 사실은 남아야 한다
     trackStep("pay:click");
+
+    // 계좌이체 기간에는 토스를 부르지 않고 주문 창을 연다.
+    // 이 경우 리다이렉트가 없으므로 초안을 미리 저장할 필요도 없다.
+    if (PAY_MODE === "bank") {
+      setError(null);
+      setShowBank(true);
+      return;
+    }
+
     try {
       setError(null);
       // 리다이렉트 전에 현재 상태 저장
@@ -423,6 +450,29 @@ export default function Home() {
     }
   }, [title, pages, current, kids, art]);
 
+  // 계좌이체 입금이 확인됐을 때 — 카드 결제 성공과 같은 자리로 합류시킨다.
+  const unlockAfterBankPay = useCallback(async () => {
+    setShowBank(false);
+    setPaid(true);
+    const draft: Draft = {
+      title,
+      pages,
+      current,
+      photos: kids.map((k) => k.photo).filter((p): p is string => !!p),
+      children: kids.map((k) => ({
+        name: k.name.trim(),
+        gender: k.gender ?? ("girl" as Gender),
+        age: k.age,
+      })),
+      art,
+    };
+    await kvSet("draft", draft);
+    await kvSet("paidOrder", "bank");
+    // 주문 기록은 여기서 지운다 — 남겨두면 다음에 만드는 새 동화까지 공짜로 열린다
+    await clearBankOrder();
+    await resumeGeneration(draft);
+  }, [title, pages, current, kids, art, resumeGeneration]);
+
   const reset = useCallback(() => {
     setPhase("form");
     setKids([emptyChild()]);
@@ -439,6 +489,8 @@ export default function Home() {
     kvDel("draft");
     kvDel("paidOrder");
     kvDel("recordings");
+    // 새 동화를 만들면 지난 계좌이체 주문도 털어낸다 — 그 주문이 이 책을 열어주면 안 된다
+    void clearBankOrder();
     // 공유 링크 목록("shares")은 지우지 않는다 — 새 동화를 만들어도 지난 링크를 지울 수 있어야 한다
   }, []);
 
@@ -797,6 +849,15 @@ export default function Home() {
             setCropping(null);
             trackStep("photo");
           }}
+        />
+      )}
+
+      {showBank && (
+        <BankOrderBox
+          bookTitle={title}
+          price={PRICE}
+          onPaid={unlockAfterBankPay}
+          onClose={() => setShowBank(false)}
         />
       )}
 
@@ -1385,6 +1446,11 @@ function BookViewer({
               <button className="btn lock-btn" onClick={onPay} disabled={!agreed}>
                 {PRICE.toLocaleString()}원으로 전체 열기 🔓
               </button>
+              {PAY_MODE === "bank" && (
+                <div className="hint" style={{ marginTop: 8 }}>
+                  지금은 계좌이체로 받고 있어요
+                </div>
+              )}
             </div>
           ) : page.image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1527,7 +1593,9 @@ function BookViewer({
       <div className="actions">
         {!paid ? (
           <button className="btn" onClick={onPay} disabled={!agreed}>
-            {PRICE.toLocaleString()}원 결제하고 전체 보기 🔓
+            {PAY_MODE === "bank"
+              ? `${PRICE.toLocaleString()}원 계좌이체로 전체 보기 🔓`
+              : `${PRICE.toLocaleString()}원 결제하고 전체 보기 🔓`}
           </button>
         ) : (
           <>
