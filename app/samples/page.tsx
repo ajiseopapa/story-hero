@@ -120,9 +120,7 @@ export default function SamplesPage() {
 
       <section className="card" style={{ textAlign: "center" }}>
         <p className="hint" style={{ fontSize: 16, lineHeight: 1.8, marginBottom: 16 }}>
-          맨 위 <b>&lsquo;사진 한 장이면 됩니다&rsquo;</b>는 실제 사진으로 만든 예시이고,
-          <br />
-          그림체·주제 샘플의 아이는 <b>AI로 만든 가상 인물</b>이에요.
+          이 페이지의 그림은 <b>모두 맨 위 사진 한 장</b>으로 만든 것이에요.
           <br />
           우리 아이 사진을 올리시면 <b>그 아이를 닮은 얼굴</b>로 그려집니다.
           <br />
