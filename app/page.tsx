@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SAMPLES, SAMPLE_H, SAMPLE_W } from "@/lib/samples";
-import { MAX_CHILDREN, THEMES, joinCallNames, type ThemeId } from "@/lib/prompts";
+import {
+  ART_STYLES,
+  DEFAULT_ART,
+  MAX_CHILDREN,
+  THEMES,
+  joinCallNames,
+  type ThemeId,
+} from "@/lib/prompts";
 import { BUSINESS } from "@/lib/business";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
@@ -71,6 +78,7 @@ type Draft = {
   // 신버전: 아이별 정보 (photos[i] ↔ children[i])
   photos?: string[];
   children?: { name: string; age: number; gender: Gender }[];
+  art?: string; // 그림체 (예전 초안엔 없음 → 수채화)
 };
 
 // 초안(신·구버전)에서 아이 배열 복원
@@ -141,11 +149,12 @@ async function fetchImage(
   imagePrompt: string,
   kind: "cover" | "scene",
   children: { age: number; gender: Gender }[],
+  art: string,
 ): Promise<string> {
   const res = await fetch("/api/image", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ photos, imagePrompt, kind, children }),
+    body: JSON.stringify({ photos, imagePrompt, kind, children, art }),
   });
   const json = await safeJson(res);
   if (!res.ok) throw new Error((json.error as string) || "삽화 생성 실패");
@@ -156,6 +165,7 @@ export default function Home() {
   const [phase, setPhase] = useState<Phase>("form");
   const [kids, setKids] = useState<ChildForm[]>([emptyChild()]);
   const [theme, setTheme] = useState<ThemeId | null>(null);
+  const [art, setArt] = useState<string>(DEFAULT_ART); // 그림체
   const [error, setError] = useState<string | null>(null);
 
   const [progressStep, setProgressStep] = useState("");
@@ -203,6 +213,7 @@ export default function Home() {
   // 저장된 동화를 화면에 펼친다 (결제 복귀 / 이어보기 공통)
   const openDraft = useCallback((draft: Draft, isPaid: boolean) => {
     setTitle(draft.title);
+    setArt(draft.art ?? "watercolor"); // 예전 초안은 수채화로 그렸다
     setKids(draftToKids(draft));
     setPages(draft.pages);
     setCurrent(Math.min(draft.current, draft.pages.length - 1));
@@ -253,7 +264,8 @@ export default function Home() {
     try {
       let cur = draft.pages;
       for (const { p, i } of missing) {
-        const img = await fetchImage(photos, p.imagePrompt, p.kind, specs);
+        // 결제 전에 그리던 그림체를 그대로 이어간다 (예전 초안엔 값이 없어 수채화)
+        const img = await fetchImage(photos, p.imagePrompt, p.kind, specs, draft.art ?? "");
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
         setPages(cur);
         await kvSet("draft", { ...draft, pages: cur });
@@ -328,7 +340,7 @@ export default function Home() {
         setProgressStep(
           i === 0 ? "표지 삽화를 그리고 있어요…" : `샘플 ${i} / ${FREE_SCENES} 장면을 그리고 있어요…`,
         );
-        const img = await fetchImage(photos, cur[i].imagePrompt, cur[i].kind, children);
+        const img = await fetchImage(photos, cur[i].imagePrompt, cur[i].kind, children, art);
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
         setPages(cur);
         setProgressPct(Math.round(((i + 1) / freeCount) * 100));
@@ -344,6 +356,7 @@ export default function Home() {
         current: 0,
         photos,
         children,
+        art,
       } satisfies Draft);
 
       setCurrent(0);
@@ -352,7 +365,7 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "문제가 발생했어요. 다시 시도해주세요.");
       setPhase("form");
     }
-  }, [canSubmit, kids, theme]);
+  }, [canSubmit, kids, theme, art]);
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
@@ -668,6 +681,29 @@ export default function Home() {
                   {t.label}
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="field">
+            <label>어떤 그림으로 그릴까요?</label>
+            <div className="arts">
+              {ART_STYLES.map((a) => (
+                <div
+                  key={a.id}
+                  className={`art ${art === a.id ? "active" : ""}`}
+                  onClick={() => setArt(a.id)}
+                  role="button"
+                >
+                  {a.id === DEFAULT_ART && <i className="art-badge">가장 닮게</i>}
+                  <span className="emoji">{a.emoji}</span>
+                  <b>{a.label}</b>
+                  <em>{a.sub}</em>
+                </div>
+              ))}
+            </div>
+            <div className="hint">
+              사진을 가장 닮게 그리는 건 <b>사실적 그림</b>이에요. 그림책 느낌을 원하시면 수채화나
+              크레파스를 골라주세요.
             </div>
           </div>
 

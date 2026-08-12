@@ -61,19 +61,82 @@ function castDescriptor(children: ChildSpec[]): string {
   ].join(" ");
 }
 
+// 고를 수 있는 그림체.
+// 3D 카툰은 실제 비교 테스트에서 얼굴이 "예쁜 캐릭터"로 일반화돼 제외했다 (2026-08-12).
+// 닮음이 이 서비스의 유일한 해자라 그림체는 닮음을 지키는 것만 남긴다.
+export type ArtStyleId = "realistic" | "watercolor" | "pencil" | "crayon";
+
+export const ART_STYLES: {
+  id: ArtStyleId;
+  label: string;
+  sub: string;
+  emoji: string;
+  /** 초상 프레임에 넣을 재료 이름 */
+  medium: string;
+  /** 그림체 지문 */
+  style: string;
+}[] = [
+  {
+    id: "realistic",
+    label: "사실적 그림",
+    sub: "가장 닮게",
+    emoji: "🖼️",
+    medium: "realistic painted",
+    style:
+      "Style: richly detailed realistic painterly illustration — true-to-life facial rendering and natural body proportions, oil and gouache brushwork with fine detail, warm cinematic light, in the spirit of classic realistic children's book paintings. Keep it painterly and warm, never photographic or uncanny.",
+  },
+  {
+    id: "watercolor",
+    label: "수채화",
+    sub: "포근한 그림책",
+    emoji: "🎨",
+    medium: "watercolor",
+    style:
+      "Style: gentle classic storybook watercolor — soft washes, warm golden light, delicate ink linework, dreamy pastel palette, subtle paper texture, cozy and whimsical (in the spirit of timeless bedtime picture books).",
+  },
+  {
+    id: "pencil",
+    label: "색연필",
+    sub: "부드럽고 따뜻하게",
+    emoji: "✏️",
+    medium: "coloured-pencil",
+    style:
+      "Style: gentle coloured-pencil illustration — fine hatching and soft blended pencil strokes, light grain of the paper showing through, muted natural palette, delicate and warm like a hand-drawn picture book.",
+  },
+  {
+    id: "crayon",
+    label: "크레파스",
+    sub: "아이 그림책 질감",
+    emoji: "🖍️",
+    medium: "crayon and oil-pastel",
+    style:
+      "Style: warm children's crayon and oil-pastel illustration — chunky waxy strokes, visible paper tooth, bold saturated colours layered by hand, slightly rough outlines, the charm of a picture book drawn with crayons.",
+  },
+];
+
+/** 새로 만드는 책의 기본 그림체 */
+export const DEFAULT_ART: ArtStyleId = "realistic";
+
+/** 예전 초안엔 그림체 값이 없다 — 그때는 수채화로 만들었으므로 그걸로 되돌린다. */
+export function artStyle(id?: string) {
+  return ART_STYLES.find((a) => a.id === id) ?? ART_STYLES[1];
+}
+
 // "그림책 캐릭터로 변환"이라고 하면 만화 얼굴로 뭉개짐 —
-// "실제 아이를 수채화로 그린 초상"이라는 프레임이 닮음을 훨씬 잘 지킴.
+// "실제 아이를 그린 초상"이라는 프레임이 닮음을 훨씬 잘 지킴.
 // 다인(형제·자매)일 때는 얼굴을 서로 섞거나 바꾸는 사고를 막는 지시가 핵심.
-function styleBase(count: number): string {
+function styleBase(count: number, artId?: string): string {
   const single = count === 1;
+  const art = artStyle(artId);
+  const m = art.medium;
   return [
     single
-      ? "A skilled portrait artist paints THIS real child (from the reference photo) in watercolor, placing them inside a storybook scene. The face is a faithful watercolor PORTRAIT OF THE PHOTOGRAPH — the same face at the same proportions, only rendered in paint."
-      : `A skilled portrait artist paints THESE ${count} real children (one from each reference photo, in the same order) in watercolor, placing them TOGETHER inside one storybook scene. Each child's face is a faithful watercolor PORTRAIT of that child's OWN photograph — the same face at the same proportions, only rendered in paint.`,
+      ? `A skilled portrait artist depicts THIS real child (from the reference photo) in ${m} illustration, placing them inside a storybook scene. The face is a faithful ${m} PORTRAIT OF THE PHOTOGRAPH — the same face at the same proportions, only rendered in this medium.`
+      : `A skilled portrait artist depicts THESE ${count} real children (one from each reference photo, in the same order) in ${m} illustration, placing them TOGETHER inside one storybook scene. Each child's face is a faithful ${m} PORTRAIT of that child's OWN photograph — the same face at the same proportions, only rendered in this medium.`,
     single
-      ? "TOP PRIORITY — PORTRAIT LIKENESS: anyone who knows the child must recognize them instantly. Keep the photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. Stylize only the MEDIUM (watercolor brushwork, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins."
-      : "TOP PRIORITY — PORTRAIT LIKENESS OF EVERY CHILD: anyone who knows these children must recognize EACH one instantly. For EACH child, keep that child's own photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve each child's distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. NEVER blend, average, or swap facial features, hairstyles or skin tones BETWEEN the children — each child keeps their OWN face from their OWN photo only. Stylize only the MEDIUM (watercolor brushwork, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins.",
-    "Style: gentle classic storybook watercolor — soft washes, warm golden light, delicate ink linework, dreamy pastel palette, subtle paper texture, cozy and whimsical (in the spirit of timeless bedtime picture books).",
+      ? "TOP PRIORITY — PORTRAIT LIKENESS: anyone who knows the child must recognize them instantly. Keep the photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins."
+      : "TOP PRIORITY — PORTRAIT LIKENESS OF EVERY CHILD: anyone who knows these children must recognize EACH one instantly. For EACH child, keep that child's own photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve each child's distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. NEVER blend, average, or swap facial features, hairstyles or skin tones BETWEEN the children — each child keeps their OWN face from their OWN photo only. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins.",
+    art.style,
     single
       ? "IMPORTANT — costume: do NOT copy the outfit from the photo. Instead, dress the child in the outfit and accessories described in the scene below, like a storybook character in costume. Only the face, hair and skin come from the photo; the clothing comes from the scene description."
       : "IMPORTANT — costume: do NOT copy the outfits from the photos. Instead, dress each child in the outfit and accessories described for them in the scene below, like storybook characters in costume. Only each child's face, hair and skin come from their photo; the clothing comes from the scene description.",
@@ -87,10 +150,10 @@ function styleBase(count: number): string {
 
 // 표지용: 아이를 가장 사랑스럽게, 제목 공간을 위해 여백 살짝.
 // 나이 지시를 스타일 지문보다 앞에 둔다 — 뒤에 두면 "그림책 스타일"이 이겨서 유아처럼 그림.
-export function buildCoverPrompt(scene: string, children: ChildSpec[]): string {
+export function buildCoverPrompt(scene: string, children: ChildSpec[], artId?: string): string {
   return [
     castDescriptor(children),
-    styleBase(children.length),
+    styleBase(children.length, artId),
     `Cover illustration. Scene: ${scene}.`,
     children.length === 1
       ? "Slightly more space around the child, magical inviting mood, like the front cover of a beloved picture book."
@@ -99,8 +162,10 @@ export function buildCoverPrompt(scene: string, children: ChildSpec[]): string {
 }
 
 // 각 장면용.
-export function buildScenePrompt(scene: string, children: ChildSpec[]): string {
-  return [castDescriptor(children), styleBase(children.length), `Scene: ${scene}.`].join(" ");
+export function buildScenePrompt(scene: string, children: ChildSpec[], artId?: string): string {
+  return [castDescriptor(children), styleBase(children.length, artId), `Scene: ${scene}.`].join(
+    " ",
+  );
 }
 
 // 이야기(글) 생성을 위한 시스템 프롬프트.

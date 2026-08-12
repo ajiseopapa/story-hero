@@ -17,15 +17,17 @@ function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null 
 
 export async function POST(req: NextRequest) {
   try {
-    const { photo, photos, imagePrompt, kind, age, gender, children } = (await req.json()) as {
-      photo?: string; // 구버전 단일 사진 (결제 복원 초안 호환)
-      photos?: string[]; // 신버전: 아이별 사진 1~3장 (children과 같은 순서)
-      imagePrompt?: string;
-      kind?: "cover" | "scene";
-      age?: number;
-      gender?: "girl" | "boy";
-      children?: { age?: number; gender?: "girl" | "boy" }[];
-    };
+    const { photo, photos, imagePrompt, kind, age, gender, children, art } =
+      (await req.json()) as {
+        photo?: string; // 구버전 단일 사진 (결제 복원 초안 호환)
+        photos?: string[]; // 신버전: 아이별 사진 1~3장 (children과 같은 순서)
+        imagePrompt?: string;
+        kind?: "cover" | "scene";
+        age?: number;
+        gender?: "girl" | "boy";
+        children?: { age?: number; gender?: "girl" | "boy" }[];
+        art?: string; // 그림체 (없으면 예전 초안 → 수채화)
+      };
 
     const photoList = (
       Array.isArray(photos) && photos.length > 0 ? photos : photo ? [photo] : []
@@ -70,8 +72,8 @@ export async function POST(req: NextRequest) {
 
     const prompt =
       kind === "cover"
-        ? buildCoverPrompt(imagePrompt, cast)
-        : buildScenePrompt(imagePrompt, cast);
+        ? buildCoverPrompt(imagePrompt, cast, art)
+        : buildScenePrompt(imagePrompt, cast, art);
 
     const openai = getOpenAI();
     const result = await openai.images.edit({
