@@ -30,11 +30,52 @@ export default function SamplesPage() {
         <span className="badge">샘플 보기 ✨</span>
         <h1>이런 그림이 나와요</h1>
         <p>
-          아래 그림들은 <b>한 아이의 사진 한 장</b>으로 만든 것입니다.
+          사진 한 장만 올리면 됩니다.
           <br />
           장면이 바뀌어도 <b>같은 얼굴</b>로 그려집니다.
         </p>
       </header>
+
+      <section className="before-after">
+        <h2>사진 한 장이면 됩니다</h2>
+        <p className="hint">아래 그림은 왼쪽 사진 한 장으로 만든 것이에요.</p>
+        <div className="ba-row">
+          <figure className="ba-photo">
+            <Image
+              src="/samples/guide-photo.jpg"
+              alt="동화책 제작에 사용한 아이 사진 예시"
+              width={600}
+              height={900}
+              sizes="(max-width: 700px) 30vw, 200px"
+            />
+            <figcaption>올린 사진</figcaption>
+          </figure>
+          <div className="ba-arrow" aria-hidden="true">
+            →
+          </div>
+          <figure>
+            <Image
+              src="/samples/guide-cover.jpg"
+              alt="사진을 바탕으로 그린 동화책 표지"
+              width={SAMPLE_W}
+              height={SAMPLE_H}
+              sizes="(max-width: 700px) 30vw, 220px"
+              priority
+            />
+            <figcaption>표지</figcaption>
+          </figure>
+          <figure>
+            <Image
+              src="/samples/guide-scene.jpg"
+              alt="사진을 바탕으로 그린 동화책 본문 장면"
+              width={SAMPLE_W}
+              height={SAMPLE_H}
+              sizes="(max-width: 700px) 30vw, 220px"
+            />
+            <figcaption>본문 장면</figcaption>
+          </figure>
+        </div>
+      </section>
 
       <section className="style-compare">
         <h2>그림체를 고를 수 있어요</h2>
@@ -79,7 +120,9 @@ export default function SamplesPage() {
 
       <section className="card" style={{ textAlign: "center" }}>
         <p className="hint" style={{ fontSize: 16, lineHeight: 1.8, marginBottom: 16 }}>
-          위 샘플의 아이는 <b>실제 아이가 아니라 AI로 만든 가상 인물</b>이에요.
+          맨 위 <b>&lsquo;사진 한 장이면 됩니다&rsquo;</b>는 실제 사진으로 만든 예시이고,
+          <br />
+          그림체·주제 샘플의 아이는 <b>AI로 만든 가상 인물</b>이에요.
           <br />
           우리 아이 사진을 올리시면 <b>그 아이를 닮은 얼굴</b>로 그려집니다.
           <br />

@@ -612,6 +612,72 @@ input[type="text"]:focus,
   font-size: 13.5px;
   color: var(--ink-soft);
 }
+/* 사진 → 삽화 (닮음을 눈으로 보여주는 자리) */
+.before-after {
+  margin: 8px 0 34px;
+}
+.before-after h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--ink);
+  margin: 0 0 2px;
+  text-align: center;
+}
+.before-after .hint {
+  text-align: center;
+  margin: 0 0 16px;
+}
+.ba-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.ba-row figure {
+  margin: 0;
+  flex: 1 1 0;
+  max-width: 220px;
+}
+.ba-row img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid #e8dcc6;
+  box-shadow: 0 12px 28px -18px var(--shadow);
+  display: block;
+}
+/* 사진은 '입력'이라 살짝 작게 두어 결과물이 주인공이 되게 한다 */
+.ba-row .ba-photo {
+  max-width: 168px;
+}
+.ba-row .ba-photo img {
+  border-style: dashed;
+  border-color: #d6c6a8;
+}
+.ba-row figcaption {
+  font-family: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: 8px;
+}
+.ba-arrow {
+  font-size: 26px;
+  color: var(--accent);
+  flex: 0 0 auto;
+  margin-top: -18px;
+}
+@media (max-width: 520px) {
+  .ba-row {
+    gap: 7px;
+  }
+  .ba-arrow {
+    font-size: 18px;
+  }
+}
+
 /* 그림체 비교 (같은 아이·같은 장면) */
 .style-compare {
   margin: 8px 0 30px;
