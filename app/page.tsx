@@ -11,6 +11,8 @@ import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-cl
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import ConsentBox from "./consent-box";
 import PhotoCropper from "./photo-cropper";
+import ReviewForm from "./review-form";
+import ReviewsSection from "./reviews-section";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 
 type Gender = "girl" | "boy";
@@ -687,6 +689,8 @@ export default function Home() {
         </section>
       )}
 
+      {phase === "form" && <ReviewsSection />}
+
       {phase === "form" && <SavedShareList />}
 
       {phase === "generating" && (
@@ -888,6 +892,7 @@ function BookViewer({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false); // 결제 전 청약철회 제한 동의
+  const [reviewed, setReviewed] = useState(true); // 로드 전에는 후기 폼을 숨긴다
   const [exporting, setExporting] = useState(false); // 소리책 만드는 중
   const [exportStep, setExportStep] = useState("");
 
@@ -1190,6 +1195,11 @@ function BookViewer({
       setExportStep("");
     }
   }, [exporting, pages, title, collectAudios]);
+
+  // 이 책의 후기를 이미 남겼는지
+  useEffect(() => {
+    kvGet<string[]>("reviewed").then((list) => setReviewed((list ?? []).includes(title)));
+  }, [title]);
 
   // 이 책으로 이미 만들어 둔 공유 링크가 있으면 되살린다 (결제 리다이렉트 복귀 등)
   useEffect(() => {
@@ -1556,6 +1566,16 @@ function BookViewer({
             지금은 신청만 받아요. 결제는 제작이 확정된 뒤에 따로 안내드릴게요.
           </div>
         </div>
+      )}
+
+      {paid && allDone && !reviewed && (
+        <ReviewForm
+          bookTitle={title}
+          onDone={async () => {
+            const list = (await kvGet<string[]>("reviewed")) ?? [];
+            await kvSet("reviewed", [...list, title]);
+          }}
+        />
       )}
 
       {(saveError || error) && <div className="error">{saveError || error}</div>}

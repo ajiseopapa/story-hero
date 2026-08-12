@@ -354,6 +354,131 @@ input[type="text"]:focus,
   box-shadow: 0 12px 26px -12px #6b91c2;
 }
 
+/* ---------- 후기 ---------- */
+.review-box {
+  margin-top: 18px;
+  background: var(--paper-2);
+  border: 1px dashed #ddceb3;
+  border-radius: 18px;
+  padding: 20px 16px;
+  text-align: center;
+}
+.review-box .review-emoji {
+  font-size: 30px;
+}
+.review-box .review-title {
+  font-family: var(--hand);
+  font-size: 21px;
+  margin: 4px 0 2px;
+}
+.review-stars {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.review-stars button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 32px;
+  line-height: 1;
+  padding: 2px;
+  color: #e0d6c2;
+  transition: color 0.12s, transform 0.12s;
+}
+.review-stars button.on {
+  color: var(--gold);
+}
+.review-stars button:hover {
+  transform: scale(1.1);
+}
+.review-text {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  padding: 12px 14px;
+  border: 1px solid #ddceb3;
+  border-radius: 13px;
+  background: #fff;
+  outline: none;
+  resize: vertical;
+}
+.review-text:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(224, 138, 123, 0.18);
+}
+.review-count {
+  text-align: right;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin: 4px 0 10px;
+}
+
+.reviews {
+  margin-top: 26px;
+}
+.reviews h2 {
+  font-family: var(--hand);
+  font-size: 23px;
+  text-align: center;
+  margin: 0 0 14px;
+  color: var(--ink);
+}
+.reviews ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.reviews li {
+  background: var(--paper-2);
+  border: 1px solid #e8dcc6;
+  border-radius: 16px;
+  padding: 15px 16px;
+}
+.reviews li p {
+  margin: 8px 0 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--ink);
+  word-break: keep-all;
+}
+.review-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.review-rate {
+  color: var(--gold);
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+.review-rate i {
+  color: #e0d6c2;
+  font-style: normal;
+}
+.review-who {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.review-who em {
+  font-style: normal;
+}
+.review-date {
+  margin-top: 8px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: #a99a85;
+}
+
 /* ---------- 샘플 갤러리 ---------- */
 .sample-strip {
   margin-top: 22px;
