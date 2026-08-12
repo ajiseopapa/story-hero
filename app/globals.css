@@ -188,7 +188,11 @@ body {
   font-weight: 500;
 }
 
+/* password·email도 같이 — 빠뜨리면 그 칸만 브라우저 기본 모양으로 튄다 */
 input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="tel"],
 .field select {
   width: 100%;
   /* 입력 중인 글자는 고딕이 또렷하다 — 여기만 바탕체를 쓰지 않는다 */
@@ -204,6 +208,9 @@ input[type="text"],
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
 .field select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(224, 138, 123, 0.18);
@@ -612,6 +619,44 @@ input[type="text"]:focus,
   font-size: 13.5px;
   color: var(--ink-soft);
 }
+/* 관리 화면 목차 — 카드 전체가 눌리는 메뉴 (기본 파란 링크가 튀어 보였다) */
+.admin-menu {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+.admin-item {
+  display: block;
+  background: var(--paper-2);
+  border: 1px solid #e8dcc6;
+  border-radius: 18px;
+  padding: 18px 20px;
+  text-decoration: none;
+  box-shadow: 0 10px 28px -22px var(--shadow);
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.admin-item:hover {
+  border-color: var(--accent);
+  background: #fffaf6;
+  transform: translateY(-1px);
+}
+.admin-item b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--ink);
+}
+.admin-item span {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--text);
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--ink-soft);
+  word-break: keep-all;
+}
+
 /* 사진 → 삽화 (닮음을 눈으로 보여주는 자리) */
 .before-after {
   margin: 8px 0 34px;

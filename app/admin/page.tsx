@@ -46,25 +46,26 @@ export default function AdminIndexPage() {
           <input
             type="password"
             value={key}
-            placeholder="Vercel 환경변수 ADMIN_KEY 값"
+            placeholder="REVIEW_ADMIN_KEY 값"
             onChange={(e) => setKey(e.target.value.trim())}
           />
         </div>
         <p className="hint">
           키는 저장하지 않습니다. 이 화면을 벗어나면 다시 넣어야 합니다.
+          <br />
+          값은 프로젝트의 <b>.env.local</b> 파일이나 Vercel 환경변수{" "}
+          <b>REVIEW_ADMIN_KEY</b>에 있습니다.
         </p>
       </section>
 
-      {PAGES.map((p) => (
-        <section className="card" key={p.href}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>
-            <a href={link(p.href)}>{p.title}</a>
-          </h2>
-          <p className="hint" style={{ marginTop: 4 }}>
-            {p.desc}
-          </p>
-        </section>
-      ))}
+      <nav className="admin-menu">
+        {PAGES.map((p) => (
+          <a className="admin-item" href={link(p.href)} key={p.href}>
+            <b>{p.title}</b>
+            <span>{p.desc}</span>
+          </a>
+        ))}
+      </nav>
     </main>
   );
 }
