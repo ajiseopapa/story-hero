@@ -1,5 +1,6 @@
 // 카톡·SNS에 첫 화면 주소를 붙였을 때 뜨는 미리보기 카드.
-// 한글이 나와야 해서 브랜드 손글씨체(Gaegu, OFL)를 직접 실어 그린다.
+// 한글이 나와야 해서 제목용 글꼴(고운바탕, OFL)을 직접 실어 그린다.
+// 이 카드에 쓰는 글자만 남긴 subset이라 파일이 작다 — 원본 8MB는 커밋하지 않는다.
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
@@ -17,7 +18,9 @@ const BOOKS = [
 ];
 
 export default async function OpengraphImage() {
-  const gaegu = await readFile(join(process.cwd(), "assets/fonts/Gaegu-Bold.ttf"));
+  const batang = await readFile(
+    join(process.cwd(), "assets/fonts/GowunBatang-Bold.subset.ttf"),
+  );
 
   return new ImageResponse(
     (
@@ -61,7 +64,7 @@ export default async function OpengraphImage() {
             <div>그림동화</div>
           </div>
           <div style={{ fontSize: 35, color: "#7a6a58", lineHeight: 1.5 }}>
-            사진과 이름을 넣으면 아이를 닮은 수채화 동화책이 됩니다
+            사진과 이름을 넣으면 아이를 닮은 그림동화책이 됩니다
           </div>
           <div style={{ fontSize: 28, color: "#a99a85", marginTop: 30 }}>
             kidsbook-story.vercel.app
@@ -118,7 +121,7 @@ export default async function OpengraphImage() {
     ),
     {
       ...size,
-      fonts: [{ name: "Gaegu", data: gaegu, style: "normal", weight: 700 }],
+      fonts: [{ name: "Gowun Batang", data: batang, style: "normal", weight: 700 }],
     },
   );
 }

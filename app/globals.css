@@ -7,10 +7,15 @@
   --accent-2: #9bb08a;
   --gold: #e3b15f;
   --shadow: rgba(74, 63, 53, 0.18);
-  --serif: "Nanum Myeongjo", serif;
-  --hand: "Gaegu", "Nanum Myeongjo", cursive;
-  /* 작은 안내 텍스트용: 명조/손글씨는 작은 크기에서 획이 뭉개져 안 보임. 굵기가 있는 고딕으로 */
-  --sans: "Noto Sans KR", "Malgun Gothic", sans-serif;
+  /* 글꼴은 2종만. 역할을 나눠 통일감을 준다 (2026-08-12).
+     --display: 제목·라벨·동화 본문 — 따뜻한 바탕체, "책" 느낌
+     --text   : 버튼·입력·힌트 등 UI 전부 — 고딕, 작은 크기에서도 또렷 */
+  --display: "Gowun Batang", "Nanum Myeongjo", serif;
+  --text: "Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  /* 아래 셋은 예전 이름 — 남아있는 참조가 깨지지 않도록 새 체계로 연결해 둔다 */
+  --serif: var(--display);
+  --hand: var(--display);
+  --sans: var(--text);
 }
 
 * {
@@ -24,7 +29,7 @@ body {
 }
 
 body {
-  font-family: var(--serif);
+  font-family: var(--display);
   color: var(--ink);
   background: radial-gradient(circle at 20% 15%, #fbf6ec 0%, var(--paper) 55%, #efe3cf 100%);
   min-height: 100dvh;
@@ -44,7 +49,8 @@ body {
 }
 .hero .badge {
   display: inline-block;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 17px;
   color: var(--accent);
   background: #fff;
@@ -55,7 +61,7 @@ body {
 }
 .hero h1 {
   font-size: clamp(28px, 6vw, 40px);
-  font-weight: 800;
+  font-weight: 700;
   margin: 0 0 8px;
   line-height: 1.25;
   letter-spacing: -0.5px;
@@ -63,7 +69,7 @@ body {
 .hero p {
   margin: 0;
   color: var(--ink-soft);
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 17.5px;
   line-height: 1.75;
   font-weight: 500;
@@ -83,7 +89,7 @@ body {
   border: 1px solid #e8dcc6;
   border-radius: 14px;
   padding: 12px 8px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   line-height: 1.5;
   color: var(--ink);
@@ -125,12 +131,13 @@ body {
   margin-bottom: 14px;
 }
 .child-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 22px;
   color: var(--ink);
 }
 .child-remove {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   color: var(--ink-soft);
   background: none;
@@ -151,7 +158,8 @@ body {
   background: #fff;
   border-radius: 16px;
   padding: 15px;
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 18px;
   color: var(--ink);
   cursor: pointer;
@@ -164,13 +172,14 @@ body {
 }
 .field > label {
   display: block;
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 21px;
   margin-bottom: 8px;
   color: var(--ink);
 }
 .hint {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 16px;
   color: var(--ink-soft);
   margin-top: 6px;
@@ -182,7 +191,9 @@ body {
 input[type="text"],
 .field select {
   width: 100%;
-  font-family: var(--serif);
+  /* 입력 중인 글자는 고딕이 또렷하다 — 여기만 바탕체를 쓰지 않는다 */
+  font-family: var(--text);
+  font-weight: 500;
   font-size: 18px;
   color: var(--ink);
   padding: 13px 15px;
@@ -211,7 +222,8 @@ input[type="text"]:focus,
   border-radius: 14px;
   padding: 16px 12px;
   text-align: center;
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 21px;
   transition: all 0.15s;
   user-select: none;
@@ -245,7 +257,8 @@ input[type="text"]:focus,
   border-radius: 14px;
   padding: 13px 8px;
   text-align: center;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 17px;
   transition: all 0.15s;
   user-select: none;
@@ -290,14 +303,15 @@ input[type="text"]:focus,
 }
 .art b {
   display: block;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 17px;
   color: var(--ink);
 }
 .art em {
   display: block;
   font-style: normal;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 13px;
   color: var(--ink-soft);
   margin-top: 2px;
@@ -314,7 +328,7 @@ input[type="text"]:focus,
   left: 50%;
   transform: translateX(-50%);
   font-style: normal;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 12px;
   color: #fff;
   background: var(--accent);
@@ -353,12 +367,13 @@ input[type="text"]:focus,
   font-size: 34px;
 }
 .upload .up-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 20px;
   margin: 8px 0 2px;
 }
 .upload .up-sub {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   color: var(--ink-soft);
   font-weight: 500;
@@ -376,7 +391,7 @@ input[type="text"]:focus,
 }
 .preview-photo .change {
   margin-top: 10px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   color: var(--accent);
   text-decoration: underline;
@@ -388,7 +403,8 @@ input[type="text"]:focus,
   width: 100%;
   border: none;
   cursor: pointer;
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 22px;
   color: #fff;
   padding: 16px;
@@ -433,7 +449,8 @@ input[type="text"]:focus,
   font-size: 30px;
 }
 .review-box .review-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 21px;
   margin: 4px 0 2px;
 }
@@ -461,7 +478,7 @@ input[type="text"]:focus,
 }
 .review-text {
   width: 100%;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 16px;
   line-height: 1.7;
   color: var(--ink);
@@ -478,7 +495,7 @@ input[type="text"]:focus,
 }
 .review-count {
   text-align: right;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 13px;
   color: var(--ink-soft);
   margin: 4px 0 10px;
@@ -488,7 +505,8 @@ input[type="text"]:focus,
   margin-top: 26px;
 }
 .reviews h2 {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 23px;
   text-align: center;
   margin: 0 0 14px;
@@ -509,7 +527,7 @@ input[type="text"]:focus,
 }
 .reviews li p {
   margin: 8px 0 0;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 16.5px;
   line-height: 1.75;
   color: var(--ink);
@@ -532,7 +550,7 @@ input[type="text"]:focus,
   font-style: normal;
 }
 .review-who {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14.5px;
   color: var(--ink-soft);
   font-weight: 500;
@@ -542,7 +560,7 @@ input[type="text"]:focus,
 }
 .review-date {
   margin-top: 8px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 13px;
   color: #a99a85;
 }
@@ -558,13 +576,14 @@ input[type="text"]:focus,
   margin-bottom: 10px;
 }
 .sample-strip-head b {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 19px;
   color: var(--ink);
 }
 .sample-strip-head a,
 .sample-grid a {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   color: var(--accent);
   text-decoration: none;
@@ -589,7 +608,7 @@ input[type="text"]:focus,
 .sample-strip-row span {
   display: block;
   margin-top: 5px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 13.5px;
   color: var(--ink-soft);
 }
@@ -598,7 +617,8 @@ input[type="text"]:focus,
   margin: 8px 0 30px;
 }
 .style-compare h2 {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 25px;
   color: var(--ink);
   margin: 0 0 2px;
@@ -625,7 +645,7 @@ input[type="text"]:focus,
   display: block;
 }
 .style-row figcaption {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 12.5px;
   color: var(--ink-soft);
   text-align: center;
@@ -634,7 +654,8 @@ input[type="text"]:focus,
 }
 .style-row figcaption b {
   display: block;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 17px;
   color: var(--ink);
 }
@@ -646,7 +667,8 @@ input[type="text"]:focus,
 }
 
 .sample-heading {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 25px;
   color: var(--ink);
   margin: 0 0 12px;
@@ -672,7 +694,7 @@ input[type="text"]:focus,
 }
 .sample-grid figcaption {
   margin-top: 8px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14.5px;
   color: var(--ink-soft);
   line-height: 1.6;
@@ -682,7 +704,8 @@ input[type="text"]:focus,
 }
 .sample-grid figcaption b {
   display: block;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 17px;
   color: var(--ink);
 }
@@ -700,7 +723,7 @@ input[type="text"]:focus,
   background: #fffdf8;
   border: 1px solid #e8dcc6;
   border-radius: 12px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   line-height: 1.75;
   color: var(--ink-soft);
@@ -745,12 +768,13 @@ input[type="text"]:focus,
 }
 .crop-head b {
   display: block;
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 21px;
   margin-bottom: 4px;
 }
 .crop-head span {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   color: var(--ink-soft);
   line-height: 1.6;
@@ -796,7 +820,7 @@ input[type="text"]:focus,
   align-items: center;
   gap: 10px;
   margin-top: 14px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   color: var(--ink-soft);
 }
@@ -815,7 +839,7 @@ input[type="text"]:focus,
   background: #fff;
   border-radius: 12px;
   padding: 8px 16px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   color: var(--ink);
   cursor: pointer;
@@ -837,7 +861,7 @@ input[type="text"]:focus,
   border-radius: 18px;
   padding: 16px 16px 14px;
   margin: 22px 0 18px;
-  font-family: var(--sans);
+  font-family: var(--text);
 }
 .consent input[type="checkbox"] {
   flex: 0 0 auto;
@@ -902,7 +926,7 @@ input[type="text"]:focus,
   background: none;
   border: none;
   color: var(--ink-soft);
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   cursor: pointer;
   padding: 4px;
@@ -950,7 +974,7 @@ input[type="text"]:focus,
   background: #fbf6ec;
   border: 1px solid #e8dcc6;
   border-radius: 12px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15.5px;
   line-height: 1.65;
   color: var(--ink);
@@ -988,13 +1012,14 @@ input[type="text"]:focus,
   text-align: center;
 }
 .share-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 20px;
   margin-bottom: 10px;
 }
 .share-url {
   display: block;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   color: #4d6f9c;
   word-break: break-all;
@@ -1020,7 +1045,7 @@ input[type="text"]:focus,
   gap: 10px;
 }
 .resume-label {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   color: var(--ink-soft);
 }
@@ -1028,13 +1053,14 @@ input[type="text"]:focus,
   border: none;
   background: none;
   cursor: pointer;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 13px;
   color: var(--ink-soft);
   padding: 4px 6px;
 }
 .resume-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 20px;
   margin: 6px 0 14px;
   word-break: keep-all;
@@ -1048,7 +1074,8 @@ input[type="text"]:focus,
   gap: 8px;
 }
 .share-row-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 18px;
 }
 
@@ -1058,7 +1085,7 @@ input[type="text"]:focus,
   border: 1px solid #f3c9c2;
   border-radius: 12px;
   padding: 12px 14px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 16px;
   margin-top: 14px;
   line-height: 1.6;
@@ -1085,13 +1112,14 @@ input[type="text"]:focus,
   }
 }
 .progress-wrap h2 {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 24px;
   margin: 0 0 8px;
 }
 .progress-wrap .step {
   color: var(--ink-soft);
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 16px;
   min-height: 22px;
 }
@@ -1118,7 +1146,7 @@ input[type="text"]:focus,
 .book-title {
   text-align: center;
   font-size: clamp(24px, 5vw, 34px);
-  font-weight: 800;
+  font-weight: 700;
   margin: 6px 0 18px;
 }
 .page {
@@ -1164,12 +1192,14 @@ input[type="text"]:focus,
 }
 .page .pagenum {
   margin-top: 14px;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 14px;
   color: var(--ink-soft);
 }
 .page .cover-caption {
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 15px;
   color: var(--accent);
   padding: 14px;
@@ -1186,7 +1216,8 @@ input[type="text"]:focus,
   text-align: center;
 }
 .read-aloud .read-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 18px;
   color: var(--ink);
   margin-bottom: 10px;
@@ -1203,7 +1234,8 @@ input[type="text"]:focus,
   background: #fff;
   border-radius: 13px;
   padding: 10px 8px;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 16px;
   transition: all 0.15s;
   user-select: none;
@@ -1217,7 +1249,7 @@ input[type="text"]:focus,
   margin-bottom: 12px;
 }
 .rec-status {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   color: var(--ink-soft);
   margin-bottom: 10px;
@@ -1245,7 +1277,8 @@ input[type="text"]:focus,
 .rec-btn {
   border: none;
   cursor: pointer;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 17px;
   color: #fff;
   padding: 11px 20px;
@@ -1273,7 +1306,7 @@ input[type="text"]:focus,
 }
 .read-note {
   margin-top: 12px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   color: var(--accent-2);
   background: #f2f6ee;
@@ -1296,7 +1329,8 @@ input[type="text"]:focus,
   border-radius: 13px;
   padding: 10px 4px;
   text-align: center;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 15px;
   transition: all 0.15s;
   user-select: none;
@@ -1314,7 +1348,8 @@ input[type="text"]:focus,
 .read-btn {
   border: none;
   cursor: pointer;
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 18px;
   color: #fff;
   padding: 12px 26px;
@@ -1348,7 +1383,8 @@ input[type="text"]:focus,
   border: 1.5px solid #ddceb3;
   background: #fff;
   color: var(--ink);
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 18px;
   padding: 11px 20px;
   border-radius: 12px;
@@ -1396,13 +1432,14 @@ input[type="text"]:focus,
   margin-bottom: 12px;
 }
 .locked .lock-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 24px;
   margin-bottom: 8px;
   color: var(--ink);
 }
 .locked .lock-sub {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   color: var(--ink-soft);
   line-height: 1.7;
@@ -1419,7 +1456,8 @@ input[type="text"]:focus,
 .unlock-note {
   margin-top: 14px;
   text-align: center;
-  font-family: var(--hand);
+  font-family: var(--text);
+  font-weight: 600;
   font-size: 16px;
   color: var(--accent-2);
   background: #f2f6ee;
@@ -1432,7 +1470,7 @@ input[type="text"]:focus,
 .price-anchor {
   text-align: center;
   margin-top: 12px;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
 }
 .price-anchor s {
@@ -1443,7 +1481,7 @@ input[type="text"]:focus,
 .price-anchor b {
   color: var(--accent);
   font-size: 19px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* ---------- 인쇄본 업셀 ---------- */
@@ -1461,7 +1499,7 @@ input[type="text"]:focus,
 }
 .upsell .upsell-badge {
   display: inline-block;
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1473,13 +1511,14 @@ input[type="text"]:focus,
   margin-bottom: 10px;
 }
 .upsell .upsell-title {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 21px;
   color: var(--ink);
   margin-bottom: 6px;
 }
 .upsell .upsell-sub {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   color: var(--ink-soft);
   line-height: 1.7;
@@ -1492,7 +1531,8 @@ input[type="text"]:focus,
 .upsell .upsell-btn {
   display: inline-block;
   text-decoration: none;
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 18px;
   color: #fff;
   padding: 12px 24px;
@@ -1505,7 +1545,7 @@ input[type="text"]:focus,
   transform: translateY(-1px);
 }
 .upsell .upsell-note {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 12px;
   color: var(--ink-soft);
   opacity: 0.8;
@@ -1526,7 +1566,7 @@ input[type="text"]:focus,
 .footer {
   text-align: center;
   color: var(--ink-soft);
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 15px;
   margin-top: 40px;
   line-height: 1.7;
@@ -1578,7 +1618,7 @@ input[type="text"]:focus,
 
 /* 약관/정책 본문 */
 .legal {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 16px;
   line-height: 1.85;
   color: var(--ink);
@@ -1586,7 +1626,8 @@ input[type="text"]:focus,
   word-break: keep-all;
 }
 .legal h2 {
-  font-family: var(--hand);
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 21px;
   color: var(--ink);
   margin: 26px 0 8px;
@@ -1627,7 +1668,7 @@ input[type="text"]:focus,
   white-space: nowrap;
 }
 .legal-back {
-  font-family: var(--sans);
+  font-family: var(--text);
   font-size: 14px;
   color: var(--accent);
   text-decoration: none;

@@ -3,7 +3,7 @@ import { SITE_ORIGIN } from "@/lib/sharebook";
 import "./globals.css";
 
 const DESCRIPTION =
-  "아이 이름과 사진을 넣으면, 우리 아이가 수채화 동화책의 주인공이 되는 그림동화를 만들어드려요.";
+  "아이 이름과 사진을 넣으면, 우리 아이를 닮은 얼굴로 그린 그림동화책을 만들어드려요. 사실적 그림·수채화·색연필·크레파스 중에 고를 수 있어요.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN), // opengraph-image의 절대 주소 생성에 필요
@@ -39,10 +39,17 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* 글꼴 2종만 쓴다 — 제목·동화 본문은 고운바탕(따뜻한 바탕체), UI는 Pretendard(고딕).
+            예전엔 손글씨·명조·고딕 3종이 한 화면에 섞여 통일감이 없었다 (2026-08-12). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
           rel="stylesheet"
         />
       </head>

@@ -81,18 +81,18 @@ async function renderPage(page: PdfPage, pageNum: number): Promise<string> {
   ctx.textBaseline = "middle";
 
   if (page.kind === "cover") {
-    ctx.font = "800 56px 'Nanum Myeongjo', serif";
+    ctx.font = "800 56px 'Gowun Batang', 'Nanum Myeongjo', serif";
     ctx.fillText(`《 ${page.text} 》`, W / 2, IMG_H + CAP_H / 2);
   } else {
     let fontSize = 34;
     let lineHeight = 52;
-    ctx.font = `${fontSize}px 'Nanum Myeongjo', serif`;
+    ctx.font = `${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
     let lines = wrapText(ctx, page.text, W - 140);
     // 넘치면 폰트 축소
     if (lines.length * lineHeight > CAP_H - 40) {
       fontSize = 28;
       lineHeight = 42;
-      ctx.font = `${fontSize}px 'Nanum Myeongjo', serif`;
+      ctx.font = `${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
       lines = wrapText(ctx, page.text, W - 120);
     }
     const startY = IMG_H + (CAP_H - (lines.length - 1) * lineHeight) / 2 - 14;
@@ -101,7 +101,7 @@ async function renderPage(page: PdfPage, pageNum: number): Promise<string> {
     });
 
     // 페이지 번호 (장면 페이지만)
-    ctx.font = "22px 'Nanum Myeongjo', serif";
+    ctx.font = "22px 'Gowun Batang', 'Nanum Myeongjo', serif";
     ctx.fillStyle = "#7a6a58";
     ctx.fillText(`— ${pageNum} —`, W / 2, PAGE_H - 32);
   }

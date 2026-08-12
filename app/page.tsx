@@ -445,7 +445,7 @@ export default function Home() {
           주인공인 동화책
         </h1>
         <p>
-          사진 속 얼굴을 그대로 살려 수채화로 그립니다.
+          사진 속 얼굴을 그대로 살려 그림동화로 그립니다.
           <br />
           <b>표지는 무료</b>예요 — 얼굴을 먼저 보고 결제하세요.
           <br />
@@ -784,7 +784,7 @@ export default function Home() {
       )}
 
       <footer className="footer">
-        수채화 삽화는 AI가 사진을 참고해 새로 그린 그림이에요.
+        삽화는 AI가 사진을 참고해 새로 그린 그림이에요.
         <br />
         만든 이야기는 아이와 함께 읽어주세요 💛
         <div className="legal-links">
