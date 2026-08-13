@@ -1,4 +1,5 @@
-import { ID_RE, listOrders, setOrderStatus } from "@/lib/orders";
+import { mailOrderPaid } from "@/lib/mail";
+import { ID_RE, getOrder, listOrders, setOrderStatus, shortId } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,8 +38,19 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const memo = typeof body.memo === "string" ? body.memo.slice(0, 200) : undefined;
+  // 상태 전환 감지용 — 이미 paid인 주문에 다시 paid를 눌러도 안내 메일이 중복 발송되지 않게
+  const before = await getOrder(id);
   const updated = await setOrderStatus(id, action, memo);
   if (!updated) return Response.json({ error: "주문을 찾을 수 없어요." }, { status: 404 });
+
+  if (action === "paid" && before?.status !== "paid") {
+    await mailOrderPaid({
+      email: updated.email,
+      name: updated.name,
+      bookTitle: updated.bookTitle,
+      orderNo: shortId(updated.id),
+    });
+  }
 
   return Response.json({ ok: true, order: updated });
 }

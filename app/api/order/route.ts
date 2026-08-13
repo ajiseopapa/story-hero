@@ -1,4 +1,5 @@
 import { consumeQuota, ipBucket } from "@/lib/limits";
+import { mailAdminNewOrder, mailOrderReceived } from "@/lib/mail";
 import { isStoreReady, newOrderId, newOrderToken, saveOrder, shortId } from "@/lib/orders";
 import type { Order } from "@/lib/orders";
 import { track } from "@/lib/stats";
@@ -77,10 +78,27 @@ export async function POST(req: Request): Promise<Response> {
     /* 조용히 실패 */
   }
 
+  // 접수 확인(손님)·새 주문 알림(관리자). 발송 실패해도 주문은 이미 접수됐다.
+  const orderNo = shortId(order.id);
+  await mailOrderReceived({
+    email: order.email,
+    name: order.name,
+    bookTitle: order.bookTitle,
+    amount: order.amount,
+    orderNo,
+  });
+  await mailAdminNewOrder({
+    name: order.name,
+    email: order.email,
+    bookTitle: order.bookTitle,
+    amount: order.amount,
+    orderNo,
+  });
+
   return Response.json({
     ok: true,
     id: order.id,
     token: order.token,
-    orderNo: shortId(order.id),
+    orderNo,
   });
 }
