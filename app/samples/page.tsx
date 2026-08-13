@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { SAMPLES, SAMPLE_H, SAMPLE_W, STYLE_SAMPLES } from "@/lib/samples";
+import { AGE_SAMPLES, SAMPLES, SAMPLE_H, SAMPLE_W, STYLE_SAMPLES } from "@/lib/samples";
 import { SITE_ORIGIN } from "@/lib/sharebook";
 
 const TITLE = "동화책 샘플 보기 · 키즈북";
@@ -78,8 +78,34 @@ export default function SamplesPage() {
       </section>
 
       <section className="style-compare">
+        <h2>나이에 맞게 그려드려요</h2>
+        <p className="hint">
+          같은 사진, 같은 장면입니다. 입력한 나이만 바꿔 그렸어요.
+          <br />
+          아기는 아기답게, 형아는 형아답게 — 체형과 얼굴이 나이를 따라갑니다.
+        </p>
+        <div className="style-row">
+          {AGE_SAMPLES.map((a) => (
+            <figure key={a.id}>
+              <Image
+                src={`/samples/${a.id}.jpg`}
+                alt={`${a.label} 아이로 그린 동화 삽화 샘플`}
+                width={SAMPLE_W}
+                height={SAMPLE_H}
+                sizes="(max-width: 700px) 45vw, 240px"
+              />
+              <figcaption>
+                <b>{a.label}</b>
+                {a.sub}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
+      <section className="style-compare">
         <h2>그림체를 고를 수 있어요</h2>
-        <p className="hint">같은 아이, 같은 장면을 그림체만 바꿔 그렸습니다.</p>
+        <p className="hint">같은 그림에 재료만 바꿔 칠했습니다. 구도는 그대로예요.</p>
         <div className="style-row">
           {STYLE_SAMPLES.map((s) => (
             <figure key={s.id}>

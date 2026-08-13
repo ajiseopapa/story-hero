@@ -20,7 +20,20 @@ export const SAMPLES: Sample[] = [
 export const SAMPLE_W = 720;
 export const SAMPLE_H = 1080;
 
+// 나이 비교 — 같은 아이·같은 장면(구름 위)을 입력 나이만 바꿔 그린 것.
+// 나이에 따라 등신·체형·얼굴 성숙도가 달라진다는 걸 눈으로 보여준다 (2026-08-13).
+export type AgeSample = { id: string; label: string; sub: string };
+
+export const AGE_SAMPLES: AgeSample[] = [
+  { id: "age-1", label: "1세", sub: "아기 체형 · 4등신" },
+  { id: "age-4", label: "4세", sub: "유아 체형 · 5등신" },
+  { id: "age-8", label: "8세", sub: "초등 저학년 · 6등신" },
+  { id: "age-10", label: "10세", sub: "초등 고학년 · 6등신 이상" },
+];
+
 // 그림체 비교 — 같은 아이·같은 장면(마법의 숲)을 그림체만 바꿔 그린 것.
+// ⚠️사진에서 4장을 따로 그리면 구도·포즈까지 달라져 싸구려로 보인다.
+// 사실적 그림 1장을 원본으로 두고 "같은 그림을 재료만 바꿔 다시 칠하기"로 만든다.
 export type StyleSample = { id: string; label: string; sub: string };
 
 export const STYLE_SAMPLES: StyleSample[] = [
