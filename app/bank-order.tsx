@@ -11,6 +11,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
+import { BUSINESS } from "@/lib/business";
 
 const BANK_ACCOUNT = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? "";
 
@@ -244,8 +245,13 @@ export default function BankOrderBox({
             </div>
 
             <p className="hint" style={{ marginTop: 12 }}>
-              보통 몇 시간 안에 확인됩니다. 오래 걸리면 주문번호 <b>{order.orderNo}</b>와 함께
-              메일로 문의해주세요.
+              보통 몇 시간 안에 확인됩니다. 오래 걸리면 주문번호 <b>{order.orderNo}</b>와 함께{" "}
+              <a href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(
+                `[입금 확인 문의] ${order.orderNo}`,
+              )}`}>
+                {BUSINESS.email}
+              </a>
+              로 문의해주세요.
             </p>
           </>
         )}

@@ -1673,7 +1673,7 @@ function BookViewer({
           </div>
           <a
             className="upsell-btn"
-            href={`mailto:sensitivetk@gmail.com?subject=${encodeURIComponent(
+            href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(
               `[동화책 인쇄본 1차 제작 신청] ${title}`,
             )}&body=${encodeURIComponent(
               "1차 제작분으로 신청할게요!\n연락 받으실 이메일 또는 전화번호를 남겨주세요:\n",
