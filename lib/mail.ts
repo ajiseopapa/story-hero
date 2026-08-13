@@ -7,12 +7,13 @@
  */
 import nodemailer from "nodemailer";
 
-const HOST = process.env.SMTP_HOST ?? "smtps.hiworks.com";
-const PORT = Number(process.env.SMTP_PORT ?? "465");
-const USER = process.env.SMTP_USER; // 예: support@kidstel.co.kr
-const PASS = process.env.SMTP_PASS;
-const FROM = process.env.MAIL_FROM ?? USER;
-const ADMIN = process.env.MAIL_ADMIN ?? USER; // 새 주문 알림 받을 주소
+// 대시보드에서 붙여넣을 때 끝에 공백·줄바꿈이 딸려 들어와 인증이 깨지는 일이 잦아 trim한다
+const HOST = (process.env.SMTP_HOST ?? "smtps.hiworks.com").trim();
+const PORT = Number((process.env.SMTP_PORT ?? "465").trim());
+const USER = process.env.SMTP_USER?.trim(); // 예: support@kidstel.co.kr
+const PASS = process.env.SMTP_PASS?.trim();
+const FROM = process.env.MAIL_FROM?.trim() ?? USER;
+const ADMIN = process.env.MAIL_ADMIN?.trim() ?? USER; // 새 주문 알림 받을 주소
 const BANK_ACCOUNT = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? "";
 const SITE = "https://story.kidstel.co.kr";
 
@@ -40,7 +41,11 @@ async function send(to: string, subject: string, html: string): Promise<void> {
     });
     await transport.sendMail({ from: `"키즈북" <${FROM}>`, to, subject, html });
   } catch (err) {
-    console.warn("mail send failed (fail-open):", err);
+    // 원인 추적용: 어떤 계정·서버로 시도했는지 남긴다 (비밀번호는 길이만)
+    console.warn(
+      `mail send failed (fail-open) [host=${HOST}:${PORT} user=${USER} passLen=${PASS?.length ?? 0}]:`,
+      err,
+    );
   }
 }
 
