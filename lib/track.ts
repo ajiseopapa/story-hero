@@ -13,7 +13,32 @@
  */
 
 const SEEN_KEY = "kidsbook:tracked";
+const SRC_KEY = "kidsbook:src";
 const FLUSH_MS = 400;
+
+/**
+ * 유입 출처 — 링크에 `?s=reel1` 을 붙여서 뿌리면 그 이름으로 퍼널이 따로 쌓인다.
+ * 릴스·게시물마다 다른 이름을 주면 무엇이 실제로 사람을 데려왔는지 갈라 볼 수 있다.
+ *
+ * 한 번 잡은 출처는 세션이 끝날 때까지 유지한다 — 사람이 페이지를 옮겨 다녀도
+ * 파라미터가 사라진 뒤의 단계까지 같은 출처로 따라붙어야 퍼널이 성립한다.
+ * 값은 소문자·숫자·하이픈 16자로 깎는다(서버 이벤트 이름 규칙에 맞추기 위해서다).
+ */
+function source(): string {
+  try {
+    const saved = sessionStorage.getItem(SRC_KEY);
+    if (saved !== null) return saved;
+    const raw = new URLSearchParams(window.location.search).get("s") ?? "";
+    const clean = raw
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "")
+      .slice(0, 16);
+    sessionStorage.setItem(SRC_KEY, clean);
+    return clean;
+  } catch {
+    return ""; // sessionStorage가 막히면 출처 없이 전체 집계만 남긴다
+  }
+}
 
 let queue: string[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -65,6 +90,10 @@ export function trackStep(...names: string[]): void {
   if (fresh.length === 0) return;
   remember(fresh);
   queue.push(...fresh);
+  // 출처가 있으면 같은 단계를 출처별로도 쌓는다. 전체 퍼널은 그대로 두고 곁에 하나 더 남기는 것이라
+  // 꼬리표를 안 붙인 방문이 섞여도 전체 숫자는 어긋나지 않는다.
+  const src = source();
+  if (src) queue.push(...fresh.map((n) => `src:${src}:${n}`));
   if (!timer) timer = setTimeout(flush, FLUSH_MS);
 }
 

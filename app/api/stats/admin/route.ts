@@ -40,6 +40,18 @@ export async function GET(req: Request): Promise<Response> {
     if (group in breakdown && rest.length > 0) breakdown[group][rest.join(":")] = v;
   }
 
+  // 유입 출처별 퍼널 — 링크에 ?s=... 를 붙인 방문만 여기 쌓인다(lib/track.ts).
+  // 키 모양은 `src:<출처>:<단계>` 이고, 단계 이름 자체에 콜론이 있어서(sample:done) 첫 콜론에서만 자른다.
+  const sources: Record<string, Record<string, number>> = {};
+  for (const [k, v] of Object.entries(totals)) {
+    if (!k.startsWith("src:")) continue;
+    const rest = k.slice(4);
+    const cut = rest.indexOf(":");
+    if (cut <= 0) continue;
+    const name = rest.slice(0, cut);
+    (sources[name] ??= {})[rest.slice(cut + 1)] = v;
+  }
+
   return Response.json(
     {
       days,
@@ -47,6 +59,7 @@ export async function GET(req: Request): Promise<Response> {
       steps,
       extra: EXTRA.map((e) => ({ ...e, count: totals[e.key] ?? 0 })),
       breakdown,
+      sources,
       daily,
       leakExclude: [...LEAK_EXCLUDE],
     },

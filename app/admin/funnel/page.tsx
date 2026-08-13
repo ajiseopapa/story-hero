@@ -19,6 +19,7 @@ interface Data {
   steps: Step[];
   extra: { key: string; label: string; count: number }[];
   breakdown: Record<string, Record<string, number>>;
+  sources: Record<string, Record<string, number>>;
   daily: { date: string; counts: Record<string, number> }[];
   leakExclude: string[];
 }
@@ -55,9 +56,11 @@ export default function FunnelAdminPage() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [origin, setOrigin] = useState("");
 
   useEffect(() => {
     setKey(new URLSearchParams(window.location.search).get("key") ?? "");
+    setOrigin(window.location.origin);
   }, []);
 
   const load = useCallback(async (k: string, d: number) => {
@@ -198,6 +201,82 @@ export default function FunnelAdminPage() {
                 ))}
               </div>
             )}
+          </section>
+
+          <section className="card">
+            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>어디서 왔나</h2>
+            <div className="hint" style={{ marginBottom: 10 }}>
+              뿌리는 링크 뒤에 <code>?s=이름</code>을 붙이면 그 이름으로 따로 쌓입니다. 릴스마다
+              다른 이름을 주면 어느 릴스가 사람을 데려왔는지 갈라 볼 수 있어요.
+              <br />예: <code>{origin}/?s=reel1</code> · <code>{origin}/?s=dm</code>
+              <br />
+              이름은 영어 소문자·숫자·하이픈만 쓰세요. 꼬리표를 안 붙인 방문은 위 전체 퍼널에만
+              들어갑니다.
+            </div>
+            {(() => {
+              const visitKey = data.steps[0]?.key ?? "visit";
+              const payKey = "pay:click";
+              const rows = Object.entries(data.sources ?? {}).sort(
+                (a, b) => (b[1][visitKey] ?? 0) - (a[1][visitKey] ?? 0),
+              );
+              if (rows.length === 0) {
+                return <div className="hint">아직 꼬리표가 붙은 방문이 없어요.</div>;
+              }
+              return (
+                <div style={{ overflowX: "auto" }}>
+                  <table
+                    style={{ borderCollapse: "collapse", width: "100%", fontSize: ".9rem" }}
+                  >
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", padding: "6px 8px" }}>출처</th>
+                        {data.steps.map((s) => (
+                          <th key={s.key} style={{ textAlign: "right", padding: "6px 8px" }}>
+                            {s.label}
+                          </th>
+                        ))}
+                        <th style={{ textAlign: "right", padding: "6px 8px" }}>구매의사율</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(([name, counts]) => {
+                        const visits = counts[visitKey] ?? 0;
+                        return (
+                          <tr key={name} style={{ borderTop: "1px solid rgba(0,0,0,.08)" }}>
+                            <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
+                              <b>{name}</b>
+                            </td>
+                            {data.steps.map((s) => (
+                              <td
+                                key={s.key}
+                                style={{
+                                  textAlign: "right",
+                                  padding: "6px 8px",
+                                  fontVariantNumeric: "tabular-nums",
+                                }}
+                              >
+                                {counts[s.key] ?? 0}
+                              </td>
+                            ))}
+                            <td
+                              style={{
+                                textAlign: "right",
+                                padding: "6px 8px",
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {visits > 0
+                                ? `${Math.round(((counts[payKey] ?? 0) / visits) * 100)}%`
+                                : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </section>
 
           {worst && worst.fromPrev !== null && top > 0 && (
