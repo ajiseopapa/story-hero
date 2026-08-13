@@ -3,6 +3,7 @@
 // 계좌이체 주문 관리. 주소에 ?key=... 를 붙여야 열린다 (후기 검수·퍼널과 같은 키).
 // 여기서 "입금 확인"을 누르면 주문자 화면이 자동으로 열린다.
 import { useCallback, useEffect, useState } from "react";
+import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
 
 interface Order {
   id: string;
@@ -36,7 +37,7 @@ export default function OrderAdminPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    setKey(new URLSearchParams(window.location.search).get("key") ?? "");
+    setKey(recallAdminKey());
   }, []);
 
   const load = useCallback(async (k: string) => {
@@ -49,6 +50,7 @@ export default function OrderAdminPage() {
         setOrders([]);
         return;
       }
+      rememberAdminKey(k);
       const data = (await res.json()) as { orders: Order[] };
       setOrders(data.orders);
     } catch {

@@ -3,6 +3,7 @@
 // 관리 화면 목차. /admin 자체는 아무 데이터도 안 보여주고, 키를 받아 각 화면으로 넘겨주기만 한다.
 // (예전엔 /admin/funnel · /admin/reviews 주소를 외우고 있어야 했다)
 import { useEffect, useState } from "react";
+import { recallAdminKey } from "@/lib/admin-key";
 
 const PAGES: { href: string; title: string; desc: string }[] = [
   {
@@ -27,7 +28,7 @@ export default function AdminIndexPage() {
 
   // 다른 관리 화면에서 ?key=... 를 달고 돌아온 경우 그대로 이어 쓴다
   useEffect(() => {
-    setKey(new URLSearchParams(window.location.search).get("key") ?? "");
+    setKey(recallAdminKey());
   }, []);
 
   const link = (href: string) => (key ? `${href}?key=${encodeURIComponent(key)}` : href);

@@ -2,6 +2,7 @@
 
 // 후기 검수 화면. 주소에 ?key=... 를 붙여야 열린다 (배포본에도 있지만 키 없이는 아무것도 안 보임).
 import { useCallback, useEffect, useState } from "react";
+import { recallAdminKey } from "@/lib/admin-key";
 import { formatDate, type Review } from "@/lib/reviews";
 
 export default function ReviewAdminPage() {
@@ -11,7 +12,7 @@ export default function ReviewAdminPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    setKey(new URLSearchParams(window.location.search).get("key") ?? "");
+    setKey(recallAdminKey());
   }, []);
 
   const load = useCallback(async (k: string) => {

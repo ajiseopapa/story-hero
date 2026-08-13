@@ -3,6 +3,7 @@
 // 퍼널 대시보드. 주소에 ?key=... 를 붙여야 열린다 (후기 검수와 같은 키).
 // 방문자용 화면은 몰라도 관리 화면은 한국어로 읽혀야 한다.
 import { useCallback, useEffect, useState } from "react";
+import { recallAdminKey } from "@/lib/admin-key";
 
 interface Step {
   key: string;
@@ -59,7 +60,7 @@ export default function FunnelAdminPage() {
   const [origin, setOrigin] = useState("");
 
   useEffect(() => {
-    setKey(new URLSearchParams(window.location.search).get("key") ?? "");
+    setKey(recallAdminKey());
     setOrigin(window.location.origin);
   }, []);
 
