@@ -322,6 +322,14 @@ export default function Home() {
   // ----- 샘플 생성 (표지 + FREE_SCENES 장면) -----
   const start = useCallback(async () => {
     if (!canSubmit) return;
+    // 기기에는 한 권만 저장된다 — 새 책을 만들면 지난 책이 지워지므로,
+    // 실수로 (특히 결제한) 책을 날리지 않게 한 번 확인한다. 공유 링크가 보관 수단이다.
+    if (saved) {
+      const warn = saved.paid
+        ? `지난 동화 《 ${saved.draft.title} 》가 지워져요.\n결제하신 책이에요! 지우기 전에 '이어서 보기'로 열어 공유 링크를 만들어두면 1년간 보관됩니다.\n\n그래도 새 동화를 만들까요?`
+        : `지난 동화 《 ${saved.draft.title} 》가 지워져요.\n보관하고 싶다면 '이어서 보기'로 열어 공유 링크를 만들어두세요.\n\n새 동화를 만들까요?`;
+      if (!window.confirm(warn)) return;
+    }
     const children = kids.map((k) => ({
       name: k.name.trim(),
       gender: k.gender as Gender,
@@ -396,7 +404,7 @@ export default function Home() {
       setPhase("form");
       trackEvery("sample:fail"); // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다
     }
-  }, [canSubmit, kids, theme, art]);
+  }, [canSubmit, kids, theme, art, saved]);
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
@@ -805,11 +813,15 @@ export default function Home() {
             무료 샘플 만들기 🪄
           </button>
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
-            표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요. 아이 얼굴이 마음에 들 때만
-            결제하시면, <b>표지 포함 11페이지</b> 전체와 읽어주기·PDF·공유 링크가 열립니다.
+            표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요.
             <br />
-            🎁 <b>부모 목소리 녹음</b>(엄마아빠 목소리로 한 장씩 읽어주기)은 정식 오픈 후 유료
-            전환 예정 — 지금은 <b>오픈 기념 무료</b>예요.
+            아이 얼굴이 마음에 들 때만 결제하시면,
+            <br />
+            <b>표지 포함 11페이지</b> 전체와 읽어주기·PDF·공유 링크가 열립니다.
+          </div>
+          <div className="hint" style={{ textAlign: "center", marginTop: 8, fontSize: 15 }}>
+            🎁 <b>부모 목소리 녹음</b>도 지금은 <b>오픈 기념 무료</b> — 정식 오픈 후 유료 전환
+            예정이에요.
           </div>
           <div className="price-anchor">
             <s>정가 {LIST_PRICE.toLocaleString()}원</s>
