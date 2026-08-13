@@ -60,8 +60,9 @@ export default function OrderAdminPage() {
     if (key) load(key);
   }, [key, load]);
 
-  const act = async (id: string, action: Order["status"]) => {
+  const act = async (id: string, action: Order["status"] | "delete") => {
     if (action === "paid" && !confirm("입금을 확인하셨나요? 주문자 화면이 바로 열립니다.")) return;
+    if (action === "delete" && !confirm("이 주문을 완전히 삭제할까요? 되돌릴 수 없어요.")) return;
     setBusy(id);
     try {
       await fetch(`/api/order/admin?key=${encodeURIComponent(key)}`, {
@@ -184,6 +185,13 @@ export default function OrderAdminPage() {
                 대기로 되돌리기
               </button>
             )}
+            <button
+              className="btn secondary"
+              disabled={busy === o.id}
+              onClick={() => act(o.id, "delete")}
+            >
+              삭제
+            </button>
           </div>
         </section>
       ))}

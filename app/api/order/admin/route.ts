@@ -1,5 +1,5 @@
 import { mailOrderPaid } from "@/lib/mail";
-import { ID_RE, getOrder, listOrders, setOrderStatus, shortId } from "@/lib/orders";
+import { ID_RE, deleteOrder, getOrder, listOrders, setOrderStatus, shortId } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +32,11 @@ export async function POST(req: Request): Promise<Response> {
   const { id, action } = body;
   if (typeof id !== "string" || !ID_RE.test(id)) {
     return Response.json({ error: "잘못된 주문번호예요." }, { status: 400 });
+  }
+  if (action === "delete") {
+    const ok = await deleteOrder(id);
+    if (!ok) return Response.json({ error: "주문을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ ok: true, deleted: true });
   }
   if (action !== "paid" && action !== "canceled" && action !== "pending") {
     return Response.json({ error: "알 수 없는 동작이에요." }, { status: 400 });
