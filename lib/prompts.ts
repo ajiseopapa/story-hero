@@ -26,17 +26,17 @@ export function ageDescriptor(
 ): string {
   const kid = gender === "girl" ? "girl" : "boy";
   if (age <= 2) {
-    return `${subject} is a ${age === 0 ? "baby (under 1 year old)" : `${age}-year-old baby ${kid}`} — adorable chubby baby proportions, big soft cheeks, tiny hands; keep the baby safely nestled or gently held in the scene (never in a dangerous pose).`;
+    return `${subject} is a ${age === 0 ? "baby (under 1 year old)" : `${age}-year-old baby ${kid}`} — real infant anatomy: the whole body is about four head-heights tall, soft round cheeks, short arms and legs, tiny hands; keep the baby safely nestled or gently held in the scene (never in a dangerous pose).`;
   }
   if (age <= 6) {
-    return `${subject} is a ${age}-year-old ${kid} — sweet little-kid proportions with a soft round face are appropriate.`;
+    return `${subject} is a ${age}-year-old ${kid} — real preschooler anatomy: the whole body is about five head-heights tall, with a soft round face, but the head is NOT oversized — it is no wider than the shoulders and sits on a visible neck.`;
   }
   if (age <= 9) {
-    return `${subject} is a ${age}-year-old ${kid} in elementary school — draw school-age proportions (longer limbs, less baby fat), clearly older than a toddler.`;
+    return `${subject} is a ${age}-year-old ${kid} in elementary school — real school-age anatomy: the whole body is about five and a half to six head-heights tall, longer limbs, less baby fat, a visible neck, clearly older than a toddler. The head is normal-sized, no wider than the shoulders.`;
   }
   return [
     `THE MOST IMPORTANT RULE — AGE: ${subject} is an ${age}-year-old preteen ${kid} (upper elementary school), and the drawing MUST look that age.`,
-    "Realistic preteen proportions: the body is about five and a half to six head-heights tall, with a slender build, longer arms and legs, visible neck, and a more defined oval face — NOT a round baby face.",
+    "Realistic preteen proportions: the body is about six to six and a half head-heights tall, with a slender build, longer arms and legs, visible neck, and a more defined oval face — NOT a round baby face.",
     "Confident, capable posture like the hero of an illustrated middle-grade adventure novel for 10–12 year old readers.",
     "STRICTLY FORBIDDEN: toddler or chibi proportions (oversized head, stubby limbs, 2–3 head-heights tall), baby cheeks, baby-like cuteness. If in doubt, draw the character OLDER, never younger.",
   ].join(" ");
@@ -136,6 +136,9 @@ function styleBase(count: number, artId?: string): string {
     single
       ? "TOP PRIORITY — PORTRAIT LIKENESS: anyone who knows the child must recognize them instantly. Keep the photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins."
       : "TOP PRIORITY — PORTRAIT LIKENESS OF EVERY CHILD: anyone who knows these children must recognize EACH one instantly. For EACH child, keep that child's own photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve each child's distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. NEVER blend, average, or swap facial features, hairstyles or skin tones BETWEEN the children — each child keeps their OWN face from their OWN photo only. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins.",
+    // 닮음 지시가 강할수록 모델이 얼굴을 "보여주려고" 머리를 부풀린다 —
+    // 닮음과 머리 크기는 별개라는 걸 못 박아야 3.5등신 대두가 안 나온다 (2026-08-13).
+    "HEAD SIZE — read this together with the likeness rule: keeping the likeness means drawing the face ACCURATELY, never drawing it BIGGER. The head must stay in natural anatomical proportion to the body for a real child of this age — no wider than the shoulders, sitting on a visible neck, with the body at the head-height count given above. Big-head, chibi, bobblehead or caricature proportions are FORBIDDEN even in a soft storybook style. If the face ends up small in the frame, render it with finer detail — do NOT enlarge the head to make it readable.",
     art.style,
     single
       ? "IMPORTANT — costume: do NOT copy the outfit from the photo. Instead, dress the child in the outfit and accessories described in the scene below, like a storybook character in costume. Only the face, hair and skin come from the photo; the clothing comes from the scene description."
