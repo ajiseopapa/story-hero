@@ -71,7 +71,9 @@ export default function ConsentBox({ checked, onChange }: Props) {
       </ul>
 
       <div className="hint">
-        아이의 사진과 이름은 <b>서버에 저장하지 않습니다.</b> 자세한 내용은{" "}
+        아이의 사진 원본은 <b>어떤 경우에도 서버에 저장하지 않습니다.</b> 완성된 동화는{" "}
+        <b>&lsquo;링크로 공유하기&rsquo;를 직접 누른 경우에만</b> 서버에 보관되고(1년 후 자동
+        삭제), 그 외에는 이 기기에만 남아요. 자세한 내용은{" "}
         <a href="/privacy" target="_blank" rel="noreferrer">
           개인정보처리방침
         </a>

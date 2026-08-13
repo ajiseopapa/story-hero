@@ -52,7 +52,7 @@ export default function AdminIndexPage() {
           />
         </div>
         <p className="hint">
-          키는 저장하지 않습니다. 이 화면을 벗어나면 다시 넣어야 합니다.
+          한 번 통과하면 이 브라우저에 키를 기억해두어, 다음부터는 주소에 키가 없어도 열립니다.
           <br />
           값은 프로젝트의 <b>.env.local</b> 파일이나 Vercel 환경변수{" "}
           <b>REVIEW_ADMIN_KEY</b>에 있습니다.
