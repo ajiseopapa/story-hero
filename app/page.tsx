@@ -807,6 +807,9 @@ export default function Home() {
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
             표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요. 아이 얼굴이 마음에 들 때만
             결제하시면, <b>표지 포함 11페이지</b> 전체와 읽어주기·PDF·공유 링크가 열립니다.
+            <br />
+            🎁 <b>부모 목소리 녹음</b>(엄마아빠 목소리로 한 장씩 읽어주기)은 정식 오픈 후 유료
+            전환 예정 — 지금은 <b>오픈 기념 무료</b>예요.
           </div>
           <div className="price-anchor">
             <s>정가 {LIST_PRICE.toLocaleString()}원</s>
@@ -1530,7 +1533,7 @@ function BookViewer({
             onClick={() => switchMode("mine")}
             role="button"
           >
-            🎙 내 목소리
+            🎙 내 목소리 <span className="voice-free-badge">오픈 기념 무료</span>
           </div>
         </div>
 

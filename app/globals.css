@@ -1356,6 +1356,19 @@ input[type="tel"]:focus,
   background: #fff5f2;
   box-shadow: 0 6px 18px -10px var(--accent);
 }
+/* "유료 예정 기능을 지금은 무료로" 표시 — 가치 인식용 배지 */
+.voice-free-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7a5a1e;
+  background: linear-gradient(135deg, #f6e3b8, #f0d494);
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .rec-panel {
   margin-bottom: 12px;
 }
