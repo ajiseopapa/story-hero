@@ -14,6 +14,7 @@ import {
 import { BUSINESS } from "@/lib/business";
 import { SITE_ORIGIN } from "@/lib/sharebook";
 import PrintRequestForm from "./print-request-form";
+import { useConfirm } from "./confirm-dialog";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
@@ -185,6 +186,7 @@ export default function Home() {
   const [unlocking, setUnlocking] = useState(false); // 결제 후 나머지 생성 중
   // 이 브라우저에 저장된 지난 동화 — 자동으로 펼치지 않고 첫 화면에 "이어보기" 카드로만 안내
   const [saved, setSaved] = useState<{ draft: Draft; paid: boolean } | null>(null);
+  const { confirmDialog, ask } = useConfirm();
 
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
   const restoredRef = useRef(false);
@@ -325,10 +327,15 @@ export default function Home() {
     // 기기에는 한 권만 저장된다 — 새 책을 만들면 지난 책이 지워지므로,
     // 실수로 (특히 결제한) 책을 날리지 않게 한 번 확인한다. 공유 링크가 보관 수단이다.
     if (saved) {
-      const warn = saved.paid
-        ? `지난 동화 《 ${saved.draft.title} 》가 지워져요.\n결제하신 책이에요! 지우기 전에 '이어서 보기'로 열어 공유 링크를 만들어두면 1년간 보관됩니다.\n\n그래도 새 동화를 만들까요?`
-        : `지난 동화 《 ${saved.draft.title} 》가 지워져요.\n보관하고 싶다면 '이어서 보기'로 열어 공유 링크를 만들어두세요.\n\n새 동화를 만들까요?`;
-      if (!window.confirm(warn)) return;
+      const ok = await ask({
+        title: "지난 동화가 지워져요 📖",
+        message: saved.paid
+          ? `《 ${saved.draft.title} 》는 결제하신 책이에요!\n지우기 전에 '이어서 보기'로 열어 공유 링크를 만들어두면 1년간 보관됩니다.`
+          : `《 ${saved.draft.title} 》를 보관하고 싶다면\n'이어서 보기'로 열어 공유 링크를 만들어두세요.`,
+        confirmLabel: "그래도 새로 만들기",
+        cancelLabel: "취소",
+      });
+      if (!ok) return;
     }
     const children = kids.map((k) => ({
       name: k.name.trim(),
@@ -404,7 +411,7 @@ export default function Home() {
       setPhase("form");
       trackEvery("sample:fail"); // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다
     }
-  }, [canSubmit, kids, theme, art, saved]);
+  }, [canSubmit, kids, theme, art, saved, ask]);
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
@@ -505,13 +512,18 @@ export default function Home() {
   }, []);
 
   // 첫 화면의 "지난 동화" 카드 지우기 — 저장된 초안·결제기록·녹음을 함께 정리한다.
-  const dropSaved = useCallback(() => {
-    if (!confirm("저장된 지난 동화를 지울까요? 이 기기에서는 다시 열 수 없어요.")) return;
+  const dropSaved = useCallback(async () => {
+    const ok = await ask({
+      title: "지난 동화를 지울까요?",
+      message: "이 기기에서는 다시 열 수 없어요.",
+      confirmLabel: "지우기",
+    });
+    if (!ok) return;
     setSaved(null);
     kvDel("draft");
     kvDel("paidOrder");
     kvDel("recordings");
-  }, []);
+  }, [ask]);
 
   return (
     <main className="wrap">
@@ -897,6 +909,7 @@ export default function Home() {
         />
       )}
 
+      {confirmDialog}
       {showBank && (
         <BankOrderBox
           bookTitle={title}
@@ -970,6 +983,7 @@ function SavedShareList() {
   const [shares, setShares] = useState<SavedShare[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { confirmDialog, ask } = useConfirm();
 
   useEffect(() => {
     loadShares().then(setShares);
@@ -978,8 +992,12 @@ function SavedShareList() {
   if (shares.length === 0) return null;
 
   const remove = async (s: SavedShare) => {
-    if (!confirm(`《 ${s.title} 》 공유 링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없어요.`))
-      return;
+    const ok = await ask({
+      title: "공유 링크를 지울까요?",
+      message: `《 ${s.title} 》 링크를 받은 사람도 더 이상 볼 수 없어요.`,
+      confirmLabel: "지우기",
+    });
+    if (!ok) return;
     setBusy(s.id);
     setError(null);
     try {
@@ -995,6 +1013,7 @@ function SavedShareList() {
 
   return (
     <section className="card">
+      {confirmDialog}
       <div className="field">
         <label>내가 만든 공유 링크 🔗</label>
         <div className="hint">
@@ -1076,6 +1095,7 @@ function BookViewer({
 
   // 인쇄본 신청 폼 (mailto는 메일 앱 없는 기기에서 에러가 나서 폼으로 받는다)
   const [printFormOpen, setPrintFormOpen] = useState(false);
+  const { confirmDialog, ask } = useConfirm();
   // 결제 표식에서 주문번호를 꺼내 신청 메일에 담는다 (bank-XXXX 형식이면 계좌이체 주문번호)
   const [payMarker, setPayMarker] = useState("");
   useEffect(() => {
@@ -1434,7 +1454,12 @@ function BookViewer({
 
   const removeShareLink = async () => {
     if (!share || sharing) return;
-    if (!confirm("공유 링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없어요.")) return;
+    const ok = await ask({
+      title: "공유 링크를 지울까요?",
+      message: "링크를 받은 사람도 더 이상 볼 수 없어요.",
+      confirmLabel: "지우기",
+    });
+    if (!ok) return;
     setSharing(true);
     try {
       await deleteShareLink(share.id, share.deleteKey);
@@ -1480,6 +1505,7 @@ function BookViewer({
 
   return (
     <section className="book">
+      {confirmDialog}
       <h2 className="book-title">《 {title} 》</h2>
 
       <div className="page">
