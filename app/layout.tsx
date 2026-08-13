@@ -3,7 +3,7 @@ import { SITE_ORIGIN } from "@/lib/sharebook";
 import "./globals.css";
 
 const DESCRIPTION =
-  "아이 이름과 사진을 넣으면, 우리 아이를 닮은 얼굴로 그린 그림동화책을 만들어드려요. 사실적 그림·수채화·색연필·크레파스 중에 고를 수 있어요.";
+  "아이 이름과 사진을 넣으면, 우리 아이를 닮은 얼굴로 그린 표지 포함 11페이지 그림동화책을 만들어드려요. 사실적 그림·수채화·색연필·크레파스 중에 고를 수 있어요.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN), // opengraph-image의 절대 주소 생성에 필요

@@ -513,7 +513,7 @@ export default function Home() {
           주인공인 동화책
         </h1>
         <p>
-          사진 속 얼굴을 그대로 살려 그림동화로 그립니다.
+          사진 속 얼굴을 그대로 살려 <b>표지 포함 11페이지</b> 그림동화로 그립니다.
           <br />
           <b>표지는 무료</b>예요 — 얼굴을 먼저 보고 결제하세요.
         </p>
@@ -781,7 +781,7 @@ export default function Home() {
           </button>
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
             표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요. 아이 얼굴이 마음에 들 때만
-            결제하시면, 전체 10장면과 읽어주기·PDF·공유 링크가 열립니다.
+            결제하시면, <b>표지 포함 11페이지</b> 전체와 읽어주기·PDF·공유 링크가 열립니다.
           </div>
           <div className="price-anchor">
             <s>정가 {LIST_PRICE.toLocaleString()}원</s>
@@ -1431,7 +1431,7 @@ function BookViewer({
               <div className="lock-emoji">🔒</div>
               <div className="lock-title">여기부터는 잠겨 있어요</div>
               <div className="lock-sub">
-                결제하면 남은 {total - 1 - FREE_SCENES}개 장면과
+                결제하면 남은 {total - 1 - FREE_SCENES}페이지(총 {total}페이지)와
                 <br />
                 읽어주기, PDF 다운로드가 열립니다
               </div>
