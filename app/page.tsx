@@ -532,14 +532,14 @@ export default function Home() {
       <header className="hero">
         <span className="badge">키즈북 ✨</span>
         <h1>
-          진짜 우리 아이가
+          우리 아이가
           <br />
-          주인공인 동화책
+          주인공이 되는 그림동화
         </h1>
         <p>
-          사진 속 얼굴을 그대로 살려 <b>표지 포함 11페이지</b> 그림동화로 그립니다.
+          사진 한 장이면 아이 얼굴 그대로, <b>표지 포함 11페이지</b> 동화책이 완성돼요.
           <br />
-          <b>표지는 무료</b>예요 — 얼굴을 먼저 보고 결제하세요.
+          <b>표지는 무료</b>로 먼저 보여드려요 — 마음에 들 때만 결제하시면 됩니다.
         </p>
         <ul className="hero-points">
           <li>

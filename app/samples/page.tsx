@@ -150,7 +150,7 @@ export default function SamplesPage() {
           <br />
           우리 아이 사진을 올리시면 <b>그 아이를 닮은 얼굴</b>로 그려집니다.
           <br />
-          표지는 무료니까 얼굴을 먼저 보고 결정하세요.
+          표지는 무료로 먼저 보여드려요. 마음에 들 때만 결제하시면 돼요.
         </p>
         <Link className="btn" href="/" style={{ display: "inline-block" }}>
           우리 아이로 만들어보기 🪄
