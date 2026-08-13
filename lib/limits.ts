@@ -42,7 +42,18 @@ export function ipBucket(req: Request): string {
 
 export const FREE_DAILY_LIMIT = Number(process.env.FREE_DAILY_LIMIT ?? "100"); // 전체 무료 샘플/일
 export const FREE_IP_DAILY_LIMIT = Number(process.env.FREE_IP_DAILY_LIMIT ?? "3"); // IP당 무료 샘플/일
-export const IMAGE_DAILY_LIMIT = Number(process.env.IMAGE_DAILY_LIMIT ?? "1500"); // 삽화 생성/일 (유료 이어그리기 포함 백스톱)
+// 삽화 생성/일 (유료 이어그리기 포함 백스톱).
+// 1장당 약 156원(2026-08-13 실측)이라 한도가 곧 사고 시 최대 손실액이다.
+// 1500이면 하루 23만원이 걸리는데, 정상 사용으로 그 수치가 나오려면 하루 136권(매출 200만원)이
+// 팔려야 한다 — 실제 트래픽과 너무 동떨어져 방어가 되지 않았다. 300이면 하루 27권까지 여유가
+// 있으면서 노출은 4.7만원으로 줄어든다. 실제로 팔리기 시작하면 env로 올리면 된다.
+export const IMAGE_DAILY_LIMIT = Number(process.env.IMAGE_DAILY_LIMIT ?? "300");
 export const SHARE_DAILY_LIMIT = Number(process.env.SHARE_DAILY_LIMIT ?? "50"); // 공유 링크 생성/일 (전체)
 export const SHARE_IP_DAILY_LIMIT = Number(process.env.SHARE_IP_DAILY_LIMIT ?? "5"); // 공유 링크 생성/일 (IP당)
 export const SHARE_UPLOAD_DAILY_LIMIT = Number(process.env.SHARE_UPLOAD_DAILY_LIMIT ?? "1500"); // 공유용 파일 업로드/일 (한 권에 최대 22개)
+
+// 읽어주기(TTS)/일. 여기만 한도가 없어서 누구나 무제한으로 부를 수 있었다(2026-08-13).
+// 1회 상한 1,000자면 약 85원이라 스크립트로 돌리면 시간당 수만원이 나간다.
+// 한 권 전체 낭독이 11회이고 화자를 바꿔 다시 들을 수 있어 IP당 60회면 정상 사용엔 넉넉하다.
+export const TTS_DAILY_LIMIT = Number(process.env.TTS_DAILY_LIMIT ?? "400"); // 전체
+export const TTS_IP_DAILY_LIMIT = Number(process.env.TTS_IP_DAILY_LIMIT ?? "60"); // IP당

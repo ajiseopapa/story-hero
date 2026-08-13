@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { consumeQuota, ipBucket, TTS_DAILY_LIMIT, TTS_IP_DAILY_LIMIT } from "@/lib/limits";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -49,6 +50,20 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "OPENAI_API_KEY 환경변수가 없습니다." }, { status: 500 });
+    }
+
+    // 일일 한도 (IP별 → 전체 순서로 소진). 무료 샘플 버킷과 섞이지 않게 tts 전용 키를 쓴다.
+    if (!(await consumeQuota(`tts-ip/${ipBucket(req)}`, TTS_IP_DAILY_LIMIT))) {
+      return NextResponse.json(
+        { error: "오늘 이 기기에서 들을 수 있는 만큼 다 들었어요. 내일 다시 들려주세요 🌙" },
+        { status: 429 },
+      );
+    }
+    if (!(await consumeQuota("tts", TTS_DAILY_LIMIT))) {
+      return NextResponse.json(
+        { error: "지금은 읽어주기 이용이 많아요. 잠시 후 다시 시도해주세요." },
+        { status: 429 },
+      );
     }
 
     // openai SDK(4.77) 타입에 instructions 파라미터가 없어 REST를 직접 호출한다.
