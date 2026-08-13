@@ -859,6 +859,14 @@ export default function Home() {
           onPay={pay}
           onReset={reset}
           error={error}
+          bookMeta={{
+            kidsInfo: kids
+              .filter((k) => k.name.trim())
+              .map((k) => `${k.name.trim()}(${k.age}세)`)
+              .join(", "),
+            themeLabel: THEMES.find((t) => t.id === theme)?.label ?? "",
+            artLabel: ART_STYLES.find((a) => a.id === art)?.label ?? "",
+          }}
         />
       )}
 
@@ -1008,6 +1016,7 @@ function BookViewer({
   onPay,
   onReset,
   error,
+  bookMeta,
 }: {
   title: string;
   pages: BookPage[];
@@ -1018,6 +1027,7 @@ function BookViewer({
   onPay: () => void;
   onReset: () => void;
   error: string | null;
+  bookMeta: { kidsInfo: string; themeLabel: string; artLabel: string };
 }) {
   const total = pages.length;
   const page = pages[current];
@@ -1051,6 +1061,11 @@ function BookViewer({
 
   // 인쇄본 신청 폼 (mailto는 메일 앱 없는 기기에서 에러가 나서 폼으로 받는다)
   const [printFormOpen, setPrintFormOpen] = useState(false);
+  // 결제 표식에서 주문번호를 꺼내 신청 메일에 담는다 (bank-XXXX 형식이면 계좌이체 주문번호)
+  const [payMarker, setPayMarker] = useState("");
+  useEffect(() => {
+    kvGet<string>("paidOrder").then((v) => setPayMarker(v ?? ""));
+  }, []);
 
   // 내 목소리 녹음
   const [recordings, setRecordings] = useState<Map<number, Blob>>(new Map());
@@ -1703,7 +1718,13 @@ function BookViewer({
             1차 제작분 신청하기 ✉️
           </button>
           {printFormOpen && (
-            <PrintRequestForm bookTitle={title} onClose={() => setPrintFormOpen(false)} />
+            <PrintRequestForm
+              bookTitle={title}
+              bookMeta={bookMeta}
+              orderNo={payMarker.replace(/^bank-/, "")}
+              shareUrl={share?.url ?? ""}
+              onClose={() => setPrintFormOpen(false)}
+            />
           )}
           <div className="upsell-note">
             지금은 신청만 받아요. 결제는 제작이 확정된 뒤에 따로 안내드릴게요.

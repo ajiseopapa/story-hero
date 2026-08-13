@@ -102,16 +102,34 @@ export async function mailAdminNewOrder(o: {
  * 이 메일은 발송 자체가 목적이라 성공 여부를 돌려준다 (주문 메일과 달리 fail-open이면 안 됨).
  */
 export async function mailPrintRequest(o: {
+  name: string;
   contact: string;
   message?: string;
   bookTitle?: string;
+  orderNo?: string;
+  shareUrl?: string;
+  kidsInfo?: string;
+  themeLabel?: string;
+  artLabel?: string;
 }): Promise<boolean> {
   if (!ADMIN) return false;
+  const rows = [
+    `신청자 <b>${esc(o.name)}</b>`,
+    `연락처 <b>${esc(o.contact)}</b>`,
+    o.bookTitle && `책 제목 《 ${esc(o.bookTitle)} 》`,
+    o.kidsInfo && `아이 ${esc(o.kidsInfo)}`,
+    o.themeLabel && `주제 ${esc(o.themeLabel)}`,
+    o.artLabel && `그림체 ${esc(o.artLabel)}`,
+    o.orderNo && `주문번호 <b>${esc(o.orderNo)}</b>`,
+    o.shareUrl
+      ? `책 보기(인쇄 원본) <a href="${esc(o.shareUrl)}">${esc(o.shareUrl)}</a>`
+      : `⚠️ 공유 링크 없음 — 인쇄 원본을 받으려면 손님에게 공유 링크 생성을 요청해야 해요`,
+  ].filter(Boolean);
   return send(
     ADMIN,
-    `[책 제작 요청] ${o.bookTitle ? `《 ${esc(o.bookTitle)} 》 · ` : ""}${o.contact}`,
+    `[책 제작 요청] ${o.bookTitle ? `《 ${esc(o.bookTitle)} 》 · ` : ""}${esc(o.name)}`,
     WRAP(`<h2 style="font-size:18px">인쇄본 1차 제작 신청</h2>
-<p>연락처 <b>${esc(o.contact)}</b>${o.bookTitle ? `<br/>책 제목 《 ${esc(o.bookTitle)} 》` : ""}</p>
+<p>${rows.join("<br/>")}</p>
 ${o.message ? `<p style="background:#f7efe2;padding:12px 14px;border-radius:10px;white-space:pre-wrap">${esc(o.message)}</p>` : ""}`),
   );
 }

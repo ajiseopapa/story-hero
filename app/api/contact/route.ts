@@ -1,5 +1,6 @@
 import { consumeQuota, ipBucket } from "@/lib/limits";
 import { mailPrintRequest, mailReady } from "@/lib/mail";
+import { SITE_ORIGIN } from "@/lib/sharebook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,17 +20,38 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  let body: { contact?: unknown; message?: unknown; bookTitle?: unknown };
+  let body: {
+    name?: unknown;
+    contact?: unknown;
+    message?: unknown;
+    bookTitle?: unknown;
+    orderNo?: unknown;
+    shareUrl?: unknown;
+    kidsInfo?: unknown;
+    themeLabel?: unknown;
+    artLabel?: unknown;
+  };
   try {
     body = (await req.json()) as typeof body;
   } catch {
     return Response.json({ error: "잘못된 요청이에요." }, { status: 400 });
   }
 
+  const name = clean(body.name, 40);
   const contact = clean(body.contact, 120);
   const message = clean(body.message, 1000);
   const bookTitle = clean(body.bookTitle, 120);
+  const orderNo = clean(body.orderNo, 20);
+  // 관리자에게 가는 메일에 담기므로 우리 도메인의 공유 링크만 통과시킨다
+  const rawShareUrl = clean(body.shareUrl, 300);
+  const shareUrl = rawShareUrl.startsWith(`${SITE_ORIGIN}/`) ? rawShareUrl : "";
+  const kidsInfo = clean(body.kidsInfo, 200);
+  const themeLabel = clean(body.themeLabel, 40);
+  const artLabel = clean(body.artLabel, 40);
 
+  if (name.length < 1) {
+    return Response.json({ error: "신청하시는 분 이름을 적어주세요." }, { status: 400 });
+  }
   if (contact.length < 5) {
     return Response.json(
       { error: "연락 받으실 이메일이나 전화번호를 적어주세요." },
@@ -44,7 +66,17 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const sent = await mailPrintRequest({ contact, message, bookTitle });
+  const sent = await mailPrintRequest({
+    name,
+    contact,
+    message,
+    bookTitle,
+    orderNo,
+    shareUrl,
+    kidsInfo,
+    themeLabel,
+    artLabel,
+  });
   if (!sent) {
     return Response.json(
       { error: "전송에 실패했어요. support@kidstel.co.kr로 메일 주시면 확인할게요." },
