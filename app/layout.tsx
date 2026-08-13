@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN), // opengraph-image의 절대 주소 생성에 필요
   title: "키즈북 · 우리 아이가 주인공인 동화책",
   description: DESCRIPTION,
+  // 같은 앱이 *.vercel.app 주소로도 열리므로, 검색엔진에는 항상 본 도메인이 원본임을 알린다.
+  // "./"는 각 경로에서 자기 자신(본 도메인 기준)으로 풀린다.
+  alternates: { canonical: "./" },
   openGraph: {
     type: "website",
     siteName: "키즈북",

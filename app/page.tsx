@@ -12,6 +12,7 @@ import {
   type ThemeId,
 } from "@/lib/prompts";
 import { BUSINESS } from "@/lib/business";
+import { SITE_ORIGIN } from "@/lib/sharebook";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
@@ -505,6 +506,29 @@ export default function Home() {
 
   return (
     <main className="wrap">
+      {/* 검색결과에 상품(가격) 정보로 노출되기 위한 구조화 데이터.
+          클라이언트 컴포넌트여도 프리렌더된 HTML에 포함되므로 봇이 읽을 수 있다. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "키즈북 · 우리 아이가 주인공인 맞춤 그림동화책",
+            description:
+              "아이 이름과 사진으로 만드는 표지 포함 11페이지 맞춤 그림동화책. 사실적 그림·수채화·색연필·크레파스 4가지 그림체 지원.",
+            image: `${SITE_ORIGIN}/opengraph-image`,
+            brand: { "@type": "Brand", name: "키즈북" },
+            offers: {
+              "@type": "Offer",
+              url: SITE_ORIGIN,
+              price: PRICE,
+              priceCurrency: "KRW",
+              availability: "https://schema.org/InStock",
+            },
+          }),
+        }}
+      />
       <header className="hero">
         <span className="badge">키즈북 ✨</span>
         <h1>

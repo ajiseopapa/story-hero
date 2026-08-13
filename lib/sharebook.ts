@@ -5,7 +5,7 @@ export const SHARE_TTL_DAYS = 365; // 보관 기간 — 지나면 만료 안내 
 
 // 카톡·SNS 미리보기(OG 태그)는 절대 주소를 요구한다.
 export const SITE_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://kidsbook-story.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://story.kidstel.co.kr";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type SharePage = {
