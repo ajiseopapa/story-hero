@@ -1641,6 +1641,8 @@ input[type="tel"]:focus,
 }
 .upsell .upsell-btn {
   display: inline-block;
+  border: none;
+  cursor: pointer;
   text-decoration: none;
   font-family: var(--display);
   font-weight: 700;

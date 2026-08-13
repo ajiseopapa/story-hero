@@ -30,8 +30,8 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-async function send(to: string, subject: string, html: string): Promise<void> {
-  if (!mailReady()) return;
+async function send(to: string, subject: string, html: string): Promise<boolean> {
+  if (!mailReady()) return false;
   try {
     const transport = nodemailer.createTransport({
       host: HOST,
@@ -40,12 +40,14 @@ async function send(to: string, subject: string, html: string): Promise<void> {
       auth: { user: USER, pass: PASS },
     });
     await transport.sendMail({ from: `"키즈북" <${FROM}>`, to, subject, html });
+    return true;
   } catch (err) {
     // 원인 추적용: 어떤 계정·서버로 시도했는지 남긴다 (비밀번호는 길이만)
     console.warn(
       `mail send failed (fail-open) [host=${HOST}:${PORT} user=${USER} passLen=${PASS?.length ?? 0}]:`,
       err,
     );
+    return false;
   }
 }
 
@@ -91,6 +93,26 @@ export async function mailAdminNewOrder(o: {
     WRAP(`<h2 style="font-size:18px">새 계좌이체 주문</h2>
 <p>주문번호 <b>${o.orderNo}</b><br/>입금자명 <b>${esc(o.name)}</b><br/>이메일 ${esc(o.email)}<br/>책 제목 《 ${esc(o.bookTitle)} 》<br/>금액 <b>${o.amount.toLocaleString()}원</b></p>
 <p>입금을 확인했으면 <a href="${SITE}/admin/orders">관리자 화면</a>에서 "입금 확인"을 눌러주세요.</p>`),
+  );
+}
+
+/**
+ * 인쇄본 제작 신청 — 관리자에게 전달. mailto 링크는 메일 앱이 없는 기기에서
+ * 에러가 나서, 화면 안 폼으로 받아 서버가 대신 보낸다.
+ * 이 메일은 발송 자체가 목적이라 성공 여부를 돌려준다 (주문 메일과 달리 fail-open이면 안 됨).
+ */
+export async function mailPrintRequest(o: {
+  contact: string;
+  message?: string;
+  bookTitle?: string;
+}): Promise<boolean> {
+  if (!ADMIN) return false;
+  return send(
+    ADMIN,
+    `[책 제작 요청] ${o.bookTitle ? `《 ${esc(o.bookTitle)} 》 · ` : ""}${o.contact}`,
+    WRAP(`<h2 style="font-size:18px">인쇄본 1차 제작 신청</h2>
+<p>연락처 <b>${esc(o.contact)}</b>${o.bookTitle ? `<br/>책 제목 《 ${esc(o.bookTitle)} 》` : ""}</p>
+${o.message ? `<p style="background:#f7efe2;padding:12px 14px;border-radius:10px;white-space:pre-wrap">${esc(o.message)}</p>` : ""}`),
   );
 }
 

@@ -13,6 +13,7 @@ import {
 } from "@/lib/prompts";
 import { BUSINESS } from "@/lib/business";
 import { SITE_ORIGIN } from "@/lib/sharebook";
+import PrintRequestForm from "./print-request-form";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
@@ -1048,6 +1049,9 @@ function BookViewer({
   const audioCacheRef = useRef<Map<string, string>>(new Map()); // `${voice}-${page}` → objectURL
   const sessionRef = useRef(0); // 중지/전환 시 진행 중이던 재생 루프 무효화 토큰
 
+  // 인쇄본 신청 폼 (mailto는 메일 앱 없는 기기에서 에러가 나서 폼으로 받는다)
+  const [printFormOpen, setPrintFormOpen] = useState(false);
+
   // 내 목소리 녹음
   const [recordings, setRecordings] = useState<Map<number, Blob>>(new Map());
   const [recording, setRecording] = useState(false);
@@ -1695,16 +1699,12 @@ function BookViewer({
             <br />
             1차 제작분은 신청하신 순서대로 배정해 드릴게요.
           </div>
-          <a
-            className="upsell-btn"
-            href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(
-              `[동화책 인쇄본 1차 제작 신청] ${title}`,
-            )}&body=${encodeURIComponent(
-              "1차 제작분으로 신청할게요!\n연락 받으실 이메일 또는 전화번호를 남겨주세요:\n",
-            )}`}
-          >
+          <button type="button" className="upsell-btn" onClick={() => setPrintFormOpen(true)}>
             1차 제작분 신청하기 ✉️
-          </a>
+          </button>
+          {printFormOpen && (
+            <PrintRequestForm bookTitle={title} onClose={() => setPrintFormOpen(false)} />
+          )}
           <div className="upsell-note">
             지금은 신청만 받아요. 결제는 제작이 확정된 뒤에 따로 안내드릴게요.
           </div>
