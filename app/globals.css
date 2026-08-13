@@ -51,7 +51,7 @@ body {
   display: inline-block;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--accent);
   background: #fff;
   border: 2px dashed var(--accent);
@@ -60,7 +60,7 @@ body {
   margin-bottom: 14px;
 }
 .hero h1 {
-  font-size: clamp(28px, 6vw, 40px);
+  font-size: clamp(26px, 5.6vw, 37px);
   font-weight: 700;
   margin: 0 0 8px;
   line-height: 1.25;
@@ -70,7 +70,7 @@ body {
   margin: 0;
   color: var(--ink-soft);
   font-family: var(--text);
-  font-size: 17.5px;
+  font-size: 16.5px;
   line-height: 1.75;
   font-weight: 500;
 }
@@ -90,7 +90,7 @@ body {
   border-radius: 14px;
   padding: 12px 8px;
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--ink);
   word-break: keep-all;
@@ -98,7 +98,7 @@ body {
 }
 .hero-points .hp-emoji {
   display: block;
-  font-size: 22px;
+  font-size: 21px;
   margin-bottom: 5px;
 }
 
@@ -133,7 +133,7 @@ body {
 .child-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 22px;
+  font-size: 21px;
   color: var(--ink);
 }
 .child-remove {
@@ -160,7 +160,7 @@ body {
   padding: 15px;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   color: var(--ink);
   cursor: pointer;
   margin-bottom: 20px;
@@ -174,13 +174,13 @@ body {
   display: block;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   margin-bottom: 8px;
   color: var(--ink);
 }
 .hint {
   font-family: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   color: var(--ink-soft);
   margin-top: 6px;
   line-height: 1.7;
@@ -198,7 +198,7 @@ input[type="tel"],
   /* 입력 중인 글자는 고딕이 또렷하다 — 여기만 바탕체를 쓰지 않는다 */
   font-family: var(--text);
   font-weight: 500;
-  font-size: 18px;
+  font-size: 17px;
   color: var(--ink);
   padding: 13px 15px;
   border: 1px solid #ddceb3;
@@ -231,13 +231,13 @@ input[type="tel"]:focus,
   text-align: center;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   transition: all 0.15s;
   user-select: none;
 }
 .gender .emoji {
   display: block;
-  font-size: 30px;
+  font-size: 29px;
   margin-bottom: 4px;
 }
 .gender.active {
@@ -266,13 +266,13 @@ input[type="tel"]:focus,
   text-align: center;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 17px;
+  font-size: 16px;
   transition: all 0.15s;
   user-select: none;
 }
 .theme .emoji {
   display: block;
-  font-size: 26px;
+  font-size: 25px;
   margin-bottom: 3px;
 }
 .theme.active {
@@ -305,14 +305,14 @@ input[type="tel"]:focus,
 }
 .art .emoji {
   display: block;
-  font-size: 26px;
+  font-size: 25px;
   margin-bottom: 4px;
 }
 .art b {
   display: block;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--ink);
 }
 .art em {
@@ -371,17 +371,17 @@ input[type="tel"]:focus,
   box-shadow: 0 10px 26px -14px var(--accent);
 }
 .upload .up-emoji {
-  font-size: 34px;
+  font-size: 33px;
 }
 .upload .up-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 19px;
   margin: 8px 0 2px;
 }
 .upload .up-sub {
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink-soft);
   font-weight: 500;
 }
@@ -412,7 +412,7 @@ input[type="tel"]:focus,
   cursor: pointer;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 22px;
+  font-size: 21px;
   color: #fff;
   padding: 16px;
   border-radius: 15px;
@@ -436,7 +436,7 @@ input[type="tel"]:focus,
   color: var(--accent);
   border: 1.5px solid var(--accent);
   box-shadow: none;
-  font-size: 18px;
+  font-size: 17px;
 }
 .btn.share {
   background: linear-gradient(135deg, #8fb0d6, #7ba0cc 60%, #6b91c2);
@@ -453,12 +453,12 @@ input[type="tel"]:focus,
   text-align: center;
 }
 .review-box .review-emoji {
-  font-size: 30px;
+  font-size: 29px;
 }
 .review-box .review-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   margin: 4px 0 2px;
 }
 .review-stars {
@@ -471,7 +471,7 @@ input[type="tel"]:focus,
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 32px;
+  font-size: 31px;
   line-height: 1;
   padding: 2px;
   color: #e0d6c2;
@@ -486,7 +486,7 @@ input[type="tel"]:focus,
 .review-text {
   width: 100%;
   font-family: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.7;
   color: var(--ink);
   padding: 12px 14px;
@@ -514,7 +514,7 @@ input[type="tel"]:focus,
 .reviews h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 23px;
+  font-size: 22px;
   text-align: center;
   margin: 0 0 14px;
   color: var(--ink);
@@ -535,7 +535,7 @@ input[type="tel"]:focus,
 .reviews li p {
   margin: 8px 0 0;
   font-family: var(--text);
-  font-size: 16.5px;
+  font-size: 15.5px;
   line-height: 1.75;
   color: var(--ink);
   word-break: keep-all;
@@ -549,7 +549,7 @@ input[type="tel"]:focus,
 }
 .review-rate {
   color: var(--gold);
-  font-size: 17px;
+  font-size: 16px;
   letter-spacing: 1px;
 }
 .review-rate i {
@@ -585,13 +585,13 @@ input[type="tel"]:focus,
 .sample-strip-head b {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 19px;
+  font-size: 18px;
   color: var(--ink);
 }
 .sample-strip-head a,
 .sample-grid a {
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--accent);
   text-decoration: none;
 }
@@ -644,7 +644,7 @@ input[type="tel"]:focus,
   display: block;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   color: var(--ink);
 }
 .admin-item span {
@@ -652,7 +652,7 @@ input[type="tel"]:focus,
   margin-top: 3px;
   font-family: var(--text);
   font-weight: 500;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink-soft);
   word-break: keep-all;
 }
@@ -664,7 +664,7 @@ input[type="tel"]:focus,
 .before-after h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 26px;
+  font-size: 25px;
   color: var(--ink);
   margin: 0 0 2px;
   text-align: center;
@@ -709,7 +709,7 @@ input[type="tel"]:focus,
   margin-top: 8px;
 }
 .ba-arrow {
-  font-size: 26px;
+  font-size: 25px;
   color: var(--accent);
   flex: 0 0 auto;
   margin-top: -18px;
@@ -719,7 +719,7 @@ input[type="tel"]:focus,
     gap: 7px;
   }
   .ba-arrow {
-    font-size: 18px;
+    font-size: 17px;
   }
 }
 
@@ -730,7 +730,7 @@ input[type="tel"]:focus,
 .style-compare h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 25px;
+  font-size: 24px;
   color: var(--ink);
   margin: 0 0 2px;
   text-align: center;
@@ -767,7 +767,7 @@ input[type="tel"]:focus,
   display: block;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--ink);
 }
 @media (max-width: 560px) {
@@ -780,7 +780,7 @@ input[type="tel"]:focus,
 .sample-heading {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 25px;
+  font-size: 24px;
   color: var(--ink);
   margin: 0 0 12px;
   text-align: center;
@@ -817,7 +817,7 @@ input[type="tel"]:focus,
   display: block;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--ink);
 }
 @media (max-width: 560px) {
@@ -835,7 +835,7 @@ input[type="tel"]:focus,
   border: 1px solid #e8dcc6;
   border-radius: 12px;
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.75;
   color: var(--ink-soft);
   word-break: keep-all;
@@ -881,12 +881,12 @@ input[type="tel"]:focus,
   display: block;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   margin-bottom: 4px;
 }
 .crop-head span {
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink-soft);
   line-height: 1.6;
   word-break: keep-all;
@@ -951,7 +951,7 @@ input[type="tel"]:focus,
   border-radius: 12px;
   padding: 8px 16px;
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink);
   cursor: pointer;
 }
@@ -961,7 +961,7 @@ input[type="tel"]:focus,
   margin-top: 14px;
 }
 .crop-actions .btn {
-  font-size: 18px;
+  font-size: 17px;
   padding: 13px;
 }
 
@@ -991,7 +991,7 @@ input[type="tel"]:focus,
   cursor: pointer;
 }
 .consent-all b {
-  font-size: 18px;
+  font-size: 17px;
   color: var(--ink);
 }
 .consent-all em {
@@ -1021,7 +1021,7 @@ input[type="tel"]:focus,
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--ink);
   word-break: keep-all;
   font-weight: 500;
@@ -1086,7 +1086,7 @@ input[type="tel"]:focus,
   border: 1px solid #e8dcc6;
   border-radius: 12px;
   font-family: var(--text);
-  font-size: 15.5px;
+  font-size: 14.5px;
   line-height: 1.65;
   color: var(--ink);
   cursor: pointer;
@@ -1125,13 +1125,13 @@ input[type="tel"]:focus,
 .share-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 19px;
   margin-bottom: 10px;
 }
 .share-url {
   display: block;
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   color: #4d6f9c;
   word-break: break-all;
   background: #fff;
@@ -1172,7 +1172,7 @@ input[type="tel"]:focus,
 .resume-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 19px;
   margin: 6px 0 14px;
   word-break: keep-all;
 }
@@ -1187,7 +1187,7 @@ input[type="tel"]:focus,
 .share-row-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .error {
@@ -1197,7 +1197,7 @@ input[type="tel"]:focus,
   border-radius: 12px;
   padding: 12px 14px;
   font-family: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   margin-top: 14px;
   line-height: 1.6;
   font-weight: 500;
@@ -1225,13 +1225,13 @@ input[type="tel"]:focus,
 .progress-wrap h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 24px;
+  font-size: 23px;
   margin: 0 0 8px;
 }
 .progress-wrap .step {
   color: var(--ink-soft);
   font-family: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   min-height: 22px;
 }
 .bar {
@@ -1311,7 +1311,7 @@ input[type="tel"]:focus,
 .page .cover-caption {
   font-family: var(--text);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--accent);
   padding: 14px;
   text-align: center;
@@ -1329,7 +1329,7 @@ input[type="tel"]:focus,
 .read-aloud .read-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   color: var(--ink);
   margin-bottom: 10px;
 }
@@ -1347,7 +1347,7 @@ input[type="tel"]:focus,
   padding: 10px 8px;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   transition: all 0.15s;
   user-select: none;
 }
@@ -1374,7 +1374,7 @@ input[type="tel"]:focus,
 }
 .rec-status {
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink-soft);
   margin-bottom: 10px;
 }
@@ -1403,7 +1403,7 @@ input[type="tel"]:focus,
   cursor: pointer;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 17px;
+  font-size: 16px;
   color: #fff;
   padding: 11px 20px;
   border-radius: 13px;
@@ -1455,13 +1455,13 @@ input[type="tel"]:focus,
   text-align: center;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   transition: all 0.15s;
   user-select: none;
 }
 .narrator .emoji {
   display: block;
-  font-size: 24px;
+  font-size: 23px;
   margin-bottom: 2px;
 }
 .narrator.active {
@@ -1474,7 +1474,7 @@ input[type="tel"]:focus,
   cursor: pointer;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   color: #fff;
   padding: 12px 26px;
   border-radius: 13px;
@@ -1509,7 +1509,7 @@ input[type="tel"]:focus,
   color: var(--ink);
   font-family: var(--display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   padding: 11px 20px;
   border-radius: 12px;
   cursor: pointer;
@@ -1552,19 +1552,19 @@ input[type="tel"]:focus,
   padding: 30px;
 }
 .locked .lock-emoji {
-  font-size: 52px;
+  font-size: 51px;
   margin-bottom: 12px;
 }
 .locked .lock-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 24px;
+  font-size: 23px;
   margin-bottom: 8px;
   color: var(--ink);
 }
 .locked .lock-sub {
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink-soft);
   line-height: 1.7;
   margin-bottom: 20px;
@@ -1572,7 +1572,7 @@ input[type="tel"]:focus,
 .locked .lock-btn {
   width: auto;
   padding: 14px 26px;
-  font-size: 19px;
+  font-size: 18px;
 }
 .locked-caption {
   color: var(--ink-soft);
@@ -1582,7 +1582,7 @@ input[type="tel"]:focus,
   text-align: center;
   font-family: var(--text);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--accent-2);
   background: #f2f6ee;
   border: 1px dashed var(--accent-2);
@@ -1595,7 +1595,7 @@ input[type="tel"]:focus,
   text-align: center;
   margin-top: 12px;
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
 }
 .price-anchor s {
   color: var(--ink-soft);
@@ -1604,7 +1604,7 @@ input[type="tel"]:focus,
 }
 .price-anchor b {
   color: var(--accent);
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
 }
 
@@ -1618,7 +1618,7 @@ input[type="tel"]:focus,
   text-align: center;
 }
 .upsell .upsell-emoji {
-  font-size: 38px;
+  font-size: 37px;
   margin-bottom: 6px;
 }
 .upsell .upsell-badge {
@@ -1637,7 +1637,7 @@ input[type="tel"]:focus,
 .upsell .upsell-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   color: var(--ink);
   margin-bottom: 6px;
 }
@@ -1650,7 +1650,7 @@ input[type="tel"]:focus,
 }
 .upsell .upsell-sub b {
   color: var(--gold);
-  font-size: 16px;
+  font-size: 15px;
 }
 .upsell .upsell-btn {
   display: inline-block;
@@ -1659,7 +1659,7 @@ input[type="tel"]:focus,
   text-decoration: none;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 17px;
   color: #fff;
   padding: 12px 24px;
   border-radius: 13px;
@@ -1693,7 +1693,7 @@ input[type="tel"]:focus,
   text-align: center;
   color: var(--ink-soft);
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   margin-top: 40px;
   line-height: 1.7;
 }
@@ -1730,7 +1730,7 @@ input[type="tel"]:focus,
 }
 .biz-info .biz-lead {
   margin: 0 0 10px;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink-soft);
 }
 .biz-info p {
@@ -1745,7 +1745,7 @@ input[type="tel"]:focus,
 /* 약관/정책 본문 */
 .legal {
   font-family: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.85;
   color: var(--ink);
   text-align: left;
@@ -1754,7 +1754,7 @@ input[type="tel"]:focus,
 .legal h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 20px;
   color: var(--ink);
   margin: 26px 0 8px;
 }
@@ -1825,7 +1825,7 @@ input[type="tel"]:focus,
 }
 .modal-card h3 {
   font-family: var(--display);
-  font-size: 21px;
+  font-size: 20px;
 }
 .order-amount {
   display: flex;
@@ -1837,11 +1837,11 @@ input[type="tel"]:focus,
   border-radius: 12px;
   background: rgba(155, 176, 138, 0.16);
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   word-break: keep-all;
 }
 .order-amount b {
-  font-size: 19px;
+  font-size: 18px;
   white-space: nowrap;
 }
 .order-bank {
@@ -1863,7 +1863,7 @@ input[type="tel"]:focus,
   flex: 1 1 auto;
   min-width: 0;
   font-family: var(--text);
-  font-size: 17px;
+  font-size: 16px;
   letter-spacing: 0.01em;
   word-break: keep-all;
   overflow-wrap: anywhere;
@@ -1879,10 +1879,10 @@ input[type="tel"]:focus,
 .order-no {
   margin: 12px 0;
   font-family: var(--text);
-  font-size: 15px;
+  font-size: 14px;
 }
 .order-no b {
-  font-size: 21px;
+  font-size: 20px;
   letter-spacing: 0.08em;
 }
 
