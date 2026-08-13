@@ -1843,10 +1843,18 @@ input[type="tel"]:focus,
   margin-top: 6px;
 }
 .order-bank-row b {
+  /* .btn의 width:100%가 flex-basis로 작용해 복사 버튼이 줄을 다 차지하고,
+     계좌 텍스트가 break-all로 한 글자씩 세로로 쪼개졌다 (2026-08-13). */
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--text);
   font-size: 17px;
   letter-spacing: 0.01em;
-  word-break: break-all;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.order-bank-row .btn {
+  width: auto;
 }
 .btn.small {
   padding: 7px 12px;
