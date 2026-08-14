@@ -12,6 +12,9 @@ import {
   type ThemeId,
 } from "@/lib/prompts";
 import { BUSINESS } from "@/lib/business";
+import { SITE_ORIGIN } from "@/lib/sharebook";
+import PrintRequestForm from "./print-request-form";
+import { useConfirm } from "./confirm-dialog";
 import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
@@ -243,6 +246,7 @@ export default function Home() {
   const [unlocking, setUnlocking] = useState(false); // 결제 후 나머지 생성 중
   // 이 브라우저에 저장된 지난 동화 — 자동으로 펼치지 않고 첫 화면에 "이어보기" 카드로만 안내
   const [saved, setSaved] = useState<{ draft: Draft; paid: boolean } | null>(null);
+  const { confirmDialog, ask } = useConfirm();
 
   const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
   const restoredRef = useRef(false);
@@ -393,15 +397,31 @@ export default function Home() {
     if (!canSubmit || startingRef.current) return;
     startingRef.current = true;
     try {
+      // 기기에는 한 권만 저장된다 — 새 책을 만들면 지난 책이 지워지므로,
+      // 실수로 (특히 결제한) 책을 날리지 않게 한 번 확인한다. 공유 링크가 보관 수단이다.
+      if (saved) {
+        const ok = await ask({
+          title: "지난 동화가 지워져요 📖",
+          message: saved.paid
+            ? `《 ${saved.draft.title} 》는 결제하신 책이에요!\n지우기 전에 '이어서 보기'로 열어 공유 링크를 만들어두면 1년간 보관됩니다.`
+            : `《 ${saved.draft.title} 》를 보관하고 싶다면\n'이어서 보기'로 열어 공유 링크를 만들어두세요.`,
+          confirmLabel: "그래도 새로 만들기",
+          cancelLabel: "취소",
+        });
+        if (!ok) return;
+      }
       // 입금 확인을 기다리는 계좌이체 주문이 있으면 경고한다 — 새 샘플이 기존 초안을
       // 덮어써서, 입금해도 엉뚱한 책이 열리거나 주문한 책이 사라지는 사고를 막는다.
       const pendingBank = await loadBankOrder();
       if (pendingBank) {
-        const ok = confirm(
-          `입금 확인을 기다리는 주문(주문번호 ${pendingBank.orderNo})이 있어요.\n` +
-            "새 동화를 만들면 주문하신 동화가 지워지고, 입금하셔도 열 수 없게 돼요.\n\n" +
-            "그래도 새 동화를 만들까요?",
-        );
+        const ok = await ask({
+          title: "입금 확인을 기다리는 주문이 있어요",
+          message:
+            `주문번호 ${pendingBank.orderNo} — 새 동화를 만들면 주문하신 동화가 지워지고,\n` +
+            "입금하셔도 열 수 없게 돼요.",
+          confirmLabel: "그래도 새로 만들기",
+          cancelLabel: "취소",
+        });
         if (!ok) return;
         await clearBankOrder();
       }
@@ -410,7 +430,7 @@ export default function Home() {
       startingRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canSubmit, kids, theme, art]);
+  }, [canSubmit, saved, ask, kids, theme, art]);
 
   const startInner = useCallback(async () => {
     const children = kids.map((k) => ({
@@ -487,7 +507,7 @@ export default function Home() {
       setPhase("form");
       trackEvery("sample:fail"); // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다
     }
-  }, [canSubmit, kids, theme, art]);
+  }, [canSubmit, kids, theme, art, saved, ask]);
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
@@ -570,19 +590,19 @@ export default function Home() {
     [title, pages, current, kids, art, resumeGeneration],
   );
 
-  const reset = useCallback(() => {
-    // 결제한 책은 이 기기(브라우저)에만 있다 — 실수로 한 번 누르면 복구가 안 되므로 묻는다.
-    // (지난 동화 카드 삭제에는 이미 confirm이 있는데, 더 파괴적인 이 버튼에만 없었다)
-    if (
-      paid &&
-      pages.length > 0 &&
-      !confirm(
-        "결제하신 동화가 이 기기에서 지워져요.\n" +
-          "PDF 저장이나 공유 링크를 아직 안 만드셨다면 먼저 만들어두세요.\n\n" +
-          "지우고 새 동화를 시작할까요?",
-      )
-    ) {
-      return;
+  const reset = useCallback(async () => {
+    // 결제한 책은 실수로 한 번 누르면 이 기기에서 사라지므로 묻는다.
+    // (보관·공유 링크를 만들어뒀다면 링크로는 계속 열 수 있다)
+    if (paid && pages.length > 0) {
+      const ok = await ask({
+        title: "결제하신 동화가 지워져요",
+        message:
+          "이 기기에서 지워지면 되돌릴 수 없어요.\n" +
+          "PDF 저장이나 보관·공유 링크를 아직 안 만드셨다면 먼저 만들어두세요.",
+        confirmLabel: "지우고 새로 만들기",
+        cancelLabel: "취소",
+      });
+      if (!ok) return;
     }
     setPhase("form");
     setKids([emptyChild()]);
@@ -602,30 +622,58 @@ export default function Home() {
     // 새 동화를 만들면 지난 계좌이체 주문도 털어낸다 — 그 주문이 이 책을 열어주면 안 된다
     void clearBankOrder();
     // 공유 링크 목록("shares")은 지우지 않는다 — 새 동화를 만들어도 지난 링크를 지울 수 있어야 한다
-  }, [paid, pages.length]);
+  }, [paid, pages.length, ask]);
 
   // 첫 화면의 "지난 동화" 카드 지우기 — 저장된 초안·결제기록·녹음을 함께 정리한다.
-  const dropSaved = useCallback(() => {
-    if (!confirm("저장된 지난 동화를 지울까요? 이 기기에서는 다시 열 수 없어요.")) return;
+  const dropSaved = useCallback(async () => {
+    const ok = await ask({
+      title: "지난 동화를 지울까요?",
+      message: "이 기기에서는 다시 열 수 없어요.",
+      confirmLabel: "지우기",
+    });
+    if (!ok) return;
     setSaved(null);
     kvDel("draft");
     kvDel("paidOrder");
     kvDel("recordings");
-  }, []);
+  }, [ask]);
 
   return (
     <main className="wrap">
+      {/* 검색결과에 상품(가격) 정보로 노출되기 위한 구조화 데이터.
+          클라이언트 컴포넌트여도 프리렌더된 HTML에 포함되므로 봇이 읽을 수 있다. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "키즈북 · 우리 아이가 주인공인 맞춤 그림동화책",
+            description:
+              "아이 이름과 사진으로 만드는 표지 포함 11페이지 맞춤 그림동화책. 사실적 그림·수채화·색연필·크레파스 4가지 그림체 지원.",
+            image: `${SITE_ORIGIN}/opengraph-image`,
+            brand: { "@type": "Brand", name: "키즈북" },
+            offers: {
+              "@type": "Offer",
+              url: SITE_ORIGIN,
+              price: PRICE,
+              priceCurrency: "KRW",
+              availability: "https://schema.org/InStock",
+            },
+          }),
+        }}
+      />
       <header className="hero">
         <span className="badge">키즈북 ✨</span>
         <h1>
-          진짜 우리 아이가
+          우리 아이가
           <br />
-          주인공인 동화책
+          주인공이 되는 그림동화
         </h1>
         <p>
-          사진 속 얼굴을 그대로 살려 <b>표지 포함 11페이지</b> 그림동화로 그립니다.
+          사진 한 장이면 아이 얼굴 그대로, <b>표지 포함 11페이지</b> 동화책이 완성돼요.
           <br />
-          <b>표지는 무료</b>예요 — 얼굴을 먼저 보고 결제하세요.
+          <b>표지는 무료</b>로 먼저 보여드려요 — 마음에 들 때만 결제하시면 됩니다.
         </p>
         <ul className="hero-points">
           <li>
@@ -890,8 +938,15 @@ export default function Home() {
             무료 샘플 만들기 🪄
           </button>
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
-            표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요. 아이 얼굴이 마음에 들 때만
-            결제하시면, <b>표지 포함 11페이지</b> 전체와 읽어주기·PDF·공유 링크가 열립니다.
+            표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요.
+            <br />
+            아이 얼굴이 마음에 들 때만 결제하시면,
+            <br />
+            <b>표지 포함 11페이지</b> 전체와 읽어주기·PDF·공유 링크가 열립니다.
+          </div>
+          <div className="hint" style={{ textAlign: "center", marginTop: 8, fontSize: 15 }}>
+            🎁 <b>부모 목소리 녹음</b>도 지금은 <b>오픈 기념 무료</b> — 정식 오픈 후 유료 전환
+            예정이에요.
           </div>
           <div className="price-anchor">
             <s>정가 {LIST_PRICE.toLocaleString()}원</s>
@@ -944,6 +999,14 @@ export default function Home() {
           onPay={pay}
           onReset={reset}
           error={error}
+          bookMeta={{
+            kidsInfo: kids
+              .filter((k) => k.name.trim())
+              .map((k) => `${k.name.trim()}(${k.age}세)`)
+              .join(", "),
+            themeLabel: THEMES.find((t) => t.id === theme)?.label ?? "",
+            artLabel: ART_STYLES.find((a) => a.id === art)?.label ?? "",
+          }}
         />
       )}
 
@@ -959,6 +1022,7 @@ export default function Home() {
         />
       )}
 
+      {confirmDialog}
       {showBank && (
         <BankOrderBox
           bookTitle={title}
@@ -1032,6 +1096,7 @@ function SavedShareList() {
   const [shares, setShares] = useState<SavedShare[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { confirmDialog, ask } = useConfirm();
 
   useEffect(() => {
     loadShares().then(setShares);
@@ -1040,8 +1105,12 @@ function SavedShareList() {
   if (shares.length === 0) return null;
 
   const remove = async (s: SavedShare) => {
-    if (!confirm(`《 ${s.title} 》 공유 링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없어요.`))
-      return;
+    const ok = await ask({
+      title: "공유 링크를 지울까요?",
+      message: `《 ${s.title} 》 링크를 받은 사람도 더 이상 볼 수 없어요.`,
+      confirmLabel: "지우기",
+    });
+    if (!ok) return;
     setBusy(s.id);
     setError(null);
     try {
@@ -1057,6 +1126,7 @@ function SavedShareList() {
 
   return (
     <section className="card">
+      {confirmDialog}
       <div className="field">
         <label>내가 만든 공유 링크 🔗</label>
         <div className="hint">
@@ -1093,6 +1163,7 @@ function BookViewer({
   onPay,
   onReset,
   error,
+  bookMeta,
 }: {
   title: string;
   pages: BookPage[];
@@ -1103,6 +1174,7 @@ function BookViewer({
   onPay: () => void;
   onReset: () => void;
   error: string | null;
+  bookMeta: { kidsInfo: string; themeLabel: string; artLabel: string };
 }) {
   const total = pages.length;
   const page = pages[current];
@@ -1133,6 +1205,15 @@ function BookViewer({
   const audioRef = useRef<HTMLAudioElement | null>(null); // 하나를 재사용 (iOS 자동재생 잠금 대응)
   const audioCacheRef = useRef<Map<string, string>>(new Map()); // `${voice}-${page}` → objectURL
   const sessionRef = useRef(0); // 중지/전환 시 진행 중이던 재생 루프 무효화 토큰
+
+  // 인쇄본 신청 폼 (mailto는 메일 앱 없는 기기에서 에러가 나서 폼으로 받는다)
+  const [printFormOpen, setPrintFormOpen] = useState(false);
+  const { confirmDialog, ask } = useConfirm();
+  // 결제 표식에서 주문번호를 꺼내 신청 메일에 담는다 (bank-XXXX 형식이면 계좌이체 주문번호)
+  const [payMarker, setPayMarker] = useState("");
+  useEffect(() => {
+    kvGet<string>("paidOrder").then((v) => setPayMarker(v ?? ""));
+  }, []);
 
   // 내 목소리 녹음
   const [recordings, setRecordings] = useState<Map<number, Blob>>(new Map());
@@ -1524,12 +1605,13 @@ function BookViewer({
 
   const removeShareLink = async () => {
     if (!share || sharing) return;
-    if (
-      !confirm(
-        "링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없고,\n서버에 보관된 책도 함께 지워져 다시 만들 수 없어요.",
-      )
-    )
-      return;
+    const ok = await ask({
+      title: "보관·공유 링크를 지울까요?",
+      message:
+        "링크를 받은 사람도 더 이상 볼 수 없고,\n서버에 보관된 책도 함께 지워져 다시 만들 수 없어요.",
+      confirmLabel: "지우기",
+    });
+    if (!ok) return;
     setSharing(true);
     try {
       await deleteShareLink(share.id, share.deleteKey);
@@ -1580,6 +1662,7 @@ function BookViewer({
 
   return (
     <section className="book">
+      {confirmDialog}
       <h2 className="book-title">《 {title} 》</h2>
 
       <div className="page">
@@ -1645,7 +1728,7 @@ function BookViewer({
             onClick={() => switchMode("mine")}
             role="button"
           >
-            🎙 내 목소리
+            🎙 내 목소리 <span className="voice-free-badge">오픈 기념 무료</span>
           </div>
         </div>
 
@@ -1831,16 +1914,18 @@ function BookViewer({
             <br />
             1차 제작분은 신청하신 순서대로 배정해 드릴게요.
           </div>
-          <a
-            className="upsell-btn"
-            href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(
-              `[동화책 인쇄본 1차 제작 신청] ${title}`,
-            )}&body=${encodeURIComponent(
-              "1차 제작분으로 신청할게요!\n연락 받으실 이메일 또는 전화번호를 남겨주세요:\n",
-            )}`}
-          >
+          <button type="button" className="upsell-btn" onClick={() => setPrintFormOpen(true)}>
             1차 제작분 신청하기 ✉️
-          </a>
+          </button>
+          {printFormOpen && (
+            <PrintRequestForm
+              bookTitle={title}
+              bookMeta={bookMeta}
+              orderNo={payMarker.replace(/^bank-/, "")}
+              shareUrl={share?.url ?? ""}
+              onClose={() => setPrintFormOpen(false)}
+            />
+          )}
           <div className="upsell-note">
             지금은 신청만 받아요. 결제는 제작이 확정된 뒤에 따로 안내드릴게요.
           </div>

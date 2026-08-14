@@ -9,7 +9,7 @@
  * 주문당 한 번만 보낸다(SET NX).
  */
 import { pipeline } from "@/lib/kv";
-import { sendMail } from "@/lib/mail";
+import { mailBookLink, mailReady } from "@/lib/mail";
 import { ID_RE as ORDER_ID_RE, getOrder, tokenMatches } from "@/lib/orders";
 import { ID_RE as BOOK_ID_RE, SITE_ORIGIN } from "@/lib/sharebook";
 
@@ -46,26 +46,14 @@ export async function POST(req: Request): Promise<Response> {
   const [already] = await pipeline([["GET", sentKey]]);
   if (already) return Response.json({ ok: true, skipped: true });
 
-  try {
-    await sendMail(
-      order.email,
-      `[키즈북] 동화책 보관 링크 — 《 ${order.bookTitle || "동화책"} 》`,
-      [
-        `${order.name}님, 동화책이 완성됐어요! 📖`,
-        "",
-        "아래 링크는 1년간 보관되는 우리 아이 동화책이에요.",
-        "폰을 바꾸거나 브라우저 기록이 지워져도 이 링크로 언제든 다시 열 수 있으니,",
-        "이 메일을 지우지 말고 보관해주세요. 가족에게 링크를 그대로 공유하셔도 됩니다.",
-        "",
-        `${SITE_ORIGIN}/book/${bookId}`,
-        "",
-        "궁금한 점은 이 메일에 답장 주시면 됩니다. 아이와 즐거운 밤 되세요 💛",
-      ].join("\n"),
-    );
-  } catch (err) {
-    console.error("share notify mail failed:", err);
-    return Response.json({ error: "메일 발송에 실패했어요." }, { status: 500 });
-  }
+  if (!mailReady()) return Response.json({ ok: true, skipped: true });
+  const sent = await mailBookLink({
+    email: order.email,
+    name: order.name,
+    bookTitle: order.bookTitle || "동화책",
+    url: `${SITE_ORIGIN}/book/${bookId}`,
+  });
+  if (!sent) return Response.json({ error: "메일 발송에 실패했어요." }, { status: 500 });
 
   await pipeline([["SET", sentKey, "1", "EX", SENT_TTL]]);
   return Response.json({ ok: true });

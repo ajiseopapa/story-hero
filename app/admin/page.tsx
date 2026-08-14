@@ -1,9 +1,10 @@
 "use client";
 
-// 관리 화면 목차. /admin 자체는 아무 데이터도 안 보여주고, 키를 받아 각 화면으로 넘겨주기만 한다.
-// 키는 주소가 아니라 sessionStorage로 전달한다(useAdminKey) — 주소에 실으면
-// 히스토리·Referer에 남는다. 예전 ?key= 즐겨찾기도 useAdminKey가 받아서 흡수한다.
-import { useAdminKey } from "./use-admin-key";
+// 관리 화면 목차. /admin 자체는 아무 데이터도 안 보여주고, 키를 받아 기억해두기만 한다.
+// 키는 이 브라우저(localStorage)에 기억되고 각 화면이 API에 헤더로만 보낸다 —
+// 링크 주소에 ?key=를 달지 않는다(히스토리·Referer에 남는다).
+import { useEffect, useState } from "react";
+import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
 
 const PAGES: { href: string; title: string; desc: string }[] = [
   {
@@ -24,7 +25,17 @@ const PAGES: { href: string; title: string; desc: string }[] = [
 ];
 
 export default function AdminIndexPage() {
-  const [key, setKey] = useAdminKey();
+  const [key, setKey] = useState("");
+
+  // 예전 ?key= 즐겨찾기로 들어와도 그대로 이어 쓴다 (recallAdminKey가 기억해둔다)
+  useEffect(() => {
+    setKey(recallAdminKey());
+  }, []);
+
+  const save = (k: string) => {
+    setKey(k);
+    if (k) rememberAdminKey(k);
+  };
 
   return (
     <main className="wrap">
@@ -41,11 +52,11 @@ export default function AdminIndexPage() {
             type="password"
             value={key}
             placeholder="REVIEW_ADMIN_KEY 값"
-            onChange={(e) => setKey(e.target.value.trim())}
+            onChange={(e) => save(e.target.value.trim())}
           />
         </div>
         <p className="hint">
-          키는 이 브라우저 탭이 열려 있는 동안만 기억합니다(탭을 닫으면 다시 넣어야 해요).
+          한 번 넣으면 이 브라우저에 키를 기억해두어, 다음부터는 주소에 키가 없어도 열립니다.
           <br />
           값은 프로젝트의 <b>.env.local</b> 파일이나 Vercel 환경변수{" "}
           <b>REVIEW_ADMIN_KEY</b>에 있습니다.

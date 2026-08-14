@@ -167,6 +167,17 @@ export async function consumeOrderImage(id: string, limit: number): Promise<bool
   return Number(count) <= limit;
 }
 
+/** 주문 완전 삭제 — 테스트 주문 정리용. 기록과 목록에서 모두 지운다. */
+export async function deleteOrder(id: string): Promise<boolean> {
+  const order = await getOrder(id);
+  if (!order) return false;
+  await pipeline([
+    ["DEL", KEY(id)],
+    ["LREM", INDEX, 0, id],
+  ]);
+  return true;
+}
+
 /** 관리자용 목록 — 최신순. 만료돼 사라진 id는 건너뛴다. */
 export async function listOrders(limit = 200): Promise<Order[]> {
   const [ids] = await pipeline([["LRANGE", INDEX, 0, limit - 1]]);

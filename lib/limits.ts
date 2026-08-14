@@ -41,8 +41,23 @@ export function ipBucket(req: Request): string {
   return createHash("sha256").update(ip).digest("hex").slice(0, 16);
 }
 
+// 무료 샘플의 1차 신원은 쿠키 기반 익명 기기 ID다. IP는 통신사 NAT(CGNAT)에서 수천 명이
+// 공유하므로 "기기당"의 신원이 될 수 없다 — IP당 3회로 막으면 처음 온 손님이 남이 쓴 한도에
+// 걸려 이탈한다 (2026-08-13). 쿠키를 지우면 새 ID가 되지만, 그 우회는 느슨한 IP 백스톱과
+// 전체 한도가 막는다.
+export const DEVICE_COOKIE = "kb_device";
+
+export function readDeviceId(req: Request): { id: string; isNew: boolean } {
+  const m = req.headers
+    .get("cookie")
+    ?.match(/(?:^|;\s*)kb_device=([A-Za-z0-9-]{8,64})(?:;|\s|$)/);
+  if (m) return { id: m[1], isNew: false };
+  return { id: crypto.randomUUID(), isNew: true };
+}
+
 export const FREE_DAILY_LIMIT = Number(process.env.FREE_DAILY_LIMIT ?? "100"); // 전체 무료 샘플/일
-export const FREE_IP_DAILY_LIMIT = Number(process.env.FREE_IP_DAILY_LIMIT ?? "3"); // IP당 무료 샘플/일
+export const FREE_DEVICE_DAILY_LIMIT = Number(process.env.FREE_DEVICE_DAILY_LIMIT ?? "3"); // 기기(쿠키)당 무료 샘플/일
+export const FREE_IP_DAILY_LIMIT = Number(process.env.FREE_IP_DAILY_LIMIT ?? "20"); // IP당 백스톱 (쿠키 삭제 우회 방지)
 // 삽화 생성/일 (유료 이어그리기 포함 백스톱).
 // 1장당 약 156원(2026-08-13 실측)이라 한도가 곧 사고 시 최대 손실액이다.
 // 1500이면 하루 23만원이 걸리는데, 정상 사용으로 그 수치가 나오려면 하루 136권(매출 200만원)이

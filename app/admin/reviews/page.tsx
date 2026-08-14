@@ -1,15 +1,19 @@
 "use client";
 
-// 후기 검수 화면 (키는 헤더로만 보낸다 — useAdminKey 참고. 키 없이는 아무것도 안 보임).
+// 후기 검수 화면 (키는 API에 헤더로만 보낸다 — lib/admin-key 참고. 키 없이는 아무것도 안 보임).
 import { useCallback, useEffect, useState } from "react";
+import { recallAdminKey } from "@/lib/admin-key";
 import { formatDate, type Review } from "@/lib/reviews";
-import { useAdminKey } from "../use-admin-key";
 
 export default function ReviewAdminPage() {
-  const [key, setKey] = useAdminKey();
+  const [key, setKey] = useState("");
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    setKey(recallAdminKey());
+  }, []);
 
   const load = useCallback(async (k: string) => {
     if (!k) return;

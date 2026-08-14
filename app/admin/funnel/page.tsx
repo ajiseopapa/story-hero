@@ -1,9 +1,9 @@
 "use client";
 
-// 퍼널 대시보드 (후기 검수와 같은 키 — 헤더로만 보낸다, useAdminKey 참고).
+// 퍼널 대시보드 (후기 검수와 같은 키 — API엔 헤더로만 보낸다, lib/admin-key 참고).
 // 방문자용 화면은 몰라도 관리 화면은 한국어로 읽혀야 한다.
 import { useCallback, useEffect, useState } from "react";
-import { useAdminKey } from "../use-admin-key";
+import { recallAdminKey } from "@/lib/admin-key";
 
 interface Step {
   key: string;
@@ -52,7 +52,7 @@ function pct(v: number | null): string {
 }
 
 export default function FunnelAdminPage() {
-  const [key, setKey] = useAdminKey();
+  const [key, setKey] = useState("");
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +60,7 @@ export default function FunnelAdminPage() {
   const [origin, setOrigin] = useState("");
 
   useEffect(() => {
+    setKey(recallAdminKey());
     setOrigin(window.location.origin);
   }, []);
 

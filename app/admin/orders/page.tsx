@@ -1,9 +1,9 @@
 "use client";
 
-// 계좌이체 주문 관리 (후기 검수·퍼널과 같은 키 — 헤더로만 보낸다, useAdminKey 참고).
+// 계좌이체 주문 관리 (후기 검수·퍼널과 같은 키 — API엔 헤더로만 보낸다, lib/admin-key 참고).
 // 여기서 "입금 확인"을 누르면 주문자 화면이 자동으로 열린다.
 import { useCallback, useEffect, useState } from "react";
-import { useAdminKey } from "../use-admin-key";
+import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
 
 interface Order {
   id: string;
@@ -31,10 +31,14 @@ function when(ms: number): string {
 }
 
 export default function OrderAdminPage() {
-  const [key, setKey] = useAdminKey();
+  const [key, setKey] = useState("");
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    setKey(recallAdminKey());
+  }, []);
 
   const load = useCallback(async (k: string) => {
     if (!k) return;
@@ -46,6 +50,7 @@ export default function OrderAdminPage() {
         setOrders([]);
         return;
       }
+      rememberAdminKey(k);
       const data = (await res.json()) as { orders: Order[] };
       setOrders(data.orders);
     } catch {
@@ -57,8 +62,9 @@ export default function OrderAdminPage() {
     if (key) load(key);
   }, [key, load]);
 
-  const act = async (id: string, action: Order["status"]) => {
+  const act = async (id: string, action: Order["status"] | "delete") => {
     if (action === "paid" && !confirm("입금을 확인하셨나요? 주문자 화면이 바로 열립니다.")) return;
+    if (action === "delete" && !confirm("이 주문을 완전히 삭제할까요? 되돌릴 수 없어요.")) return;
     setBusy(id);
     try {
       await fetch("/api/order/admin", {
@@ -181,6 +187,13 @@ export default function OrderAdminPage() {
                 대기로 되돌리기
               </button>
             )}
+            <button
+              className="btn secondary"
+              disabled={busy === o.id}
+              onClick={() => act(o.id, "delete")}
+            >
+              삭제
+            </button>
           </div>
         </section>
       ))}

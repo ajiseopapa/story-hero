@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import {
+  DEVICE_COOKIE,
   FREE_DAILY_LIMIT,
+  FREE_DEVICE_DAILY_LIMIT,
   FREE_IP_DAILY_LIMIT,
   consumeQuota,
   ipBucket,
+  readDeviceId,
 } from "@/lib/limits";
 import {
   MAX_CHILDREN,
@@ -53,6 +56,23 @@ function normalizeTitle(title: string, callName: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  // 무료 샘플 한도의 1차 신원인 기기 쿠키. 어느 경로로 응답이 끝나든 새 기기에는 쿠키를 심어,
+  // 첫 요청부터 같은 기기로 집계되게 한다.
+  const device = readDeviceId(req);
+  const res = await generateStory(req, device.id);
+  if (device.isNew) {
+    res.cookies.set(DEVICE_COOKIE, device.id, {
+      maxAge: 60 * 60 * 24 * 400, // 크롬이 허용하는 최대 수명
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+    });
+  }
+  return res;
+}
+
+async function generateStory(req: NextRequest, deviceId: string): Promise<NextResponse> {
   try {
     const { name, gender, age, theme, children } = (await req.json()) as {
       name?: string;
@@ -88,10 +108,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "이야기 주제를 선택해주세요." }, { status: 400 });
     }
 
-    // 일일 무료 샘플 한도 (IP별 → 전체 순서로 소진)
-    if (!(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))) {
+    // 일일 무료 샘플 한도 (기기 → IP 백스톱 → 전체 순서로 소진)
+    if (!(await consumeQuota(`device/${deviceId}`, FREE_DEVICE_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "오늘 이 기기에서 만들 수 있는 무료 샘플을 모두 사용했어요. 내일 다시 만나요 🌙" },
+        { status: 429 },
+      );
+    }
+    if (!(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))) {
+      return NextResponse.json(
+        { error: "지금 같은 네트워크에서 만든 샘플이 많아 잠시 쉬어갈게요. 내일 다시 만나요 🌙" },
         { status: 429 },
       );
     }
