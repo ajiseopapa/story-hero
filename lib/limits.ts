@@ -10,7 +10,8 @@ function todayKST(): string {
 }
 
 // bucket의 오늘 사용량이 limit 미만이면 1 소진하고 true, 초과면 false.
-// Blob 토큰이 없거나 오류가 나면 서비스를 막지 않도록 통과시킨다(fail-open).
+// 토큰이 없으면(로컬 개발) 통과시키되, 검사 자체가 오류를 내면 막는다(fail-closed) —
+// Blob 장애 순간에 한도가 통째로 풀리면 그 시간 동안 OpenAI 비용 상한이 사라진다.
 export async function consumeQuota(bucket: string, limit: number): Promise<boolean> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return true;
   try {
@@ -26,8 +27,8 @@ export async function consumeQuota(bucket: string, limit: number): Promise<boole
     });
     return true;
   } catch (err) {
-    console.warn("quota check failed (fail-open):", err);
-    return true;
+    console.error("quota check failed (fail-closed):", err);
+    return false;
   }
 }
 
@@ -48,6 +49,13 @@ export const FREE_IP_DAILY_LIMIT = Number(process.env.FREE_IP_DAILY_LIMIT ?? "3"
 // 팔려야 한다 — 실제 트래픽과 너무 동떨어져 방어가 되지 않았다. 300이면 하루 27권까지 여유가
 // 있으면서 노출은 4.7만원으로 줄어든다. 실제로 팔리기 시작하면 env로 올리면 된다.
 export const IMAGE_DAILY_LIMIT = Number(process.env.IMAGE_DAILY_LIMIT ?? "300");
+// 삽화 생성 IP당/일 — 결제 안 한 요청에만 적용. 무료 샘플은 한 번에 2장(표지+1장면)이고
+// 이야기 자체가 IP당 3회/일이라, 재시도까지 감안해도 12면 정상 사용을 막지 않는다.
+// (스크립트 남용 시 노출: 12장 × 156원 ≈ 1,900원/IP/일)
+export const IMAGE_FREE_IP_DAILY_LIMIT = Number(process.env.IMAGE_FREE_IP_DAILY_LIMIT ?? "12");
+// 결제한 주문 하나가 평생 그릴 수 있는 삽화 수 — 한 권 11장 + 오류 재시도 여유.
+// 주문 토큰이 유출돼도 이 수를 넘으면 더 못 그린다.
+export const ORDER_IMAGE_LIMIT = Number(process.env.ORDER_IMAGE_LIMIT ?? "60");
 export const SHARE_DAILY_LIMIT = Number(process.env.SHARE_DAILY_LIMIT ?? "50"); // 공유 링크 생성/일 (전체)
 export const SHARE_IP_DAILY_LIMIT = Number(process.env.SHARE_IP_DAILY_LIMIT ?? "5"); // 공유 링크 생성/일 (IP당)
 export const SHARE_UPLOAD_DAILY_LIMIT = Number(process.env.SHARE_UPLOAD_DAILY_LIMIT ?? "1500"); // 공유용 파일 업로드/일 (한 권에 최대 22개)

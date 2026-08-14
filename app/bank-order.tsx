@@ -49,7 +49,7 @@ export default function BankOrderBox({
 }: {
   bookTitle: string;
   price: number;
-  onPaid: () => void;
+  onPaid: (order: BankOrder) => void; // 주문 id+token을 넘겨야 서버가 "돈 낸 주문"으로 검증한다
   onClose: () => void;
 }) {
   const [order, setOrder] = useState<BankOrder | null>(null);
@@ -61,6 +61,9 @@ export default function BankOrderBox({
   const [checkedNote, setCheckedNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 30초 자동 확인과 수동 확인 버튼이 동시에 입금을 감지해도 onPaid는 한 번만 부른다
+  // (두 번 부르면 남은 장면 생성이 두 벌 돌아 비용이 2배로 나간다)
+  const paidNotifiedRef = useRef(false);
 
   // 이미 접수한 주문이 있으면 그 화면부터 보여준다
   useEffect(() => {
@@ -76,7 +79,9 @@ export default function BankOrderBox({
       const paid = await checkBankOrderPaid(o);
       if (manual) setChecking(false);
       if (paid) {
-        onPaid();
+        if (paidNotifiedRef.current) return;
+        paidNotifiedRef.current = true;
+        onPaid(o);
       } else if (manual) {
         setCheckedNote("아직 입금 확인 전이에요. 확인되면 이메일로 알려드릴게요.");
       }
@@ -229,8 +234,8 @@ export default function BankOrderBox({
             )}
 
             <p style={{ margin: "12px 0" }}>
-              입금이 확인되면 이 화면이 자동으로 열립니다. 창을 닫으셔도 괜찮아요 — 다시
-              들어오시면 이어서 볼 수 있습니다.
+              이 창을 열어두시면 30초마다 자동으로 입금을 확인해요. 창을 닫으셨다면 확인
+              이메일을 받은 뒤 이 페이지에 다시 들어오시면(새로고침) 이어서 볼 수 있습니다.
             </p>
 
             {checkedNote && <div className="hint">{checkedNote}</div>}

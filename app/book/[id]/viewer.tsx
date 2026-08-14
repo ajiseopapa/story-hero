@@ -15,6 +15,7 @@ type Props = {
 export default function BookViewer({ id, title, pages, expiry }: Props) {
   const [current, setCurrent] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [audioFailed, setAudioFailed] = useState(false); // iOS 사파리는 audio/webm 재생 불가
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,6 +46,13 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
       const el = audioRef.current;
       playingRef.current = true;
       setPlaying(true);
+      setAudioFailed(false);
+
+      // 재생 실패(iOS 사파리의 webm 미지원 등) 시 조용히 멈추지 말고 안내를 띄운다
+      const fail = () => {
+        stop();
+        setAudioFailed(true);
+      };
 
       const step = (i: number) => {
         if (!playingRef.current) return;
@@ -61,8 +69,8 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
         el.onended = () => {
           if (playingRef.current) step(i + 1);
         };
-        el.onerror = () => stop();
-        el.play().catch(() => stop());
+        el.onerror = fail;
+        el.play().catch(fail);
       };
       step(start);
     },
@@ -124,6 +132,11 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
             {!page.hasAudio && (
               <div className="hint" style={{ marginTop: 8 }}>
                 이 페이지는 녹음된 소리가 없어요
+              </div>
+            )}
+            {audioFailed && (
+              <div className="hint" style={{ marginTop: 8 }}>
+                이 기기에서는 목소리 재생이 지원되지 않아요. 그림책은 그대로 넘겨볼 수 있어요.
               </div>
             )}
           </div>

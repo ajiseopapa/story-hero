@@ -108,6 +108,13 @@ export function buildSoundBookHtml(title: string, pages: SoundPage[]): string {
     playBtn.classList.remove("on");
   }
 
+  // iOS 사파리는 안드로이드에서 녹음된 audio/webm을 재생 못 한다 —
+  // 조용히 멈추면 고장난 것처럼 보이므로 안내를 띄운다
+  function audioFail() {
+    stop();
+    note.textContent = "이 기기에서는 목소리 재생이 지원되지 않아요. 그림책은 그대로 넘겨볼 수 있어요.";
+  }
+
   function playFrom(i) {
     playing = true;
     playBtn.textContent = "⏹ 그만 읽기";
@@ -120,7 +127,8 @@ export function buildSoundBookHtml(title: string, pages: SoundPage[]): string {
       if (!p.a) { setTimeout(function () { step(j + 1); }, 2500); return; }
       audio.src = p.a;
       audio.onended = function () { if (playing) step(j + 1); };
-      audio.play().catch(stop);
+      audio.onerror = audioFail;
+      audio.play().catch(audioFail);
     })(i);
   }
 
@@ -149,7 +157,9 @@ export function downloadSoundBook(title: string, pages: SoundPage[]): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${title} 소리책.html`;
+  // 파일명 금지 문자 제거 (lib/pdf.ts와 같은 방식)
+  const safe = title.replace(/[\\/:*?"<>|]/g, "").trim() || "동화책";
+  a.download = `${safe} 소리책.html`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }

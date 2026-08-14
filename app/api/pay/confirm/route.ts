@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { track } from "@/lib/stats";
+import { isStoreReady, newOrderId, newOrderToken, saveOrder } from "@/lib/orders";
+import type { Order } from "@/lib/orders";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -52,10 +54,35 @@ export async function POST(req: NextRequest) {
       /* 통계는 조용히 실패한다 */
     }
 
+    // 결제와 삽화 생성을 서버에서 잇는 주문 기록 — /api/image가 이 토큰으로
+    // "돈 낸 주문"임을 확인한다. 기록 실패가 결제 승인을 되돌리면 안 되므로 오류는 삼키고,
+    // 그 경우 클라이언트는 토큰 없이(무료 IP 한도로) 이어 그리게 된다.
+    let bookOrder: { id: string; token: string } | undefined;
+    try {
+      if (isStoreReady()) {
+        const record: Order = {
+          id: newOrderId(),
+          token: newOrderToken(),
+          name: "카드결제",
+          email: "",
+          amount: Number(amount),
+          bookTitle: `(카드) ${data.orderName ?? orderId}`,
+          status: "paid",
+          createdAt: Date.now(),
+          paidAt: Date.now(),
+        };
+        await saveOrder(record);
+        bookOrder = { id: record.id, token: record.token };
+      }
+    } catch {
+      /* 주문 기록은 조용히 실패한다 */
+    }
+
     return NextResponse.json({
       ok: true,
       orderId: data.orderId,
       approvedAt: data.approvedAt,
+      bookOrder,
     });
   } catch {
     return NextResponse.json({ error: "결제 승인 중 오류가 발생했습니다." }, { status: 500 });

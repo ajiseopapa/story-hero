@@ -269,9 +269,16 @@ function sceneTextSpec(age: number): string {
   return "각 장면 텍스트는 한국어로 4문장 안팎, 복문을 섞어 읽는 맛이 있게";
 }
 
-// 아이들 호칭을 "서아와 도윤이" 형태로 연결 (callName은 항상 받침 없이 끝나 "와"로 통일)
+// 아이들 호칭을 "서아와 도윤이" 형태로 연결.
+// 앞 이름의 마지막 글자에 받침이 있으면 "과", 없으면 "와" (한글이 아니면 "와" 유지).
 export function joinCallNames(names: string[]): string {
-  return names.map(koreanCallName).join("와 ");
+  return names.map(koreanCallName).reduce((acc, name, i) => {
+    if (i === 0) return name;
+    const code = acc.charCodeAt(acc.length - 1);
+    const isHangul = code >= 0xac00 && code <= 0xd7a3;
+    const particle = isHangul && (code - 0xac00) % 28 !== 0 ? "과" : "와";
+    return `${acc}${particle} ${name}`;
+  }, "");
 }
 
 export function buildStoryUserPrompt(

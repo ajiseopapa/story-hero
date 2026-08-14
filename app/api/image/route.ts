@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI, { toFile } from "openai";
 import { getOpenAI } from "@/lib/openai";
 import { MAX_CHILDREN, buildCoverPrompt, buildScenePrompt, type ChildSpec } from "@/lib/prompts";
-import { IMAGE_DAILY_LIMIT, consumeQuota } from "@/lib/limits";
+import {
+  IMAGE_DAILY_LIMIT,
+  IMAGE_FREE_IP_DAILY_LIMIT,
+  ORDER_IMAGE_LIMIT,
+  consumeQuota,
+  ipBucket,
+} from "@/lib/limits";
+import { ID_RE, consumeOrderImage, getOrder, tokenMatches } from "@/lib/orders";
 
 export const runtime = "nodejs";
 // gpt-image-1은 한 장에 60~90초 걸릴 수 있음 (Vercel Fluid Compute에서 Hobby도 최대 300초 허용)
@@ -17,7 +24,7 @@ function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null 
 
 export async function POST(req: NextRequest) {
   try {
-    const { photo, photos, imagePrompt, kind, age, gender, children, art } =
+    const { photo, photos, imagePrompt, kind, age, gender, children, art, order } =
       (await req.json()) as {
         photo?: string; // 구버전 단일 사진 (결제 복원 초안 호환)
         photos?: string[]; // 신버전: 아이별 사진 1~3장 (children과 같은 순서)
@@ -27,6 +34,8 @@ export async function POST(req: NextRequest) {
         gender?: "girl" | "boy";
         children?: { age?: number; gender?: "girl" | "boy" }[];
         art?: string; // 그림체 (없으면 예전 초안 → 수채화)
+        // 결제한 주문의 자격 증명 — 있으면 IP 한도 대신 주문별 한도를 쓴다
+        order?: { id?: string; token?: string };
       };
 
     const photoList = (
@@ -61,6 +70,30 @@ export async function POST(req: NextRequest) {
       age: clampAge(rawKids[i]?.age),
       gender: rawKids[i]?.gender === "boy" ? "boy" : "girl",
     }));
+
+    // ----- 비용 방어 -----
+    // 결제한 주문(자격 증명 제시)은 주문별 상한, 그 외(무료 샘플)는 IP별 일일 한도.
+    // 예전엔 전역 한도뿐이라 스크립트 하나가 하루치를 소진해 유료 고객까지 막을 수 있었다.
+    if (order?.id && order?.token) {
+      const found = ID_RE.test(order.id) ? await getOrder(order.id) : null;
+      if (!found || found.status !== "paid" || !tokenMatches(found.token, order.token)) {
+        return NextResponse.json(
+          { error: "주문 확인에 실패했어요. 새로고침 후 다시 시도해주세요." },
+          { status: 403 },
+        );
+      }
+      if (!(await consumeOrderImage(order.id, ORDER_IMAGE_LIMIT))) {
+        return NextResponse.json(
+          { error: "이 주문으로 그릴 수 있는 삽화 수를 넘었어요. 문의해주시면 도와드릴게요." },
+          { status: 429 },
+        );
+      }
+    } else if (!(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))) {
+      return NextResponse.json(
+        { error: "오늘 무료로 그릴 수 있는 양을 다 쓰셨어요. 내일 다시 시도해주세요." },
+        { status: 429 },
+      );
+    }
 
     // 일일 삽화 생성 백스톱 (직접 호출 남용·폭주 방지, 정상 사용량보다 넉넉하게)
     if (!(await consumeQuota("image", IMAGE_DAILY_LIMIT))) {

@@ -17,7 +17,12 @@ import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import { trackEvery, trackStep } from "@/lib/track";
-import BankOrderBox, { checkBankOrderPaid, clearBankOrder, loadBankOrder } from "./bank-order";
+import BankOrderBox, {
+  checkBankOrderPaid,
+  clearBankOrder,
+  loadBankOrder,
+  type BankOrder,
+} from "./bank-order";
 import ConsentBox from "./consent-box";
 import PhotoCropper from "./photo-cropper";
 import ReviewForm from "./review-form";
@@ -135,6 +140,53 @@ async function fileToScaledDataUrl(file: File, maxSide = 1024): Promise<string> 
   return canvas.toDataURL("image/jpeg", 0.92);
 }
 
+// 결제 표식. 예전엔 문자열("bank", 토스 orderId)만 저장했는데, 지금은 서버가 검증할 수 있는
+// 주문 자격 증명({id, token})을 저장한다 — /api/image가 이걸로 "돈 낸 주문"을 확인한다.
+// 옛 문자열 표식도 계속 읽혀야 하므로 둘 다 허용한다.
+type PaidMark = string | { id: string; token: string };
+
+function paidMarkToOrder(mark: PaidMark | null | undefined): { id: string; token: string } | undefined {
+  return mark && typeof mark === "object" && mark.id && mark.token
+    ? { id: mark.id, token: mark.token }
+    : undefined;
+}
+
+// data URL(jpeg) 재압축 — 요청 본문이 서버 한도를 넘지 않게 줄일 때 사용
+async function recompressDataUrl(
+  dataUrl: string,
+  quality: number,
+  maxSide: number,
+): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob();
+  const bitmap = await createImageBitmap(blob);
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
+// 사진 합계가 예산을 넘으면 단계적으로 재압축한다.
+// 아이 3명 × 고화질 크롭이면 Vercel 함수 요청 한도(4.5MB)를 넘을 수 있고,
+// 넘으면 JSON 아닌 413이 와서 "서버 응답이 지연됐어요"만 반복되는 수수께끼 실패가 된다.
+const PHOTO_BUDGET = 3_400_000; // base64 문자 수 ≈ 전송 바이트. 프롬프트·JSON 여유분을 뺀 예산
+async function fitPhotosToBudget(photos: string[]): Promise<string[]> {
+  const steps: [number, number][] = [
+    [0.8, 1536],
+    [0.65, 1280],
+    [0.55, 1024],
+  ];
+  let cur = photos;
+  for (const [quality, maxSide] of steps) {
+    if (cur.reduce((n, p) => n + p.length, 0) <= PHOTO_BUDGET) return cur;
+    cur = await Promise.all(cur.map((p) => recompressDataUrl(p, quality, maxSide)));
+  }
+  return cur;
+}
+
 // Vercel 타임아웃/오류 시 JSON이 아닌 텍스트("An error occurred...")가 오므로
 // 그대로 res.json() 하면 파싱 에러가 사용자에게 노출됨 — 안전하게 감싼다.
 async function safeJson(res: Response): Promise<Record<string, unknown>> {
@@ -155,11 +207,19 @@ async function fetchImage(
   kind: "cover" | "scene",
   children: { age: number; gender: Gender }[],
   art: string,
+  order?: { id: string; token: string }, // 결제한 주문이면 서버가 IP 한도 대신 주문 한도를 쓴다
 ): Promise<string> {
   const res = await fetch("/api/image", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ photos, imagePrompt, kind, children, art }),
+    body: JSON.stringify({
+      photos: await fitPhotosToBudget(photos),
+      imagePrompt,
+      kind,
+      children,
+      art,
+      order,
+    }),
   });
   const json = await safeJson(res);
   if (!res.ok) throw new Error((json.error as string) || "삽화 생성 실패");
@@ -240,7 +300,7 @@ export default function Home() {
     (async () => {
       const draft = await kvGet<Draft>("draft");
       if (!draft) return;
-      let paidOrder = await kvGet<string>("paidOrder");
+      let paidOrder = await kvGet<PaidMark>("paidOrder");
 
       // 계좌이체로 주문해둔 게 있으면 그새 입금 확인이 됐는지 물어본다.
       // 카드 결제와 같은 표식(paidOrder)으로 바꿔 두면 아래 흐름이 그대로 재사용된다.
@@ -248,7 +308,8 @@ export default function Home() {
       if (!paidOrder) {
         const bank = await loadBankOrder();
         if (bank && (await checkBankOrderPaid(bank))) {
-          paidOrder = `bank-${bank.orderNo}`;
+          // id+token을 그대로 옮겨야 /api/image가 "돈 낸 주문"으로 검증할 수 있다
+          paidOrder = { id: bank.id, token: bank.token };
           await kvSet("paidOrder", paidOrder);
           await clearBankOrder();
         }
@@ -274,8 +335,12 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 결제 후 아직 안 그려진 장면들을 이어서 생성
+  // 결제 후 아직 안 그려진 장면들을 이어서 생성.
+  // 자동 폴링과 수동 확인 버튼이 입금을 동시에 감지하면 두 번 불릴 수 있어서,
+  // ref로 재진입을 막는다 — 안 막으면 같은 장면들을 두 벌 그려 비용이 2배로 나간다.
+  const resumingRef = useRef(false);
   const resumeGeneration = useCallback(async (draft: Draft) => {
+    if (resumingRef.current) return;
     const missing = draft.pages
       .map((p, i) => ({ p, i }))
       .filter(({ p }) => !p.image);
@@ -284,12 +349,15 @@ export default function Home() {
     const photos = drawKids.map((k) => k.photo).filter((p): p is string => !!p);
     const specs = drawKids.map((k) => ({ age: k.age, gender: k.gender ?? ("girl" as Gender) }));
     if (photos.length === 0) return;
+    resumingRef.current = true;
     setUnlocking(true);
     try {
+      // 결제한 주문의 자격 증명 — 서버가 이걸로 무료 IP 한도 대신 주문 한도를 적용한다
+      const order = paidMarkToOrder(await kvGet<PaidMark>("paidOrder"));
       let cur = draft.pages;
       for (const { p, i } of missing) {
         // 결제 전에 그리던 그림체를 그대로 이어간다 (예전 초안엔 값이 없어 수채화)
-        const img = await fetchImage(photos, p.imagePrompt, p.kind, specs, draft.art ?? "");
+        const img = await fetchImage(photos, p.imagePrompt, p.kind, specs, draft.art ?? "", order);
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
         setPages(cur);
         await kvSet("draft", { ...draft, pages: cur });
@@ -298,6 +366,7 @@ export default function Home() {
       setError("남은 삽화를 그리다 오류가 났어요. 새로고침하면 이어서 그립니다.");
     } finally {
       setUnlocking(false);
+      resumingRef.current = false;
     }
   }, []);
 
@@ -318,8 +387,32 @@ export default function Home() {
   }, []);
 
   // ----- 샘플 생성 (표지 + FREE_SCENES 장면) -----
+  // 모바일 더블탭으로 두 번 실행되면 이야기·삽화를 두 벌 생성한다(비용·쿼터 2배) — ref로 막는다
+  const startingRef = useRef(false);
   const start = useCallback(async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || startingRef.current) return;
+    startingRef.current = true;
+    try {
+      // 입금 확인을 기다리는 계좌이체 주문이 있으면 경고한다 — 새 샘플이 기존 초안을
+      // 덮어써서, 입금해도 엉뚱한 책이 열리거나 주문한 책이 사라지는 사고를 막는다.
+      const pendingBank = await loadBankOrder();
+      if (pendingBank) {
+        const ok = confirm(
+          `입금 확인을 기다리는 주문(주문번호 ${pendingBank.orderNo})이 있어요.\n` +
+            "새 동화를 만들면 주문하신 동화가 지워지고, 입금하셔도 열 수 없게 돼요.\n\n" +
+            "그래도 새 동화를 만들까요?",
+        );
+        if (!ok) return;
+        await clearBankOrder();
+      }
+      await startInner();
+    } finally {
+      startingRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canSubmit, kids, theme, art]);
+
+  const startInner = useCallback(async () => {
     const children = kids.map((k) => ({
       name: k.name.trim(),
       gender: k.gender as Gender,
@@ -451,29 +544,46 @@ export default function Home() {
   }, [title, pages, current, kids, art]);
 
   // 계좌이체 입금이 확인됐을 때 — 카드 결제 성공과 같은 자리로 합류시킨다.
-  const unlockAfterBankPay = useCallback(async () => {
-    setShowBank(false);
-    setPaid(true);
-    const draft: Draft = {
-      title,
-      pages,
-      current,
-      photos: kids.map((k) => k.photo).filter((p): p is string => !!p),
-      children: kids.map((k) => ({
-        name: k.name.trim(),
-        gender: k.gender ?? ("girl" as Gender),
-        age: k.age,
-      })),
-      art,
-    };
-    await kvSet("draft", draft);
-    await kvSet("paidOrder", "bank");
-    // 주문 기록은 여기서 지운다 — 남겨두면 다음에 만드는 새 동화까지 공짜로 열린다
-    await clearBankOrder();
-    await resumeGeneration(draft);
-  }, [title, pages, current, kids, art, resumeGeneration]);
+  const unlockAfterBankPay = useCallback(
+    async (bank: BankOrder) => {
+      setShowBank(false);
+      setPaid(true);
+      const draft: Draft = {
+        title,
+        pages,
+        current,
+        photos: kids.map((k) => k.photo).filter((p): p is string => !!p),
+        children: kids.map((k) => ({
+          name: k.name.trim(),
+          gender: k.gender ?? ("girl" as Gender),
+          age: k.age,
+        })),
+        art,
+      };
+      await kvSet("draft", draft);
+      // id+token을 남겨야 /api/image가 "돈 낸 주문"으로 검증해서 이어 그릴 수 있다
+      await kvSet("paidOrder", { id: bank.id, token: bank.token });
+      // 주문 기록은 여기서 지운다 — 남겨두면 다음에 만드는 새 동화까지 공짜로 열린다
+      await clearBankOrder();
+      await resumeGeneration(draft);
+    },
+    [title, pages, current, kids, art, resumeGeneration],
+  );
 
   const reset = useCallback(() => {
+    // 결제한 책은 이 기기(브라우저)에만 있다 — 실수로 한 번 누르면 복구가 안 되므로 묻는다.
+    // (지난 동화 카드 삭제에는 이미 confirm이 있는데, 더 파괴적인 이 버튼에만 없었다)
+    if (
+      paid &&
+      pages.length > 0 &&
+      !confirm(
+        "결제하신 동화가 이 기기에서 지워져요.\n" +
+          "PDF 저장이나 공유 링크를 아직 안 만드셨다면 먼저 만들어두세요.\n\n" +
+          "지우고 새 동화를 시작할까요?",
+      )
+    ) {
+      return;
+    }
     setPhase("form");
     setKids([emptyChild()]);
     setTheme(null);
@@ -492,7 +602,7 @@ export default function Home() {
     // 새 동화를 만들면 지난 계좌이체 주문도 털어낸다 — 그 주문이 이 책을 열어주면 안 된다
     void clearBankOrder();
     // 공유 링크 목록("shares")은 지우지 않는다 — 새 동화를 만들어도 지난 링크를 지울 수 있어야 한다
-  }, []);
+  }, [paid, pages.length]);
 
   // 첫 화면의 "지난 동화" 카드 지우기 — 저장된 초안·결제기록·녹음을 함께 정리한다.
   const dropSaved = useCallback(() => {

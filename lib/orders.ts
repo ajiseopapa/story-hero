@@ -90,6 +90,10 @@ async function writeOrder(order: Order, addToIndex: boolean): Promise<void> {
       ...(order.paidAt ? ["paidAt", order.paidAt] : []),
       ...(order.memo ? ["memo", order.memo] : []),
     ],
+    // HSET은 기존 필드를 지우지 않는다 — paid를 pending/canceled로 되돌릴 때
+    // 이전 paidAt·memo가 남아 관리 화면에 유령 "확인 시각"이 보이지 않게 지운다.
+    ...(order.paidAt ? [] : [["HDEL", KEY(order.id), "paidAt"]]),
+    ...(order.memo ? [] : [["HDEL", KEY(order.id), "memo"]]),
     ["EXPIRE", KEY(order.id), ttl],
     ...(addToIndex
       ? [
@@ -145,6 +149,22 @@ export async function setOrderStatus(
   };
   await writeOrder(next, false); // 상태 변경일 뿐이니 목록에 다시 올리지 않는다
   return next;
+}
+
+/**
+ * 주문별 삽화 생성 카운터 — limit 이하면 1 올리고 true, 넘으면 false.
+ * 결제한 주문의 토큰이 유출돼도 무제한으로 그리지 못하게 하는 상한.
+ * 카운터는 주문과 같은 보관 기간으로 만료된다.
+ */
+export async function consumeOrderImage(id: string, limit: number): Promise<boolean> {
+  const key = `${KEY(id)}:img`;
+  const [count] = await pipeline([
+    ["INCR", key],
+    ["EXPIRE", key, RETENTION_DAYS * 24 * 60 * 60],
+  ]);
+  // 저장소가 없으면(pipeline이 빈 배열) 로컬 개발로 보고 통과시킨다
+  if (count === undefined) return true;
+  return Number(count) <= limit;
 }
 
 /** 관리자용 목록 — 최신순. 만료돼 사라진 id는 건너뛴다. */

@@ -26,7 +26,9 @@ function SuccessInner() {
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "결제 승인 실패");
-        await kvSet("paidOrder", orderId);
+        // 서버가 준 주문 자격 증명(id+token)을 저장하면 /api/image가 "돈 낸 주문"으로
+        // 검증해준다. 없으면(기록 실패) 예전처럼 문자열 표식만 남긴다.
+        await kvSet("paidOrder", json.bookOrder ?? orderId);
         setMsg("결제 완료! 동화책으로 돌아갑니다…");
         router.replace("/?paid=1");
       } catch (e) {

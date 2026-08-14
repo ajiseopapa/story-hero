@@ -18,6 +18,7 @@ type Props = {
 export default function PhotoCropper({ src, onCancel, onDone }: Props) {
   const [url, setUrl] = useState(src);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [loadError, setLoadError] = useState(false); // 손상된 파일이면 onload가 영영 안 온다
   const [zoom, setZoom] = useState(1);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [frame, setFrame] = useState({ w: 0, h: 0 });
@@ -31,6 +32,8 @@ export default function PhotoCropper({ src, onCancel, onDone }: Props) {
       setZoom(1);
       setPos({ x: 0, y: 0 });
     };
+    // 손상된 파일이면 빈 모달로 무한 대기하게 되므로 안내로 바꾼다
+    el.onerror = () => setLoadError(true);
     el.src = url;
   }, [url]);
 
@@ -116,6 +119,25 @@ export default function PhotoCropper({ src, onCancel, onDone }: Props) {
     );
     onDone(canvas.toDataURL("image/jpeg", 0.92));
   };
+
+  // 사진을 못 읽으면 자르기 UI 대신 안내를 보여주고 닫아서 다시 고르게 한다
+  if (loadError) {
+    return (
+      <div className="crop-overlay" role="dialog" aria-modal="true">
+        <div className="crop-sheet">
+          <div className="crop-head">
+            <b>사진을 읽을 수 없어요</b>
+            <span>파일이 손상되었거나 지원하지 않는 형식이에요. 다른 사진으로 시도해주세요.</span>
+          </div>
+          <div className="crop-actions">
+            <button type="button" className="btn secondary" onClick={onCancel}>
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="crop-overlay" role="dialog" aria-modal="true">

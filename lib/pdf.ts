@@ -81,8 +81,22 @@ async function renderPage(page: PdfPage, pageNum: number): Promise<string> {
   ctx.textBaseline = "middle";
 
   if (page.kind === "cover") {
-    ctx.font = "800 56px 'Gowun Batang', 'Nanum Myeongjo', serif";
-    ctx.fillText(`《 ${page.text} 》`, W / 2, IMG_H + CAP_H / 2);
+    // 표지 제목도 줄바꿈 — 형제 이름이 여럿 붙으면 한 줄에 안 들어가 잘린다
+    let fontSize = 56;
+    let lineHeight = 78;
+    ctx.font = `800 ${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
+    let lines = wrapText(ctx, `《 ${page.text} 》`, W - 140);
+    // 넘치면 폰트 축소
+    if (lines.length * lineHeight > CAP_H - 40) {
+      fontSize = 44;
+      lineHeight = 62;
+      ctx.font = `800 ${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
+      lines = wrapText(ctx, `《 ${page.text} 》`, W - 120);
+    }
+    const startY = IMG_H + (CAP_H - (lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, W / 2, startY + i * lineHeight);
+    });
   } else {
     let fontSize = 34;
     let lineHeight = 52;
