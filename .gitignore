@@ -15,6 +15,7 @@ voice-samples/
 
 .env*
 
-# 보조 dev 서버 빌드 폴더
+# 보조 dev 서버·검증용 빌드 폴더
 .next-alt
 .next-alt2
+.next-build
