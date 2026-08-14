@@ -3,6 +3,7 @@
 // 계좌이체 주문 관리 (후기 검수·퍼널과 같은 키 — API엔 헤더로만 보낸다, lib/admin-key 참고).
 // 여기서 "입금 확인"을 누르면 주문자 화면이 자동으로 열린다.
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/app/confirm-dialog";
 import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
 
 interface Order {
@@ -35,6 +36,7 @@ export default function OrderAdminPage() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const { confirmDialog, ask } = useConfirm();
 
   useEffect(() => {
     setKey(recallAdminKey());
@@ -63,8 +65,24 @@ export default function OrderAdminPage() {
   }, [key, load]);
 
   const act = async (id: string, action: Order["status"] | "delete") => {
-    if (action === "paid" && !confirm("입금을 확인하셨나요? 주문자 화면이 바로 열립니다.")) return;
-    if (action === "delete" && !confirm("이 주문을 완전히 삭제할까요? 되돌릴 수 없어요.")) return;
+    if (
+      action === "paid" &&
+      !(await ask({
+        title: "입금을 확인하셨나요?",
+        message: "확인하면 주문자 화면이 바로 열립니다.",
+        confirmLabel: "입금 확인",
+      }))
+    )
+      return;
+    if (
+      action === "delete" &&
+      !(await ask({
+        title: "주문을 삭제할까요?",
+        message: "이 주문이 완전히 지워지고, 되돌릴 수 없어요.",
+        confirmLabel: "삭제",
+      }))
+    )
+      return;
     setBusy(id);
     try {
       await fetch("/api/order/admin", {
@@ -197,6 +215,8 @@ export default function OrderAdminPage() {
           </div>
         </section>
       ))}
+
+      {confirmDialog}
     </main>
   );
 }
