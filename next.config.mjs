@@ -1,6 +1,12 @@
-// 대표 도메인은 kidsbook-story.vercel.app. 예전 주소로 들어오면 경로를 유지한 채 308로 넘긴다.
-const PRIMARY_HOST = "kidsbook-story.vercel.app";
-const LEGACY_HOSTS = ["my-storybook-kr.vercel.app", "story-hero-flame.vercel.app"];
+// 대표 도메인은 story.kidstel.co.kr. 예전 주소로 들어오면 경로를 유지한 채 308로 넘긴다.
+// 주의: 옛 주소(kidsbook-story 등)에서 책을 만든 사용자의 IndexedDB는 origin별이라
+// 리다이렉트로 넘어와도 책이 보이지 않는다 — 이전 공지가 필요하면 별도 처리.
+const PRIMARY_HOST = "story.kidstel.co.kr";
+const LEGACY_HOSTS = [
+  "kidsbook-story.vercel.app",
+  "my-storybook-kr.vercel.app",
+  "story-hero-flame.vercel.app",
+];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
