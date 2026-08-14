@@ -9,6 +9,16 @@
         "dev"
       ],
       "port": 3466
+    },
+    {
+      "name": "story-hero-alt",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/dev-alt.mjs",
+        "3567",
+        ".next-alt2"
+      ],
+      "port": 3567
     }
   ]
 }

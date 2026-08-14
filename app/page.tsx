@@ -703,7 +703,7 @@ export default function Home() {
           </div>
           <div className="sample-strip-row">
             {SAMPLES.slice(0, 4).map((s) => (
-              <a key={s.id} href="/samples" aria-label={`${s.label} 샘플 보기`}>
+              <a key={s.id} href={`/samples#${s.id}`} aria-label={`${s.label} 샘플 보기`}>
                 <Image
                   src={`/samples/${s.id}.jpg`}
                   alt={`${s.label} 주제의 동화 삽화 샘플`}
@@ -769,23 +769,27 @@ export default function Home() {
 
               <div className="field">
                 <label>성별</label>
-                <div className="genders">
-                  <div
+                <div className="genders" role="radiogroup" aria-label="성별">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={kid.gender === "girl"}
                     className={`gender girl ${kid.gender === "girl" ? "active" : ""}`}
                     onClick={() => patchKid(idx, { gender: "girl" })}
-                    role="button"
                   >
                     <span className="emoji">👧</span>
                     여자아이
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={kid.gender === "boy"}
                     className={`gender boy ${kid.gender === "boy" ? "active" : ""}`}
                     onClick={() => patchKid(idx, { gender: "boy" })}
-                    role="button"
                   >
                     <span className="emoji">👦</span>
                     남자아이
-                  </div>
+                  </button>
                 </div>
               </div>
 
@@ -892,36 +896,40 @@ export default function Home() {
 
           <div className="field">
             <label>어떤 이야기로 떠날까요?</label>
-            <div className="themes">
+            <div className="themes" role="radiogroup" aria-label="이야기 주제">
               {THEMES.map((t) => (
-                <div
+                <button
+                  type="button"
                   key={t.id}
+                  role="radio"
+                  aria-checked={theme === t.id}
                   className={`theme ${theme === t.id ? "active" : ""}`}
                   onClick={() => setTheme(t.id)}
-                  role="button"
                 >
                   <span className="emoji">{t.emoji}</span>
                   {t.label}
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
           <div className="field">
             <label>어떤 그림으로 그릴까요?</label>
-            <div className="arts">
+            <div className="arts" role="radiogroup" aria-label="그림체">
               {ART_STYLES.map((a) => (
-                <div
+                <button
+                  type="button"
                   key={a.id}
+                  role="radio"
+                  aria-checked={art === a.id}
                   className={`art ${art === a.id ? "active" : ""}`}
                   onClick={() => setArt(a.id)}
-                  role="button"
                 >
                   {a.id === DEFAULT_ART && <i className="art-badge">가장 닮게</i>}
                   <span className="emoji">{a.emoji}</span>
                   <b>{a.label}</b>
                   <em>{a.sub}</em>
-                </div>
+                </button>
               ))}
             </div>
             <div className="hint">
@@ -1715,35 +1723,41 @@ function BookViewer({
       <div className="read-aloud">
         <div className="read-title">🔊 누가 읽어줄까요?</div>
 
-        <div className="voice-tabs">
-          <div
+        <div className="voice-tabs" role="radiogroup" aria-label="읽어주기 방식">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={voiceMode === "ai"}
             className={`voice-tab ${voiceMode === "ai" ? "active" : ""}`}
             onClick={() => switchMode("ai")}
-            role="button"
           >
             ✨ 샘플 목소리
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={voiceMode === "mine"}
             className={`voice-tab ${voiceMode === "mine" ? "active" : ""}`}
             onClick={() => switchMode("mine")}
-            role="button"
           >
             🎙 내 목소리 <span className="voice-free-badge">오픈 기념 무료</span>
-          </div>
+          </button>
         </div>
 
         {voiceMode === "ai" ? (
-          <div className="narrators">
+          <div className="narrators" role="radiogroup" aria-label="읽어주는 목소리">
             {NARRATOR_LIST.map((n) => (
-              <div
+              <button
+                type="button"
                 key={n.id}
+                role="radio"
+                aria-checked={narrator === n.id}
                 className={`narrator ${narrator === n.id ? "active" : ""}`}
                 onClick={() => pickNarrator(n.id)}
-                role="button"
               >
                 <span className="emoji">{n.emoji}</span>
                 {n.label}
-              </div>
+              </button>
             ))}
           </div>
         ) : (

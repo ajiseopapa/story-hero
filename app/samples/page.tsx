@@ -128,7 +128,8 @@ export default function SamplesPage() {
       <h2 className="sample-heading">이야기 주제도 골라요</h2>
       <section className="sample-grid">
         {SAMPLES.map((s) => (
-          <figure key={s.id}>
+          // 첫 화면 카드가 /samples#우주 식으로 바로 이 그림에 내려앉는다
+          <figure key={s.id} id={s.id} style={{ scrollMarginTop: 16 }}>
             <Image
               src={`/samples/${s.id}.jpg`}
               alt={`${s.label} 주제의 동화 삽화 샘플`}

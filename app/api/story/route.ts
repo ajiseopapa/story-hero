@@ -90,7 +90,8 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
 
     const kids: StoryChild[] = [];
     for (const k of rawKids) {
-      const trimmed = (k.name ?? "").trim();
+      // 이름 상한 20자 — 프롬프트 오염·비정상 입력 방지 (화면 입력창도 같은 상한)
+      const trimmed = (k.name ?? "").trim().slice(0, 20);
       if (!trimmed) {
         return NextResponse.json({ error: "아이 이름을 입력해주세요." }, { status: 400 });
       }

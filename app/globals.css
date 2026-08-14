@@ -217,6 +217,23 @@ input[type="tel"]:focus,
 }
 
 /* 성별 선택 */
+/* 선택 카드류(성별·주제·그림체·목소리) — 키보드/스크린리더 접근을 위해 div가 아닌
+   진짜 <button>을 쓴다. 버튼의 UA 기본 모양이 카드 디자인을 덮지 않게 먼저 초기화하고,
+   글꼴·테두리 등은 아래 개별 규칙이 다시 정한다. (이 규칙은 개별 규칙보다 위에 있어야 한다) */
+.gender,
+.theme,
+.art,
+.voice-tab,
+.narrator {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  margin: 0;
+  display: block;
+  width: 100%;
+}
+
 .genders {
   display: grid;
   grid-template-columns: 1fr 1fr;

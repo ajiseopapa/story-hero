@@ -52,6 +52,7 @@ export default function ConsentBox({ checked, onChange }: Props) {
                   type="button"
                   className="consent-more"
                   aria-expanded={open}
+                  aria-controls={`consent-body-${item.id}`}
                   onClick={() => setOpenId(open ? null : item.id)}
                 >
                   {open ? "접기 ▲" : "자세히 ▼"}
@@ -59,7 +60,7 @@ export default function ConsentBox({ checked, onChange }: Props) {
               </div>
               <div className="consent-summary">{item.summary}</div>
               {open && (
-                <div className="consent-body">
+                <div className="consent-body" id={`consent-body-${item.id}`}>
                   {item.body.map((line) => (
                     <p key={line}>{line}</p>
                   ))}
