@@ -1,8 +1,9 @@
 "use client";
 
 // 관리 화면 목차. /admin 자체는 아무 데이터도 안 보여주고, 키를 받아 각 화면으로 넘겨주기만 한다.
-// (예전엔 /admin/funnel · /admin/reviews 주소를 외우고 있어야 했다)
-import { useEffect, useState } from "react";
+// 키는 주소가 아니라 sessionStorage로 전달한다(useAdminKey) — 주소에 실으면
+// 히스토리·Referer에 남는다. 예전 ?key= 즐겨찾기도 useAdminKey가 받아서 흡수한다.
+import { useAdminKey } from "./use-admin-key";
 
 const PAGES: { href: string; title: string; desc: string }[] = [
   {
@@ -23,21 +24,14 @@ const PAGES: { href: string; title: string; desc: string }[] = [
 ];
 
 export default function AdminIndexPage() {
-  const [key, setKey] = useState("");
-
-  // 다른 관리 화면에서 ?key=... 를 달고 돌아온 경우 그대로 이어 쓴다
-  useEffect(() => {
-    setKey(new URLSearchParams(window.location.search).get("key") ?? "");
-  }, []);
-
-  const link = (href: string) => (key ? `${href}?key=${encodeURIComponent(key)}` : href);
+  const [key, setKey] = useAdminKey();
 
   return (
     <main className="wrap">
       <header className="hero">
         <span className="badge">관리자 🔒</span>
         <h1>키즈북 관리 화면</h1>
-        <p>관리자 키를 넣으면 아래 화면들이 키를 달고 열립니다.</p>
+        <p>관리자 키를 한 번 넣으면 아래 화면들이 그대로 열립니다.</p>
       </header>
 
       <section className="card">
@@ -51,7 +45,7 @@ export default function AdminIndexPage() {
           />
         </div>
         <p className="hint">
-          키는 저장하지 않습니다. 이 화면을 벗어나면 다시 넣어야 합니다.
+          키는 이 브라우저 탭이 열려 있는 동안만 기억합니다(탭을 닫으면 다시 넣어야 해요).
           <br />
           값은 프로젝트의 <b>.env.local</b> 파일이나 Vercel 환경변수{" "}
           <b>REVIEW_ADMIN_KEY</b>에 있습니다.
@@ -60,7 +54,7 @@ export default function AdminIndexPage() {
 
       <nav className="admin-menu">
         {PAGES.map((p) => (
-          <a className="admin-item" href={link(p.href)} key={p.href}>
+          <a className="admin-item" href={p.href} key={p.href}>
             <b>{p.title}</b>
             <span>{p.desc}</span>
           </a>

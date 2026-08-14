@@ -1,8 +1,9 @@
 "use client";
 
-// 퍼널 대시보드. 주소에 ?key=... 를 붙여야 열린다 (후기 검수와 같은 키).
+// 퍼널 대시보드 (후기 검수와 같은 키 — 헤더로만 보낸다, useAdminKey 참고).
 // 방문자용 화면은 몰라도 관리 화면은 한국어로 읽혀야 한다.
 import { useCallback, useEffect, useState } from "react";
+import { useAdminKey } from "../use-admin-key";
 
 interface Step {
   key: string;
@@ -51,7 +52,7 @@ function pct(v: number | null): string {
 }
 
 export default function FunnelAdminPage() {
-  const [key, setKey] = useState("");
+  const [key, setKey] = useAdminKey();
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,6 @@ export default function FunnelAdminPage() {
   const [origin, setOrigin] = useState("");
 
   useEffect(() => {
-    setKey(new URLSearchParams(window.location.search).get("key") ?? "");
     setOrigin(window.location.origin);
   }, []);
 
@@ -68,7 +68,7 @@ export default function FunnelAdminPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`/api/stats/admin?key=${encodeURIComponent(k)}&days=${d}`);
+      const res = await fetch(`/api/stats/admin?days=${d}`, { headers: { "x-admin-key": k } });
       if (!res.ok) {
         setError("관리자 키가 올바르지 않아요.");
         setData(null);
@@ -110,8 +110,8 @@ export default function FunnelAdminPage() {
           <div className="field">
             <label>관리자 키</label>
             <input
-              type="text"
-              placeholder="주소 뒤에 ?key=... 를 붙이거나 여기에 입력"
+              type="password"
+              placeholder="관리자 키를 입력하세요"
               onChange={(e) => setKey(e.target.value.trim())}
             />
           </div>

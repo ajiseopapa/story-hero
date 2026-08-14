@@ -2,11 +2,11 @@
 import { ID_RE, type Review } from "@/lib/reviews";
 import { deleteReview, loadReviews, saveReview } from "@/lib/reviews-server";
 
+// 쿼리스트링(?key=)은 받지 않는다 — 액세스 로그·브라우저 히스토리·Referer에 남아 유출된다.
 function authorized(req: Request): boolean {
   const key = process.env.REVIEW_ADMIN_KEY;
   if (!key) return false; // 키를 설정하기 전에는 잠가둔다
-  const url = new URL(req.url);
-  return url.searchParams.get("key") === key || req.headers.get("x-admin-key") === key;
+  return req.headers.get("x-admin-key") === key;
 }
 
 export async function GET(req: Request): Promise<Response> {

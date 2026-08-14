@@ -1,8 +1,9 @@
 "use client";
 
-// 계좌이체 주문 관리. 주소에 ?key=... 를 붙여야 열린다 (후기 검수·퍼널과 같은 키).
+// 계좌이체 주문 관리 (후기 검수·퍼널과 같은 키 — 헤더로만 보낸다, useAdminKey 참고).
 // 여기서 "입금 확인"을 누르면 주문자 화면이 자동으로 열린다.
 import { useCallback, useEffect, useState } from "react";
+import { useAdminKey } from "../use-admin-key";
 
 interface Order {
   id: string;
@@ -30,20 +31,16 @@ function when(ms: number): string {
 }
 
 export default function OrderAdminPage() {
-  const [key, setKey] = useState("");
+  const [key, setKey] = useAdminKey();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-
-  useEffect(() => {
-    setKey(new URLSearchParams(window.location.search).get("key") ?? "");
-  }, []);
 
   const load = useCallback(async (k: string) => {
     if (!k) return;
     setError(null);
     try {
-      const res = await fetch(`/api/order/admin?key=${encodeURIComponent(k)}`);
+      const res = await fetch("/api/order/admin", { headers: { "x-admin-key": k } });
       if (!res.ok) {
         setError("관리자 키가 올바르지 않아요.");
         setOrders([]);
@@ -64,9 +61,9 @@ export default function OrderAdminPage() {
     if (action === "paid" && !confirm("입금을 확인하셨나요? 주문자 화면이 바로 열립니다.")) return;
     setBusy(id);
     try {
-      await fetch(`/api/order/admin?key=${encodeURIComponent(key)}`, {
+      await fetch("/api/order/admin", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-admin-key": key },
         body: JSON.stringify({ id, action }),
       });
       await load(key);
@@ -93,8 +90,8 @@ export default function OrderAdminPage() {
           <div className="field">
             <label>관리자 키</label>
             <input
-              type="text"
-              placeholder="주소 뒤에 ?key=... 를 붙이거나 여기에 입력"
+              type="password"
+              placeholder="관리자 키를 입력하세요"
               onChange={(e) => setKey(e.target.value.trim())}
             />
           </div>

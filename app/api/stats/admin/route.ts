@@ -4,11 +4,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // 후기 검수와 같은 키를 쓴다 — 관리자가 외울 키를 늘리지 않는다.
+// 쿼리스트링(?key=)은 받지 않는다 — 액세스 로그·브라우저 히스토리·Referer에 남아 유출된다.
 function authorized(req: Request): boolean {
   const key = process.env.ADMIN_KEY || process.env.REVIEW_ADMIN_KEY;
   if (!key) return false; // 키를 설정하기 전에는 잠가둔다
-  const url = new URL(req.url);
-  return url.searchParams.get("key") === key || req.headers.get("x-admin-key") === key;
+  return req.headers.get("x-admin-key") === key;
 }
 
 export async function GET(req: Request): Promise<Response> {
