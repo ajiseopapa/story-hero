@@ -71,7 +71,9 @@ export default function ConsentBox({ checked, onChange }: Props) {
       </ul>
 
       <div className="hint">
-        아이의 사진과 이름은 <b>서버에 저장하지 않습니다.</b> 자세한 내용은{" "}
+        아이의 사진 원본은 <b>어떤 경우에도 서버에 저장하지 않습니다.</b> 결제하시면 완성된
+        동화(그림·글)를 <b>1년간 보관</b>해 폰을 바꿔도 다시 열 수 있어요. 무료 샘플만
+        이용하시면 서버에 남는 것이 없습니다. 자세한 내용은{" "}
         <a href="/privacy" target="_blank" rel="noreferrer">
           개인정보처리방침
         </a>

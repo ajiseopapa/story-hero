@@ -1,6 +1,8 @@
 import { consumeQuota, ipBucket } from "@/lib/limits";
+import { NOTIFY_EMAIL, sendMail } from "@/lib/mail";
 import { isStoreReady, newOrderId, newOrderToken, saveOrder, shortId } from "@/lib/orders";
 import type { Order } from "@/lib/orders";
+import { SITE_ORIGIN } from "@/lib/sharebook";
 import { track } from "@/lib/stats";
 
 export const runtime = "nodejs";
@@ -75,6 +77,28 @@ export async function POST(req: Request): Promise<Response> {
     await track(["order:submit"]);
   } catch {
     /* 조용히 실패 */
+  }
+
+  // 새 주문을 관리자에게 바로 알린다 — 관리 화면을 계속 들여다보지 않아도
+  // 입금 확인이 늦지 않게. 발송 실패가 주문 접수를 되돌리면 안 된다.
+  try {
+    await sendMail(
+      NOTIFY_EMAIL,
+      `[키즈북] 새 주문 ${shortId(order.id)} — ${name} (${order.amount.toLocaleString()}원)`,
+      [
+        "새 계좌이체 주문이 들어왔어요.",
+        "",
+        `주문번호: ${shortId(order.id)}`,
+        `입금자명: ${name}`,
+        `이메일: ${email}`,
+        `금액: ${order.amount.toLocaleString()}원`,
+        ...(order.bookTitle ? [`책 제목: ${order.bookTitle}`] : []),
+        "",
+        `입금 확인하러 가기: ${SITE_ORIGIN}/admin/orders`,
+      ].join("\n"),
+    );
+  } catch (err) {
+    console.error("order notify mail failed:", err);
   }
 
   return Response.json({

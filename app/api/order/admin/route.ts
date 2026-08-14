@@ -1,4 +1,6 @@
+import { sendMail } from "@/lib/mail";
 import { ID_RE, listOrders, setOrderStatus } from "@/lib/orders";
+import { SITE_ORIGIN } from "@/lib/sharebook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +41,30 @@ export async function POST(req: Request): Promise<Response> {
   const memo = typeof body.memo === "string" ? body.memo.slice(0, 200) : undefined;
   const updated = await setOrderStatus(id, action, memo);
   if (!updated) return Response.json({ error: "주문을 찾을 수 없어요." }, { status: 404 });
+
+  // 입금 확인 즉시 주문자에게 안내 — 주문 화면에서 "확인되면 이메일로 알려드릴게요"라고
+  // 약속한 메일이 바로 이것이다. 발송 실패가 상태 변경을 되돌리면 안 된다.
+  if (action === "paid" && updated.email) {
+    try {
+      await sendMail(
+        updated.email,
+        `[키즈북] 입금이 확인됐어요 — 《 ${updated.bookTitle || "동화책"} 》`,
+        [
+          `${updated.name}님, 입금 확인이 끝났어요. 감사합니다! 🎉`,
+          "",
+          "동화를 만들던 폰(브라우저)으로 키즈북에 다시 들어가시면 전체 책이 열립니다.",
+          "주문 창을 열어둔 채라면 잠시 뒤 자동으로 열려요.",
+          "",
+          `키즈북 열기: ${SITE_ORIGIN}`,
+          "",
+          "책이 완성되면 1년간 언제든 다시 열 수 있는 보관 링크도 이 주소로 보내드릴게요.",
+          "궁금한 점은 이 메일에 답장 주시면 됩니다.",
+        ].join("\n"),
+      );
+    } catch (err) {
+      console.error("paid notify mail failed:", err);
+    }
+  }
 
   return Response.json({ ok: true, order: updated });
 }

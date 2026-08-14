@@ -1430,17 +1430,22 @@ function BookViewer({
     });
   }, [title]);
 
-  // ----- 공유 링크 만들기 (여기서 처음으로 삽화·음성이 서버에 저장된다) -----
-  const makeShareLink = useCallback(async () => {
-    if (sharing) return;
+  // ----- 보관·공유 링크 만들기 (여기서 삽화·음성이 서버에 저장된다) -----
+  // auto=true는 결제 완료 시 자동 보관(2026-08-14 결정) — 이때 직접 녹음한 목소리는
+  // 올리지 않는다(녹음 업로드는 사용자가 버튼을 직접 누른 경우에만, 개인정보 약속).
+  const makeShareLink = useCallback(async (auto = false): Promise<boolean> => {
+    if (sharing) return false;
     setSharing(true);
     setAudioError(null);
     setReadNote(null);
     setShareCopied(false);
     try {
-      const audios = await collectAudios((i) =>
-        setShareStep(`목소리 담는 중… ${i + 1} / ${pages.length}`),
-      );
+      const audios =
+        auto && voiceMode === "mine"
+          ? pages.map(() => null)
+          : await collectAudios((i) =>
+              setShareStep(`목소리 담는 중… ${i + 1} / ${pages.length}`),
+            );
       const id = newShareId();
       const result = await createShareLink({
         id,
@@ -1463,15 +1468,48 @@ function BookViewer({
       await addShare(saved);
       setShare(saved);
       trackEvery("share:create"); // 공유는 곧 유입 경로 — 몇 권이 밖으로 나가는지 센다
+
+      // 결제한 주문이면 보관 링크를 이메일로도 보내준다 (주문당 한 번, 서버가 판단).
+      // 브라우저가 지워져도 메일함의 링크로 책을 다시 열 수 있다.
+      const order = paidMarkToOrder(await kvGet<PaidMark>("paidOrder"));
+      if (order) {
+        fetch("/api/share/notify", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ order, bookId: id }),
+        }).catch(() => {});
+      }
+      return true;
     } catch (err) {
-      setAudioError(
-        err instanceof Error ? err.message : "공유 링크를 만들지 못했어요. 다시 시도해주세요.",
-      );
+      // 자동 보관 실패는 조용히 넘긴다 — 다음 방문 때 다시 시도되고, 수동 버튼도 살아 있다
+      if (!auto) {
+        setAudioError(
+          err instanceof Error ? err.message : "공유 링크를 만들지 못했어요. 다시 시도해주세요.",
+        );
+      }
+      return false;
     } finally {
       setSharing(false);
       setShareStep("");
     }
-  }, [sharing, collectAudios, pages, title]);
+  }, [sharing, collectAudios, pages, title, voiceMode]);
+
+  // 결제한 책은 완성되는 즉시 자동으로 링크를 만들어 서버에 1년 보관한다(2026-08-14 결정).
+  // 책이 브라우저에만 있으면 사파리의 저장소 정리(7일 규칙)로 증발할 수 있어서다.
+  // 시도 여부를 기기에 기록해, 사용자가 링크를 직접 지운 책을 되살리지 않는다.
+  const backupRef = useRef(false);
+  useEffect(() => {
+    if (!paid || !allDone || share || sharing || backupRef.current) return;
+    backupRef.current = true;
+    (async () => {
+      const done = (await kvGet<string[]>("autoBackedUp")) ?? [];
+      if (done.includes(title)) return;
+      // 성공했을 때만 기록 — 실패한 채 기록하면 다시는 시도하지 않게 된다
+      if (await makeShareLink(true)) {
+        await kvSet("autoBackedUp", [...done, title].slice(-50));
+      }
+    })();
+  }, [paid, allDone, share, sharing, title, makeShareLink]);
 
   const copyShareLink = async () => {
     if (!share) return;
@@ -1486,11 +1524,21 @@ function BookViewer({
 
   const removeShareLink = async () => {
     if (!share || sharing) return;
-    if (!confirm("공유 링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없어요.")) return;
+    if (
+      !confirm(
+        "링크를 지울까요? 링크를 받은 사람도 더 이상 볼 수 없고,\n서버에 보관된 책도 함께 지워져 다시 만들 수 없어요.",
+      )
+    )
+      return;
     setSharing(true);
     try {
       await deleteShareLink(share.id, share.deleteKey);
       await dropShare(share.id);
+      // 직접 지운 책은 자동 보관이 몰래 되살리면 안 된다 — 시도 기록에 올려 재생성을 막는다
+      const done = (await kvGet<string[]>("autoBackedUp")) ?? [];
+      if (!done.includes(share.title)) {
+        await kvSet("autoBackedUp", [...done, share.title].slice(-50));
+      }
       setShare(null);
     } catch (err) {
       setAudioError(err instanceof Error ? err.message : "링크를 지우지 못했어요.");
@@ -1723,7 +1771,7 @@ function BookViewer({
             {!share && (
               <button
                 className="btn share"
-                onClick={makeShareLink}
+                onClick={() => makeShareLink()}
                 disabled={sharing || !allDone}
               >
                 {sharing ? shareStep || "공유 링크 만드는 중… 🔗" : "링크로 공유하기 🔗"}
@@ -1750,7 +1798,7 @@ function BookViewer({
 
       {paid && share && (
         <div className="share-box">
-          <div className="share-title">공유 링크가 준비됐어요 🔗</div>
+          <div className="share-title">책 보관·공유 링크가 준비됐어요 🔗</div>
           <div className="share-url">{share.url}</div>
           <div className="share-actions">
             <button className="btn" onClick={copyShareLink}>
@@ -1761,9 +1809,11 @@ function BookViewer({
             </button>
           </div>
           <div className="hint" style={{ marginTop: 10, lineHeight: 1.8 }}>
-            링크를 아는 사람만 볼 수 있어요(검색에는 잡히지 않아요).
+            이 링크가 책 보관본이에요 — 폰을 바꾸거나 브라우저 기록이 지워져도 열 수 있으니
+            잘 간직해주세요.
             <br />
-            만든 날부터 1년 뒤 자동으로 지워지고, 언제든 직접 지울 수도 있어요.
+            링크를 아는 사람만 볼 수 있고(검색에는 안 잡혀요), 만든 날부터 1년 뒤 자동으로
+            지워지며 언제든 직접 지울 수도 있어요.
           </div>
         </div>
       )}
