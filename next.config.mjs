@@ -24,12 +24,26 @@ const nextConfig = {
     "/opengraph-image": ["./assets/fonts/**"],
   },
   async redirects() {
-    return LEGACY_HOSTS.map((host) => ({
-      source: "/:path*",
-      has: [{ type: "host", value: host }],
-      destination: `https://${PRIMARY_HOST}/:path*`,
-      permanent: true,
-    }));
+    return [
+      ...LEGACY_HOSTS.map((host) => ({
+        source: "/:path*",
+        has: [{ type: "host", value: host }],
+        destination: `https://${PRIMARY_HOST}/:path*`,
+        permanent: true,
+      })),
+      // 인스타 프로필용 짧은 주소 → UTM 붙은 홈으로. GA 트래픽 획득에서 campaign으로 갈린다.
+      // 307(임시)로 둔다 — 308로 캐시되면 나중에 UTM을 바꿔도 브라우저가 옛 주소를 기억한다.
+      {
+        source: "/papa",
+        destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=papa",
+        permanent: false,
+      },
+      {
+        source: "/mama",
+        destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=mama",
+        permanent: false,
+      },
+    ];
   },
 };
 
