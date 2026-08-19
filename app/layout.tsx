@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { SITE_ORIGIN } from "@/lib/sharebook";
 import "./globals.css";
+
+// 방문자 분석용 측정 ID. 값이 비어 있으면 스크립트를 아예 넣지 않는다.
+// GA_ID: 구글 애널리틱스 4 측정 ID (G-로 시작) — analytics.google.com에서 발급
+// CLARITY_ID: 마이크로소프트 Clarity 프로젝트 ID — clarity.microsoft.com에서 발급
+const GA_ID: string = "";
+const CLARITY_ID: string = "";
 
 const DESCRIPTION =
   "아이 이름과 사진을 넣으면, 우리 아이를 닮은 얼굴로 그린 표지 포함 11페이지 그림동화책을 만들어드려요. 사실적 그림·수채화·색연필·크레파스 중에 고를 수 있어요.";
@@ -60,7 +67,31 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_ID}');`}
+            </Script>
+          </>
+        )}
+        {CLARITY_ID && (
+          <Script id="clarity-init" strategy="afterInteractive">
+            {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "${CLARITY_ID}");`}
+          </Script>
+        )}
+      </body>
     </html>
   );
 }
