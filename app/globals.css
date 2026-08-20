@@ -460,6 +460,15 @@ input[type="tel"]:focus,
   box-shadow: 0 12px 26px -12px #6b91c2;
 }
 
+/* 공유 책 뷰어의 다시 공유하기 묶음 */
+.share-actions {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+  margin: 26px auto 0;
+  text-align: center;
+}
+
 /* ---------- 후기 ---------- */
 .review-box {
   margin-top: 18px;

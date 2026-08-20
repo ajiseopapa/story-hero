@@ -46,6 +46,10 @@ export const EXTRA: { key: string; label: string }[] = [
   { key: "order:submit", label: "계좌이체 주문 접수" },
   { key: "sample:fail", label: "샘플 생성 실패" },
   { key: "share:create", label: "공유 링크 생성" },
+  // 공유 책(/book/…)이 바이럴 루프로 얼마나 일하는지 — 열람 → 재공유·카드 → 새 방문(src:book:visit)
+  { key: "book:view", label: "공유 책 열람" },
+  { key: "book:share", label: "공유 책에서 다시 공유" },
+  { key: "book:card", label: "인스타 자랑 카드 저장" },
 ];
 
 /** 인스턴스 메모리 폴백 (개발용 — 배포 환경에서는 유실되므로 대시보드에 경고를 띄운다) */

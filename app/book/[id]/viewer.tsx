@@ -3,7 +3,9 @@
 // 공유 링크로 열리는 웹 스토리북 뷰어 — 그림 넘기기 + 이어읽기.
 // 삽화·음성은 /api/book/{id}/{파일}로 하나씩 받아온다(비공개 블롭 경유).
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SharePage } from "@/lib/sharebook";
+import { SITE_ORIGIN, type SharePage } from "@/lib/sharebook";
+import { drawShareCard } from "@/lib/share-card";
+import { trackEvery, trackStep } from "@/lib/track";
 
 type Props = {
   id: string;
@@ -80,12 +82,80 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
 
   useEffect(() => stop, [stop]);
 
+  // 공유 책이 바이럴 루프로 일하는지 본다 — 열람이 잡혀야 재공유·새 방문 전환율이 나온다
+  useEffect(() => {
+    trackStep("book:view");
+  }, []);
+
   const go = (n: number) => {
     stop();
     setCurrent(Math.max(0, Math.min(total - 1, n)));
   };
 
   const hasAnyAudio = pages.some((p) => p.hasAudio);
+
+  // ----- 다시 공유하기 — 받은 사람이 또 퍼뜨릴 수 있어야 루프가 돈다 -----
+  const shareUrl = `${SITE_ORIGIN}/book/${id}`;
+  const [copied, setCopied] = useState(false);
+  const [cardBusy, setCardBusy] = useState(false);
+  const [cardMsg, setCardMsg] = useState("");
+
+  const shareLink = async () => {
+    const data = {
+      title: `《 ${title} 》`,
+      text: "우리 아이가 주인공인 그림동화예요 💛",
+      url: shareUrl,
+    };
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share(data);
+        trackEvery("book:share");
+      } catch {
+        // 공유 시트를 닫은 것 — 센다면 허수다
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      trackEvery("book:share");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // 클립보드가 막힌 브라우저 — 주소창 복사로도 충분해서 안내하지 않는다
+    }
+  };
+
+  const saveCard = async () => {
+    if (cardBusy) return;
+    setCardBusy(true);
+    setCardMsg("");
+    try {
+      const blob = await drawShareCard(imgSrc(0), title);
+      const file = new File([blob], "kidsbook.png", { type: "image/png" });
+      // 모바일이면 공유 시트로 바로 인스타에 보낼 수 있게 한다
+      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: `《 ${title} 》` });
+          trackEvery("book:card");
+          return;
+        } catch {
+          return; // 시트를 닫은 것 — 파일까지 내려받게 하면 성가시다
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "우리아이동화책.png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      trackEvery("book:card");
+      setCardMsg("카드를 저장했어요 — 인스타에 올려 자랑해 주세요 💛");
+    } catch {
+      setCardMsg("카드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setCardBusy(false);
+    }
+  };
 
   return (
     <main className="wrap">
@@ -142,12 +212,26 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
           </div>
         )}
 
+        <div className="share-actions">
+          <button className="btn share" onClick={shareLink}>
+            📤 이 동화책 공유하기
+          </button>
+          {copied && <div className="hint">링크를 복사했어요 — 붙여넣기만 하면 돼요!</div>}
+          {pages[0]?.hasImage && (
+            <button className="btn secondary" onClick={saveCard} disabled={cardBusy}>
+              {cardBusy ? "카드를 만드는 중…" : "🖼️ 인스타 자랑 카드 저장"}
+            </button>
+          )}
+          {cardMsg && <div className="hint">{cardMsg}</div>}
+        </div>
+
         <div className="hint" style={{ textAlign: "center", marginTop: 28, lineHeight: 1.8 }}>
           키즈북에서 만든 그림동화예요 💛
           <br />
           이 링크는 {expiry}까지 열려 있어요.
           <br />
-          <a href="/">나도 우리 아이 동화책 만들기 →</a>
+          {/* ?s=book — 공유 책을 보고 넘어온 방문을 퍼널에서 따로 센다 */}
+          <a href="/?s=book">나도 우리 아이 동화책 만들기 →</a>
         </div>
       </section>
     </main>

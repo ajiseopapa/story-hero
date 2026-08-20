@@ -22,18 +22,20 @@ const FLUSH_MS = 400;
  *
  * 한 번 잡은 출처는 세션이 끝날 때까지 유지한다 — 사람이 페이지를 옮겨 다녀도
  * 파라미터가 사라진 뒤의 단계까지 같은 출처로 따라붙어야 퍼널이 성립한다.
+ * 빈 출처는 굳히지 않는다 — 공유 책(/book/…)에서 이벤트를 먼저 찍고
+ * `/?s=book` CTA로 넘어오는 사람의 꼬리표가 지워지면 안 되기 때문이다.
  * 값은 소문자·숫자·하이픈 16자로 깎는다(서버 이벤트 이름 규칙에 맞추기 위해서다).
  */
 function source(): string {
   try {
     const saved = sessionStorage.getItem(SRC_KEY);
-    if (saved !== null) return saved;
+    if (saved) return saved;
     const raw = new URLSearchParams(window.location.search).get("s") ?? "";
     const clean = raw
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "")
       .slice(0, 16);
-    sessionStorage.setItem(SRC_KEY, clean);
+    if (clean) sessionStorage.setItem(SRC_KEY, clean);
     return clean;
   } catch {
     return ""; // sessionStorage가 막히면 출처 없이 전체 집계만 남긴다
