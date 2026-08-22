@@ -19,3 +19,6 @@ voice-samples/
 .next-alt
 .next-alt2
 .next-build
+
+# 샘플 재생성 원본(scripts/gen-sample.mjs)
+scripts/.out
