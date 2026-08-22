@@ -22,3 +22,8 @@ voice-samples/
 
 # 샘플 재생성 원본(scripts/gen-sample.mjs)
 scripts/.out
+
+# 샘플 재생성 원본 png / 교체 전 백업
+scripts/.out
+scripts/.out.bak
+scripts/.out.bak2

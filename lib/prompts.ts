@@ -19,24 +19,50 @@ const ORDINALS = ["FIRST", "SECOND", "THIRD"];
 // 나이대별 체형/얼굴 성숙도 지시. gpt-image가 동화풍이라는 이유로
 // 아이를 무조건 유아처럼 그리는 걸 막는 핵심 장치 (11세가 아기처럼 나오는 문제).
 // subject를 바꿔 다인 주인공에서 "Main character 2 (…)"처럼 재사용한다.
+// ⚠️2026-08-22: 예전엔 10세+ 구간만 강한 지시(최우선 규칙 + 금지문)를 달아놔서
+// 그 구간만 말을 듣고 0~9세는 전부 "귀여운 유아"로 수렴했다 (1·4·8세 샘플이 같은 얼굴로 나옴).
+// 이제 네 구간 모두 같은 강도로 — 나이별 실제 특징을 나열하고, 아닌 쪽을 금지문으로 막는다.
 export function ageDescriptor(
   age: number,
   gender: Gender,
   subject = "The main character",
 ): string {
   const kid = gender === "girl" ? "girl" : "boy";
+  const who = age === 0 ? "baby under 1 year old" : `${age}-year-old`;
+  const head = `AGE IS A TOP-PRIORITY RULE — ${subject} is a ${who} ${kid}, and the drawing MUST look exactly that age.`;
+  // 참고 사진은 다른 나이에 찍힌 것일 수 있다 (샘플 갤러리는 사진 한 장으로 네 나이를 그린다).
+  // 신원은 사진에서, 나이는 이 규칙에서 — 이 분리를 못 박지 않으면 모델이 사진 속 나이를 그대로 베낀다.
+  const source = `The reference photo may have been taken at a different age. IDENTITY comes from the photo (eye shape and spacing, hairline, hairstyle, nose bridge, moles, dimples, gaps between teeth, skin tone); AGE comes from this rule (body proportions, facial maturity, baby fat, teeth, neck length). Draw the SAME child as they look at ${age === 0 ? "under one year old" : `age ${age}`} — do NOT simply copy the age you see in the photo.`;
+
   if (age <= 2) {
-    return `${subject} is a ${age === 0 ? "baby (under 1 year old)" : `${age}-year-old baby ${kid}`} — real infant anatomy: the whole body is about four head-heights tall, soft round cheeks, short arms and legs, tiny hands; keep the baby safely nestled or gently held in the scene (never in a dangerous pose).`;
+    return [
+      head,
+      source,
+      "Real infant anatomy: the whole body is about four head-heights tall. A big rounded forehead with the hairline set far back; hair thin, fine and sparse — never a full styled head of hair. The eyes sit BELOW the vertical middle of the head. Small short nose with a low flat bridge. Very full round cheeks, a small receding chin, and almost no visible neck — the head sits straight on the shoulders. Short chubby arms and legs with soft creases at the wrists, elbows and knees, and tiny dimpled hands. If the mouth is open, show only two to four tiny front teeth — never a full row.",
+      "STRICTLY FORBIDDEN: drawing a preschooler instead of a baby — no thick styled hair, no full set of teeth, no defined jawline, no long slim limbs, no long neck. If in doubt, draw the character YOUNGER, never older.",
+      "Keep the baby safely nestled, seated with legs splayed, or gently held in the scene (never in a dangerous pose).",
+    ].join(" ");
   }
   if (age <= 6) {
-    return `${subject} is a ${age}-year-old ${kid} — real preschooler anatomy: the whole body is about five head-heights tall, with a soft round face, but the head is NOT oversized — it is no wider than the shoulders and sits on a visible neck.`;
+    return [
+      head,
+      source,
+      "Real preschooler anatomy: the whole body is about five head-heights tall. This age still carries a lot of baby fat and must look SOFT and PLUMP, never lean. Full rounded cheeks are the widest part of the face, with a soft rounded chin and NO visible jawline or cheekbones; a small nose, a full set of small baby teeth, and a short but clearly visible neck. The body is softly padded: a rounded little tummy, chubby arms and legs with soft creases at the wrists, elbows and knees, dimpled hands, and plump feet. The head is NOT oversized — it is no wider than the shoulders.",
+      "STRICTLY FORBIDDEN: infant proportions (four head-heights, no neck, sparse hair) and any school-age slimness — no hollow, flat or sunken cheeks, no defined jawline or cheekbones, no thin wiry arms and legs, no lean athletic build. A preschooler drawn slim looks gaunt and wrong; when in doubt, draw them SOFTER and ROUNDER (but never with a bigger head).",
+    ].join(" ");
   }
   if (age <= 9) {
-    return `${subject} is a ${age}-year-old ${kid} in elementary school — real school-age anatomy: the whole body is about five and a half to six head-heights tall, longer limbs, less baby fat, a visible neck, clearly older than a toddler. The head is normal-sized, no wider than the shoulders.`;
+    return [
+      head,
+      source,
+      "Real school-age anatomy: the whole body is about five and a half to six head-heights tall, with clearly longer arms and legs, a slimmer torso and a visible neck. FACE — still a young child, only halfway to a teenager: the face is still comparatively WIDE and short, the cheeks have thinned but are not hollow and the cheekbones do not show, the chin is small and rounded, the nose is still short with a low soft bridge, and the eyes are still LARGE relative to the face. The permanent front teeth have come in and look slightly too big for this small face. This must read instantly as a lower-elementary child — clearly older than a preschooler, and just as clearly YOUNGER than a preteen.",
+      "STRICTLY FORBIDDEN: toddler or preschooler features — round baby face, plump baby cheeks, stubby limbs, oversized head, baby teeth. If in doubt, draw the character OLDER, never younger.",
+    ].join(" ");
   }
   return [
     `THE MOST IMPORTANT RULE — AGE: ${subject} is an ${age}-year-old preteen ${kid} (upper elementary school), and the drawing MUST look that age.`,
-    "Realistic preteen proportions: the body is about six to six and a half head-heights tall, with a slender build, longer arms and legs, visible neck, and a more defined oval face — NOT a round baby face.",
+    source,
+    "Realistic preteen proportions: the body is about six to six and a half head-heights tall, with a slender build, longer arms and legs, and a long slim neck. FACE — this is where the age must show, so make it clearly different from a 7-year-old: the LOWER half of the face has grown, so the face is distinctly LONG and oval rather than wide; the cheeks are flat with visible cheekbones and a defined jawline and a stronger, slightly squarer chin; the nose is longer with a raised bridge; and because the face has grown around them, the eyes now look SMALLER in proportion to the face. A 7-year-old and a 10-year-old must never look interchangeable.",
     "Confident, capable posture like the hero of an illustrated middle-grade adventure novel for 10–12 year old readers.",
     "STRICTLY FORBIDDEN: toddler or chibi proportions (oversized head, stubby limbs, 2–3 head-heights tall), baby cheeks, baby-like cuteness. If in doubt, draw the character OLDER, never younger.",
   ].join(" ");
@@ -134,8 +160,8 @@ function styleBase(count: number, artId?: string): string {
       ? `A skilled portrait artist depicts THIS real child (from the reference photo) in ${m} illustration, placing them inside a storybook scene. The face is a faithful ${m} PORTRAIT OF THE PHOTOGRAPH — the same face at the same proportions, only rendered in this medium.`
       : `A skilled portrait artist depicts THESE ${count} real children (one from each reference photo, in the same order) in ${m} illustration, placing them TOGETHER inside one storybook scene. Each child's face is a faithful ${m} PORTRAIT of that child's OWN photograph — the same face at the same proportions, only rendered in this medium.`,
     single
-      ? "TOP PRIORITY — PORTRAIT LIKENESS: anyone who knows the child must recognize them instantly. Keep the photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins."
-      : "TOP PRIORITY — PORTRAIT LIKENESS OF EVERY CHILD: anyone who knows these children must recognize EACH one instantly. For EACH child, keep that child's own photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder, younger, or more 'cute' than the photo), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve each child's distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. NEVER blend, average, or swap facial features, hairstyles or skin tones BETWEEN the children — each child keeps their OWN face from their OWN photo only. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins.",
+      ? "TOP PRIORITY — PORTRAIT LIKENESS: anyone who knows the child must recognize them instantly. Keep the photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder or more 'cute' than the photo — the medium must never soften the face into a generic cartoon child. The ONLY thing allowed to change how old the child looks is the AGE rule stated above; the drawing style itself never makes them younger or older), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins."
+      : "TOP PRIORITY — PORTRAIT LIKENESS OF EVERY CHILD: anyone who knows these children must recognize EACH one instantly. For EACH child, keep that child's own photograph's facial proportions exactly: the real eye shape and eye size relative to the face (do NOT enlarge the eyes, do NOT make the face rounder or more 'cute' than the photo — the medium must never soften the face into a generic cartoon child. The ONLY thing allowed to change how old the child looks is the AGE rule stated above; the drawing style itself never makes them younger or older), eyebrows, nose, mouth and teeth, chin and cheek structure, skin tone, and the exact hairstyle (parting, bangs, length, color). Preserve each child's distinctive personal features exactly — moles, freckles, dimples, gaps between teeth, glasses. NEVER blend, average, or swap facial features, hairstyles or skin tones BETWEEN the children — each child keeps their OWN face from their OWN photo only. Stylize only the MEDIUM (the drawing technique, palette, linework) — never the facial identity. When the storybook style and the likeness conflict, likeness always wins.",
     // 닮음 지시가 강할수록 모델이 얼굴을 "보여주려고" 머리를 부풀린다 —
     // 닮음과 머리 크기는 별개라는 걸 못 박아야 3.5등신 대두가 안 나온다 (2026-08-13).
     "HEAD SIZE — read this together with the likeness rule: keeping the likeness means drawing the face ACCURATELY, never drawing it BIGGER. The head must stay in natural anatomical proportion to the body for a real child of this age — no wider than the shoulders, sitting on a visible neck, with the body at the head-height count given above. Big-head, chibi, bobblehead or caricature proportions are FORBIDDEN even in a soft storybook style. If the face ends up small in the frame, render it with finer detail — do NOT enlarge the head to make it readable.",
