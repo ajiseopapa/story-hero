@@ -160,6 +160,10 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
   return (
     <main className="wrap">
       <section className="book">
+        {/* 받은 사람이 어느 페이지에서든 키즈북 홈으로 갈 수 있는 자리 */}
+        <a className="book-brand" href="/?s=book">
+          키즈북 ✨
+        </a>
         <h1 className="book-title">《 {title} 》</h1>
 
         <div className="page">
@@ -225,13 +229,15 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
           {cardMsg && <div className="hint">{cardMsg}</div>}
         </div>
 
-        <div className="hint" style={{ textAlign: "center", marginTop: 28, lineHeight: 1.8 }}>
-          키즈북에서 만든 그림동화예요 💛
-          <br />
-          이 링크는 {expiry}까지 열려 있어요.
-          <br />
-          {/* ?s=book — 공유 책을 보고 넘어온 방문을 퍼널에서 따로 센다 */}
-          <a href="/?s=book">나도 우리 아이 동화책 만들기 →</a>
+        {/* ?s=book — 공유 책을 보고 넘어온 방문을 퍼널에서 따로 센다 */}
+        <div className="book-outro">
+          <a className="btn" href="/?s=book">
+            🪄 나도 우리 아이 동화책 만들기
+          </a>
+          <div className="hint">
+            키즈북에서 만든 그림동화예요 💛
+            <br />이 링크는 {expiry}까지 열려 있어요.
+          </div>
         </div>
       </section>
     </main>
