@@ -212,7 +212,7 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
           </div>
         )}
 
-        <div className="share-actions">
+        <div className="share-actions book-share">
           <button className="btn share" onClick={shareLink}>
             📤 이 동화책 공유하기
           </button>
