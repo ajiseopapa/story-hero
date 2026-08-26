@@ -750,7 +750,6 @@ export default function Home() {
 
       {phase === "form" && (
         <p className="more-samples">
-          우주 · 바다 · 공룡 · 마법의 숲 …{" "}
           <a href="/samples">
             주제 {THEMES.length}가지 샘플 보기 →
           </a>
