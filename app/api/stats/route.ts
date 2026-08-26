@@ -25,8 +25,15 @@ async function overIpLimit(req: Request, count: number): Promise<boolean> {
 }
 
 /** 클라이언트가 보낸 퍼널 이벤트를 집계한다. 개인정보는 저장하지 않고 카운터만 올린다. */
+/** localhost로 열어본 화면은 세지 않는다 (로컬 프로덕션 빌드 대비). */
+function fromLocalhost(req: Request): boolean {
+  const host = req.headers.get("host") ?? "";
+  return /^(localhost|127.0.0.1|[::1])(:|$)/.test(host);
+}
+
 export async function POST(req: Request): Promise<Response> {
   try {
+    if (fromLocalhost(req)) return Response.json({ ok: true, skipped: true });
     const body = (await req.json()) as { events?: unknown };
     const events = Array.isArray(body.events) ? body.events.filter(isValidEvent) : [];
     if (events.length === 0) return Response.json({ ok: true, skipped: true });

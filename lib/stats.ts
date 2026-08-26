@@ -63,7 +63,22 @@ export function isValidEvent(name: unknown): name is string {
   return typeof name === "string" && /^[a-z0-9_:-]{1,48}$/.test(name);
 }
 
+/**
+ * 이 실행 환경의 이벤트를 실제 지표로 셀지 여부.
+ *
+ * 로컬 dev 서버가 .env.local의 **운영 KV**를 그대로 쓰기 때문에, 개발하며 페이지를 열 때마다
+ * 방문이 운영 퍼널에 쌓였다. 수요검증의 근거로 쓰는 숫자에 내 테스트가 섞이면
+ * "방문 59, 사진 0"이 무슨 뜻인지 영영 읽을 수 없다 (2026-08-26).
+ *
+ * 프리뷰 배포(VERCEL_ENV=preview)도 같은 이유로 세지 않는다.
+ */
+function countable(): boolean {
+  if (process.env.VERCEL_ENV) return process.env.VERCEL_ENV === "production";
+  return process.env.NODE_ENV === "production";
+}
+
 export async function track(events: string[]): Promise<void> {
+  if (!countable()) return;
   const valid = events.filter(isValidEvent).slice(0, 10);
   if (valid.length === 0) return;
   const day = kstDate();
