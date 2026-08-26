@@ -626,6 +626,28 @@ a.btn {
   font-weight: 600;
   white-space: nowrap;
 }
+/* 데스크탑은 그림 3장이 커서 텍스트 링크가 파묻힌다 — 알약 버튼으로 승격.
+   모바일은 화면이 좁아 텍스트 링크로도 충분히 보이므로 그대로 둔다. */
+@media (min-width: 561px) {
+  .more-samples {
+    font-size: 16px;
+  }
+  .more-samples a {
+    display: inline-block;
+    margin-top: 10px;
+    background: #fff;
+    border: 1.5px solid var(--accent);
+    border-radius: 999px;
+    padding: 10px 24px;
+    font-size: 16.5px;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .more-samples a:hover {
+    background: #fff5f2;
+    transform: translateY(-1px);
+  }
+}
 
 /* ---------- 샘플 갤러리 ---------- */
 .sample-strip {
