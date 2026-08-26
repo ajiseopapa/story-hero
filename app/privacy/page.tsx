@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "개인정보처리방침 · 키즈�
 
 export default function PrivacyPage() {
   return (
-    <LegalShell title="개인정보처리방침" updated="2026년 8월 14일">
+    <LegalShell title="개인정보처리방침" updated="2026년 8월 26일">
       <p>
         {BUSINESS.name}(이하 &ldquo;회사&rdquo;)는 이용자의 개인정보를 소중히 다루며, 아래와 같이
         처리합니다. <b>본 서비스는 회원가입 없이 이용할 수 있으며, 무료 샘플만 이용한 경우 회사는
@@ -156,7 +156,40 @@ export default function PrivacyPage() {
         광고 목적으로 이용하지 않습니다.
       </p>
 
-      <h2>5. 이용자의 권리</h2>
+      <h2>5. 웹 분석 및 광고 도구 (행태정보)</h2>
+      <p>
+        회사는 서비스 개선과 광고 성과 측정을 위해 아래 도구를 사용합니다. 이 도구들은 쿠키
+        등으로 <b>방문 기록·이용 행태</b>(방문한 페이지, 버튼 클릭, 대략적인 접속 지역·기기
+        정보)를 수집하며, <b>아이의 사진·이름·나이 등 입력 정보는 어떤 경우에도 전송되지
+        않습니다.</b>
+      </p>
+      <ul>
+        <li>
+          <b>Google Analytics</b> (Google LLC, 미국) — 방문자 수·이용 흐름 분석
+        </li>
+        <li>
+          <b>Microsoft Clarity</b> (Microsoft Corporation, 미국) — 화면 이용 행태 분석
+        </li>
+        <li>
+          <b>Meta 픽셀</b> (Meta Platforms, Inc., 미국) — 인스타그램·페이스북 광고의 성과
+          측정 및 맞춤형 광고. 전송되는 정보는 페이지 방문과 진행 단계(샘플 생성·결제 등)
+          여부뿐입니다.
+        </li>
+      </ul>
+      <p>
+        이용자는 브라우저의 쿠키 차단 기능이나{" "}
+        <a href="https://www.facebook.com/adpreferences" target="_blank" rel="noreferrer">
+          Meta 광고 설정
+        </a>
+        ,{" "}
+        <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noreferrer">
+          Google Analytics 차단 도구
+        </a>
+        를 통해 행태정보 수집을 거부할 수 있으며, 거부해도 서비스 이용에는 아무 제한이
+        없습니다.
+      </p>
+
+      <h2>6. 이용자의 권리</h2>
       <p>
         무료 샘플만 이용한 경우 회사가 서버에 보관하는 정보가 없으므로, 이용자는 브라우저에서
         &lsquo;새 동화 만들기&rsquo;를 실행하거나 브라우저 저장소를 삭제하는 것으로 언제든 모든
@@ -166,14 +199,14 @@ export default function PrivacyPage() {
         삭제해 드립니다.
       </p>
 
-      <h2>6. 개인정보 보호책임자</h2>
+      <h2>7. 개인정보 보호책임자</h2>
       <ul>
         <li>책임자: {BUSINESS.owner}</li>
         <li>이메일: {BUSINESS.email}</li>
         <li>전화: {BUSINESS.tel}</li>
       </ul>
 
-      <h2>7. 고지의 의무</h2>
+      <h2>8. 고지의 의무</h2>
       <p>
         본 방침의 내용이 변경되는 경우 시행일 전에 서비스 화면을 통해 공지합니다.
       </p>

@@ -12,6 +12,8 @@
  * 개인정보는 보내지 않는다. 이벤트 이름 문자열뿐이다.
  */
 
+import { metaTrackStep } from "@/lib/meta-pixel";
+
 const SEEN_KEY = "kidsbook:tracked";
 const SRC_KEY = "kidsbook:src";
 const FLUSH_MS = 400;
@@ -92,6 +94,8 @@ export function trackStep(...names: string[]): void {
   if (fresh.length === 0) return;
   remember(fresh);
   queue.push(...fresh);
+  // 광고 픽셀에도 같은 단계를 흘린다 — 세션당 한 번 규칙을 여기서 같이 얻는다
+  fresh.forEach(metaTrackStep);
   // 출처가 있으면 같은 단계를 출처별로도 쌓는다. 전체 퍼널은 그대로 두고 곁에 하나 더 남기는 것이라
   // 꼬리표를 안 붙인 방문이 섞여도 전체 숫자는 어긋나지 않는다.
   const src = source();

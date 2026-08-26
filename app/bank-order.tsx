@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 import { BUSINESS } from "@/lib/business";
+import { metaTrack, META_PRICE } from "@/lib/meta-pixel";
 
 const BANK_ACCOUNT = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? "";
 
@@ -126,6 +127,9 @@ export default function BankOrderBox({
       };
       await kvSet(STORE_KEY, saved);
       setOrder(saved);
+      // 계좌이체 기간의 최종 전환 신호. 입금은 나중에 수동 확인되지만 그 순간을 잡을
+      // 클라이언트가 없으므로, 주문 접수를 구매로 본다(착오 주문은 광고 학습에 묻힐 만큼 적다).
+      metaTrack("Purchase", { value: META_PRICE, currency: "KRW" });
     } catch {
       setError("연결에 실패했어요. 잠시 후 다시 시도해주세요.");
     } finally {

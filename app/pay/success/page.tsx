@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { kvSet } from "@/lib/store";
+import { metaTrack } from "@/lib/meta-pixel";
 
 function SuccessInner() {
   const params = useSearchParams();
@@ -29,6 +30,8 @@ function SuccessInner() {
         // 서버가 준 주문 자격 증명(id+token)을 저장하면 /api/image가 "돈 낸 주문"으로
         // 검증해준다. 없으면(기록 실패) 예전처럼 문자열 표식만 남긴다.
         await kvSet("paidOrder", json.bookOrder ?? orderId);
+        // 카드 결제의 확정 전환 — 서버 승인(pay/confirm)이 성공한 뒤에만 보낸다
+        metaTrack("Purchase", { value: Number(amount), currency: "KRW" });
         setMsg("결제 완료! 동화책으로 돌아갑니다…");
         router.replace("/?paid=1");
       } catch (e) {
