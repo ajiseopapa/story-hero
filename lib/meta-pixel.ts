@@ -23,10 +23,13 @@ export const META_PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "14900");
  * 표준 이벤트 이름을 써야 광고 관리자에서 그대로 "전환 목적"으로 고를 수 있다.
  * 커스텀 이벤트는 맞춤 전환을 따로 만들어야 해서 손이 더 간다.
  *
- * visit·photo는 넣지 않았다 — PageView로 이미 잡히고, 광고 최적화 목표로 삼기엔
- * 너무 앞단이라 "구경만 하는 사람"을 데려오게 된다.
+ * visit은 넣지 않았다 — PageView로 이미 잡힌다.
  */
 const STEP_EVENTS: Record<string, { name: string; params?: Record<string, unknown> }> = {
+  // 사진까지 올린 사람 = 그냥 스쳐간 방문자와 갈린다.
+  // Lead(sample:done)는 '판매' 목표 캠페인에서 최적화 대상으로 못 고르게 막혀 있어서,
+  // 광고를 켜는 동안은 이 ViewContent가 실질적인 최적화 신호 노릇을 한다. (2026-08-26)
+  photo: { name: "ViewContent" },
   "sample:start": { name: "CustomizeProduct" },
   // 무료 샘플을 실제로 본 순간. 카드결제를 열기 전까지는 이게 광고 최적화의 1차 목표다.
   "sample:done": { name: "Lead" },
