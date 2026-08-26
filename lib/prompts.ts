@@ -224,6 +224,10 @@ export const THEMES = [
 
 export type ThemeId = (typeof THEMES)[number]["id"];
 
+// 아무것도 고르지 않은 사람에게도 버튼이 눌리게 하는 기본값.
+// 주제 12개 + 그림체 4개를 다 고르게 하느라 무료 샘플 버튼이 화면 네 개 아래에 있었다 (2026-08-26).
+export const DEFAULT_THEME: ThemeId = "space";
+
 export function themeDescription(themeId: string): string | null {
   return THEMES.find((t) => t.id === themeId)?.ko ?? null;
 }

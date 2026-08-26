@@ -1,11 +1,12 @@
 // 사진 업로드 전에 받아야 하는 법정 동의 항목.
 // 아이 얼굴 사진은 (1) 아동의 개인정보이고 (2) 생체인식정보에 준하는 민감정보이며
 // (3) 삽화 생성을 위해 국외(미국)로 전송되므로, 각각 별도 동의가 필요하다.
-import { BUSINESS } from "@/lib/business";
-
 // 내용이 바뀌면 날짜를 올린다 — 기존 이용자에게 다시 동의를 받는다.
 // 2026-08-14: 결제 완료 시 완성된 동화 1년 자동 보관으로 변경.
-export const CONSENT_VERSION = "2026-08-14";
+// 2026-08-26: 이용약관·환불 동의를 결제 단계(PayConsent)로 옮기고, 여기는
+//   사진을 보내기 위해 법적으로 반드시 필요한 데이터 동의 4개만 남겼다.
+//   무료 샘플을 만드는 사람에게 결제·환불 규정부터 동의시킬 이유가 없다.
+export const CONSENT_VERSION = "2026-08-26";
 
 export type ConsentItem = {
   id: string;
@@ -16,17 +17,9 @@ export type ConsentItem = {
   body: string[];
 };
 
+// 사진을 OpenAI로 보내기 위해 생성 전에 반드시 필요한 동의만 둔다.
+// 이용약관·환불정책 동의는 결제 버튼 옆(PayConsent)에서 받는다.
 export const CONSENT_ITEMS: ConsentItem[] = [
-  {
-    id: "terms",
-    title: "이용약관 동의",
-    summary: "서비스 이용 조건과 결제·환불 규정에 동의합니다.",
-    body: [
-      `${BUSINESS.name}이 제공하는 ‘${BUSINESS.service}’ 서비스의 이용약관에 동의합니다.`,
-      "결제 후 콘텐츠 제공이 시작되면 청약철회가 제한될 수 있으며, 자세한 기준은 환불정책에 따릅니다.",
-      "전문은 하단 ‘이용약관’ · ‘환불정책’ 링크에서 확인하실 수 있습니다.",
-    ],
-  },
   {
     id: "privacy",
     title: "개인정보 수집·이용 동의",

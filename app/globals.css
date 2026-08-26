@@ -598,6 +598,21 @@ input[type="tel"]:focus,
   color: #a99a85;
 }
 
+/* 첫 화면에서 /samples 로 보내는 한 줄 (썸네일 4장을 대신한다) */
+.more-samples {
+  text-align: center;
+  font-family: var(--text);
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  margin: -12px 0 18px;
+  word-break: keep-all;
+}
+.more-samples a {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ---------- 샘플 갤러리 ---------- */
 .sample-strip {
   margin-top: 22px;
@@ -739,6 +754,42 @@ input[type="tel"]:focus,
   color: var(--accent);
   flex: 0 0 auto;
   margin-top: -18px;
+}
+
+/* 첫 화면의 증거는 커야 한다. 폰에서 세 장을 한 줄에 두면 한 장이 104px로 쪼그라들어
+   "이 그림 하나 보고 아이 사진을 맡길 만한가"가 전달되지 않는다.
+   그래서 폰에서는 두 줄로 나눈다 — 위: 사진 → 표지 / 아래: 다른 장면 (2026-08-26). */
+@media (max-width: 560px) {
+  .hero-proof .ba-row {
+    display: grid;
+    grid-template-columns: 33% auto 1fr;
+    grid-template-areas:
+      "photo arrow cover"
+      "scene scene scene";
+    align-items: center;
+    justify-items: center;
+  }
+  .hero-proof .ba-row .ba-photo {
+    grid-area: photo;
+    width: 100%;
+    max-width: 100%;
+  }
+  .hero-proof .ba-row .ba-arrow {
+    grid-area: arrow;
+    margin: 0;
+  }
+  /* figure만 세므로 1=사진, 2=표지, 3=다른 장면 (화살표는 div) */
+  .hero-proof .ba-row figure:nth-of-type(2) {
+    grid-area: cover;
+    width: 100%;
+    max-width: 100%;
+  }
+  .hero-proof .ba-row figure:nth-of-type(3) {
+    grid-area: scene;
+    width: 62%;
+    max-width: 62%;
+    margin-top: 16px;
+  }
 }
 @media (max-width: 520px) {
   .ba-row {
@@ -1000,6 +1051,21 @@ input[type="tel"]:focus,
   margin: 22px 0 18px;
   font-family: var(--text);
 }
+/* 겁나는 항목들보다 먼저 읽히는 안심 문장 */
+.consent-lead {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+  font-weight: 500;
+  word-break: keep-all;
+  background: #f6f1e4;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.consent-lead b {
+  color: var(--ink);
+}
 .consent input[type="checkbox"] {
   flex: 0 0 auto;
   width: 20px;
@@ -1069,13 +1135,9 @@ input[type="tel"]:focus,
   padding: 4px;
   text-decoration: underline;
 }
-.consent-summary {
-  font-size: 14.5px;
+.consent-body .consent-summary {
   color: var(--ink-soft);
-  margin: 4px 0 0 30px;
-  line-height: 1.6;
-  word-break: keep-all;
-  font-weight: 500;
+  margin-bottom: 8px;
 }
 .consent-body {
   margin: 10px 0 2px 30px;
@@ -1099,6 +1161,82 @@ input[type="tel"]:focus,
 }
 .consent > .hint a {
   color: var(--accent);
+}
+
+/* ---------- 접었다 펴는 영역 ---------- */
+/* 처음 온 사람이 무료 샘플까지 가는 길을 짧게 유지한다.
+   고르고 싶은 사람만 펼치고, 나머지는 기본값 그대로 지나간다. */
+.choices {
+  border: 1px solid #e8dcc6;
+  border-radius: 18px;
+  background: #fffdf8;
+  padding: 0 16px;
+  margin: 4px 0 4px;
+}
+.choices > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 15px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--text);
+}
+.choices > summary::-webkit-details-marker {
+  display: none;
+}
+.choices > summary::after {
+  content: "고르기 ▼";
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 14px;
+}
+.choices[open] > summary::after {
+  content: "접기 ▲";
+}
+.choices > summary b {
+  font-size: 16.5px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.choices > summary em {
+  font-style: normal;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  word-break: keep-all;
+}
+.choices[open] {
+  padding-bottom: 4px;
+}
+.choices .field:last-child {
+  margin-bottom: 12px;
+}
+
+.fold {
+  margin: 8px 0 0;
+  font-family: var(--text);
+}
+.fold > summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  list-style: none;
+}
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+.fold > summary::after {
+  content: " ▼";
+  text-decoration: none;
+}
+.fold[open] > summary::after {
+  content: " ▲";
+}
+.fold .photo-guide {
+  margin-top: 6px;
 }
 
 /* ---------- 결제 전 동의 ---------- */

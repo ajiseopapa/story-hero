@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { SAMPLES, SAMPLE_H, SAMPLE_W } from "@/lib/samples";
+import { SAMPLE_H, SAMPLE_W } from "@/lib/samples";
 import {
   ART_STYLES,
   DEFAULT_ART,
+  DEFAULT_THEME,
   MAX_CHILDREN,
   THEMES,
   joinCallNames,
@@ -232,7 +233,8 @@ async function fetchImage(
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("form");
   const [kids, setKids] = useState<ChildForm[]>([emptyChild()]);
-  const [theme, setTheme] = useState<ThemeId | null>(null);
+  // 기본 주제·그림체를 미리 골라둔다 — 안 고른 사람도 바로 무료 샘플을 만들 수 있어야 한다.
+  const [theme, setTheme] = useState<ThemeId | null>(DEFAULT_THEME);
   const [art, setArt] = useState<string>(DEFAULT_ART); // 그림체
   const [error, setError] = useState<string | null>(null);
 
@@ -696,26 +698,63 @@ export default function Home() {
         </ul>
       </header>
 
+      {/* 첫 화면의 유일한 증거 — 사진 한 장이 그림이 되는 장면.
+          예전엔 /samples 안에만 있어서, 처음 온 사람은 81px 썸네일만 보고 사진을 요구받았다. */}
       {phase === "form" && (
-        <section className="sample-strip">
-          <div className="sample-strip-head">
-            <b>이런 그림이 나와요</b>
-          </div>
-          <div className="sample-strip-row">
-            {SAMPLES.slice(0, 4).map((s) => (
-              <a key={s.id} href={`/samples#${s.id}`} aria-label={`${s.label} 샘플 보기`}>
-                <Image
-                  src={`/samples/${s.id}.jpg`}
-                  alt={`${s.label} 주제의 동화 삽화 샘플`}
-                  width={SAMPLE_W}
-                  height={SAMPLE_H}
-                  sizes="150px"
-                />
-                <span>{s.label}</span>
-              </a>
-            ))}
+        <section className="before-after hero-proof">
+          <h2>사진 한 장이면 이렇게 돼요</h2>
+          <p className="hint">
+            아래 두 그림은 <b>왼쪽 사진 한 장</b>으로 만든 거예요.
+            <br />
+            장면이 바뀌어도 <b>같은 얼굴</b>로 그려집니다.
+          </p>
+          <div className="ba-row">
+            <figure className="ba-photo">
+              <Image
+                src="/samples/guide-photo.jpg"
+                alt="동화책 제작에 사용한 아이 사진 예시"
+                width={600}
+                height={900}
+                sizes="(max-width: 560px) 33vw, 200px"
+                priority
+              />
+              <figcaption>올린 사진</figcaption>
+            </figure>
+            <div className="ba-arrow" aria-hidden="true">
+              →
+            </div>
+            <figure>
+              <Image
+                src="/samples/guide-cover.jpg"
+                alt="사진을 바탕으로 그린 동화책 표지"
+                width={SAMPLE_W}
+                height={SAMPLE_H}
+                sizes="(max-width: 560px) 46vw, 220px"
+                priority
+              />
+              <figcaption>표지</figcaption>
+            </figure>
+            <figure>
+              <Image
+                src="/samples/guide-scene.jpg"
+                alt="사진을 바탕으로 그린 동화책 본문 장면"
+                width={SAMPLE_W}
+                height={SAMPLE_H}
+                sizes="(max-width: 560px) 62vw, 220px"
+              />
+              <figcaption>다른 장면, 같은 얼굴</figcaption>
+            </figure>
           </div>
         </section>
+      )}
+
+      {phase === "form" && (
+        <p className="more-samples">
+          우주 · 바다 · 공룡 · 마법의 숲 …{" "}
+          <a href="/samples">
+            주제 {THEMES.length}가지 샘플 보기 →
+          </a>
+        </p>
       )}
 
       {phase === "form" && saved && (
@@ -864,20 +903,28 @@ export default function Home() {
                   </div>
                 )}
                 {!kid.photo && (
-                  <ul className="photo-guide">
-                    <li className="good">
-                      <span>✅</span> 정면을 보고 <b>얼굴이 크고 또렷한</b> 사진
-                    </li>
-                    <li>
-                      <span>❌</span> 옆모습·뒷모습, 눈을 감은 사진
-                    </li>
-                    <li>
-                      <span>❌</span> 여러 명이 함께 있거나 얼굴이 작게 나온 사진
-                    </li>
-                    <li>
-                      <span>❌</span> 모자·마스크·손으로 얼굴이 가려진 사진
-                    </li>
-                  </ul>
+                  <>
+                    <ul className="photo-guide">
+                      <li className="good">
+                        <span>✅</span> 정면을 보고 <b>얼굴이 크고 또렷한</b> 사진
+                      </li>
+                    </ul>
+                    {/* ❌ 세 줄은 접어둔다 — 사진을 올리기도 전에 조건부터 읽으면 까다로워 보인다 */}
+                    <details className="fold">
+                      <summary>이런 사진은 피해주세요</summary>
+                      <ul className="photo-guide">
+                        <li>
+                          <span>❌</span> 옆모습·뒷모습, 눈을 감은 사진
+                        </li>
+                        <li>
+                          <span>❌</span> 여러 명이 함께 있거나 얼굴이 작게 나온 사진
+                        </li>
+                        <li>
+                          <span>❌</span> 모자·마스크·손으로 얼굴이 가려진 사진
+                        </li>
+                      </ul>
+                    </details>
+                  </>
                 )}
                 <div className="hint">사진은 삽화를 그리는 데에만 쓰이고 저장하지 않아요.</div>
               </div>
@@ -894,7 +941,18 @@ export default function Home() {
             </button>
           )}
 
-          <div className="field">
+          {/* 주제 12개 + 그림체 4개가 펼쳐져 있어서 무료 샘플 버튼이 3,469px 아래에 있었다.
+              기본값을 정해두고 접는다 — 바꾸고 싶은 사람만 펼치면 된다 (2026-08-26). */}
+          <details className="choices">
+            <summary>
+              <b>이야기와 그림체 고르기</b>
+              <em>
+                지금은 {THEMES.find((t) => t.id === theme)?.label ?? "우주 여행"} ·{" "}
+                {ART_STYLES.find((a) => a.id === art)?.label ?? "사실적 그림"}
+              </em>
+            </summary>
+
+            <div className="field">
             <label>어떤 이야기로 떠날까요?</label>
             <div className="themes" role="radiogroup" aria-label="이야기 주제">
               {THEMES.map((t) => (
@@ -936,7 +994,8 @@ export default function Home() {
               사진을 가장 닮게 그리는 건 <b>사실적 그림</b>이에요. 그림책 느낌을 원하시면 수채화나
               크레파스를 골라주세요.
             </div>
-          </div>
+            </div>
+          </details>
 
           <ConsentBox checked={consents} onChange={setConsents} />
 
@@ -955,6 +1014,10 @@ export default function Home() {
           <div className="hint" style={{ textAlign: "center", marginTop: 8, fontSize: 15 }}>
             🎁 <b>부모 목소리 녹음</b>도 지금은 <b>오픈 기념 무료</b> — 정식 오픈 후 유료 전환
             예정이에요.
+          </div>
+          <div className="hint" style={{ textAlign: "center", marginTop: 8, fontSize: 13 }}>
+            무료 샘플을 만들면 <a href="/terms">이용약관</a>에 동의한 것으로 봅니다. 결제 관련
+            동의는 결제하실 때 따로 받습니다.
           </div>
           <div className="price-anchor">
             <s>정가 {LIST_PRICE.toLocaleString()}원</s>
@@ -1069,8 +1132,10 @@ export default function Home() {
   );
 }
 
-// 결제 전 청약철회 제한 동의 — 전자상거래법 제17조 제2항 제5호는 "이용자의 동의를 받아
+// 결제 전 동의 — 전자상거래법 제17조 제2항 제5호는 "이용자의 동의를 받아
 // 콘텐츠 제공이 개시된 경우"에만 환불 제한을 인정하므로, 결제 버튼은 이 동의 없이 눌리지 않는다.
+// 이용약관·환불정책 동의도 여기서 함께 받는다 — 무료 샘플 단계에서 결제 규정을 먼저
+// 동의시키던 것을 돈이 오가는 이 지점으로 옮겼다 (2026-08-26).
 function PayConsent({
   checked,
   onChange,
@@ -1084,8 +1149,8 @@ function PayConsent({
     <label className={compact ? "pay-consent compact" : "pay-consent"}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>
-        결제하면 남은 장면 생성이 바로 시작되며, <b>생성이 시작된 뒤에는 환불이 제한</b>되는 것에
-        동의합니다. (
+        <b>이용약관·환불정책</b>에 동의하며, 결제하면 남은 장면 생성이 바로 시작되어{" "}
+        <b>생성이 시작된 뒤에는 환불이 제한</b>되는 것에 동의합니다. (
         <a href="/terms" target="_blank" rel="noreferrer">
           이용약관
         </a>
