@@ -44,6 +44,11 @@ const nextConfig = {
         destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=mama&s=mama",
         permanent: false,
       },
+      {
+        source: "/tk",
+        destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=tkworld&s=tk",
+        permanent: false,
+      },
     ];
   },
 };
