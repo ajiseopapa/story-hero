@@ -49,6 +49,16 @@ const nextConfig = {
         destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=tkworld&s=tk",
         permanent: false,
       },
+      {
+        source: "/kidsbook",
+        destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=kidsbook&s=kidsbook",
+        permanent: false,
+      },
+      {
+        source: "/kidstel",
+        destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=kidstel&s=kidstel",
+        permanent: false,
+      },
     ];
   },
 };
