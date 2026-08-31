@@ -16,6 +16,7 @@ import { metaTrackStep } from "@/lib/meta-pixel";
 
 const SEEN_KEY = "kidsbook:tracked";
 const SRC_KEY = "kidsbook:src";
+const REF_KEY = "kidsbook:ref";
 const FLUSH_MS = 400;
 
 /**
@@ -42,6 +43,43 @@ function source(): string {
   } catch {
     return ""; // sessionStorage가 막히면 출처 없이 전체 집계만 남긴다
   }
+}
+
+/**
+ * 유입 링크의 **호스트만** 남긴다 — `?s=` 꼬리표가 없는 링크로 들어온 사람도
+ * 어디서 왔는지 읽히게. 경로·쿼리는 버린다(개인정보가 섞일 수 있다).
+ *
+ * 첫 방문 때 한 번 잡아 세션 내내 유지한다. 사이트 안에서 새로고침하면
+ * referrer가 우리 주소로 바뀌어 원래 유입처가 지워지기 때문이다.
+ * 빈 값도 저장한다 — "직접 들어왔다"를 나중에 우리 주소로 덮어쓰지 않도록.
+ */
+function referrer(): string {
+  try {
+    const saved = sessionStorage.getItem(REF_KEY);
+    if (saved !== null) return saved;
+    let host = "";
+    try {
+      const url = new URL(document.referrer);
+      if (url.host && url.host !== window.location.host) {
+        host = url.host.toLowerCase().replace(/^www\./, "").slice(0, 40);
+      }
+    } catch {
+      /* referrer가 비었거나 주소가 아니면 빈 값 */
+    }
+    sessionStorage.setItem(REF_KEY, host);
+    return host;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * 주문 기록에 붙일 유입 정보 — 퍼널 꼬리표(`?s=`)와 유입 링크 호스트.
+ * 둘 다 세션 첫 화면에서 굳어진 값이라, 주문서까지 왔을 때도 처음 들어온 경로를 가리킨다.
+ */
+export function entrySource(): { source: string; referrer: string } {
+  if (typeof window === "undefined") return { source: "", referrer: "" };
+  return { source: source(), referrer: referrer() };
 }
 
 let queue: string[] = [];
@@ -99,6 +137,7 @@ export function trackStep(...names: string[]): void {
   // 출처가 있으면 같은 단계를 출처별로도 쌓는다. 전체 퍼널은 그대로 두고 곁에 하나 더 남기는 것이라
   // 꼬리표를 안 붙인 방문이 섞여도 전체 숫자는 어긋나지 않는다.
   const src = source();
+  referrer(); // 첫 화면에서 유입 링크를 굳혀둔다 — 나중엔 우리 주소로 바뀐다
   if (src) queue.push(...fresh.map((n) => `src:${src}:${n}`));
   if (!timer) timer = setTimeout(flush, FLUSH_MS);
 }

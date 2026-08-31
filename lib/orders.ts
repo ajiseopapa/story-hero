@@ -29,6 +29,8 @@ export interface Order {
   createdAt: number;
   paidAt?: number;
   memo?: string; // 관리자 메모
+  source?: string; // 유입 꼬리표 (?s=...) — 없으면 꼬리표 없이 들어온 것
+  referrer?: string; // 유입 링크 호스트 (예: instagram.com)
 }
 
 export const ID_RE = /^[a-f0-9]{16}$/;
@@ -89,6 +91,8 @@ async function writeOrder(order: Order, addToIndex: boolean): Promise<void> {
       order.createdAt,
       ...(order.paidAt ? ["paidAt", order.paidAt] : []),
       ...(order.memo ? ["memo", order.memo] : []),
+      ...(order.source ? ["source", order.source] : []),
+      ...(order.referrer ? ["referrer", order.referrer] : []),
     ],
     // HSET은 기존 필드를 지우지 않는다 — paid를 pending/canceled로 되돌릴 때
     // 이전 paidAt·memo가 남아 관리 화면에 유령 "확인 시각"이 보이지 않게 지운다.
@@ -125,6 +129,8 @@ function parse(raw: unknown): Order | null {
     createdAt: Number(r.createdAt) || 0,
     paidAt: r.paidAt ? Number(r.paidAt) : undefined,
     memo: r.memo || undefined,
+    source: r.source || undefined,
+    referrer: r.referrer || undefined,
   };
 }
 

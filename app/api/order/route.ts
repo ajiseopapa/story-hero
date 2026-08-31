@@ -17,6 +17,11 @@ function clean(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "";
 }
 
+/** 유입 꼬리표·호스트처럼 정해진 글자만 남기는 값 정리 */
+function tag(v: unknown, drop: RegExp, max: number): string {
+  return typeof v === "string" ? v.toLowerCase().replace(drop, "").slice(0, max) : "";
+}
+
 /** 계좌이체 주문 접수. 입금 확인은 관리자가 수동으로 한다. */
 export async function POST(req: Request): Promise<Response> {
   if (!isStoreReady()) {
@@ -26,7 +31,13 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  let body: { name?: unknown; email?: unknown; bookTitle?: unknown };
+  let body: {
+    name?: unknown;
+    email?: unknown;
+    bookTitle?: unknown;
+    source?: unknown;
+    referrer?: unknown;
+  };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -36,6 +47,9 @@ export async function POST(req: Request): Promise<Response> {
   const name = clean(body.name, 40);
   const email = clean(body.email, 120);
   const bookTitle = clean(body.bookTitle, 120);
+  // 유입 정보는 클라이언트가 보내는 값이라 서버에서 다시 깎는다(퍼널 꼬리표 규칙과 같은 모양).
+  const source = tag(body.source, /[^a-z0-9-]/g, 16);
+  const referrer = tag(body.referrer, /[^a-z0-9.-]/g, 40);
 
   if (name.length < 1) {
     return Response.json({ error: "입금하실 분의 이름을 적어주세요." }, { status: 400 });
@@ -67,6 +81,8 @@ export async function POST(req: Request): Promise<Response> {
     bookTitle,
     status: "pending",
     createdAt: Date.now(),
+    ...(source ? { source } : {}),
+    ...(referrer ? { referrer } : {}),
   };
 
   await saveOrder(order);

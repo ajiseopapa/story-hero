@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 import { BUSINESS } from "@/lib/business";
 import { metaTrack, META_PRICE } from "@/lib/meta-pixel";
+import { entrySource } from "@/lib/track";
 
 const BANK_ACCOUNT = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? "";
 
@@ -107,7 +108,8 @@ export default function BankOrderBox({
       const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, bookTitle }),
+        // 유입 정보(꼬리표·유입 호스트)도 함께 — 어느 링크가 실제 주문까지 왔는지 보려고
+        body: JSON.stringify({ name, email, bookTitle, ...entrySource() }),
       });
       const data = (await res.json()) as {
         id?: string;

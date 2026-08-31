@@ -15,6 +15,16 @@ interface Order {
   status: "pending" | "paid" | "canceled";
   createdAt: number;
   paidAt?: number;
+  source?: string;
+  referrer?: string;
+}
+
+/** 유입 한 줄 — 꼬리표(?s=)와 유입 링크 호스트 중 있는 것만 보여준다. */
+function entry(o: Order): string {
+  const parts = [o.source && `꼬리표 ${o.source}`, o.referrer && `링크 ${o.referrer}`].filter(
+    Boolean,
+  );
+  return parts.length ? parts.join(" · ") : "직접 방문 (기록 없음)";
 }
 
 const STATUS_LABEL: Record<Order["status"], string> = {
@@ -179,6 +189,9 @@ export default function OrderAdminPage() {
           </div>
           <div style={{ marginTop: 4, wordBreak: "break-all" }}>
             <a href={`mailto:${o.email}`}>{o.email}</a>
+          </div>
+          <div className="hint" style={{ marginTop: 4 }}>
+            유입 {entry(o)}
           </div>
 
           <div className="share-actions" style={{ marginTop: 12 }}>
