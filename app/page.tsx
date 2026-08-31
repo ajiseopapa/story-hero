@@ -245,6 +245,8 @@ export default function Home() {
   const [pages, setPages] = useState<BookPage[]>([]);
   const [current, setCurrent] = useState(0);
   const [paid, setPaid] = useState(false);
+  // 이번 세션에 만든 책이 아니라 '이어서 보기'·결제 복귀로 연 책인가 — 구매 클릭을 갈라 센다
+  const [resumed, setResumed] = useState(false);
   const [unlocking, setUnlocking] = useState(false); // 결제 후 나머지 생성 중
   // 이 브라우저에 저장된 지난 동화 — 자동으로 펼치지 않고 첫 화면에 "이어보기" 카드로만 안내
   const [saved, setSaved] = useState<{ draft: Draft; paid: boolean } | null>(null);
@@ -288,6 +290,10 @@ export default function Home() {
   }, []);
 
   // 저장된 동화를 화면에 펼친다 (결제 복귀 / 이어보기 공통)
+  //
+  // ⭐ 이 길로 열린 책에서 누른 구매는 pay:click이 아니라 pay:click:resume으로 센다.
+  //    이번 세션에 샘플을 만든 적이 없는 사람이라, 퍼널의 "샘플 완성 → 구매 의사"에
+  //    섞이면 전환율이 200%를 넘는 숫자가 나온다 (2026-08-30에 실제로 그랬다).
   const openDraft = useCallback((draft: Draft, isPaid: boolean) => {
     setTitle(draft.title);
     setArt(draft.art ?? "watercolor"); // 예전 초안은 수채화로 그렸다
@@ -296,6 +302,7 @@ export default function Home() {
     setCurrent(Math.min(draft.current, draft.pages.length - 1));
     setPaid(isPaid);
     setSaved(null);
+    setResumed(true);
     setPhase("book");
   }, []);
 
@@ -502,6 +509,7 @@ export default function Home() {
       } satisfies Draft);
 
       setCurrent(0);
+      setResumed(false); // 이번 세션에 직접 만든 책이다
       setPhase("book");
       trackStep("sample:done");
     } catch (err) {
@@ -513,8 +521,9 @@ export default function Home() {
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
-    // 구매 의사는 결제창이 뜨기 전에 센다 — 결제 설정이 없어도 "사려고 했다"는 사실은 남아야 한다
-    trackStep("pay:click");
+    // 구매 의사는 결제창이 뜨기 전에 센다 — 결제 설정이 없어도 "사려고 했다"는 사실은 남아야 한다.
+    // 이어보기·결제 복귀로 연 책이면 따로 센다(lib/stats.ts의 EXTRA 참고).
+    trackStep(resumed ? "pay:click:resume" : "pay:click");
 
     // 계좌이체 기간에는 토스를 부르지 않고 주문 창을 연다.
     // 이 경우 리다이렉트가 없으므로 초안을 미리 저장할 필요도 없다.
@@ -563,7 +572,7 @@ export default function Home() {
       if (e?.code === "USER_CANCEL") return; // 사용자가 결제창을 닫음
       setError(e?.message || "결제 연결 중 오류가 발생했습니다.");
     }
-  }, [title, pages, current, kids, art]);
+  }, [title, pages, current, kids, art, resumed]);
 
   // 계좌이체 입금이 확인됐을 때 — 카드 결제 성공과 같은 자리로 합류시킨다.
   const unlockAfterBankPay = useCallback(

@@ -34,6 +34,11 @@ const STEP_EVENTS: Record<string, { name: string; params?: Record<string, unknow
   // 무료 샘플을 실제로 본 순간. 카드결제를 열기 전까지는 이게 광고 최적화의 1차 목표다.
   "sample:done": { name: "Lead" },
   "pay:click": { name: "InitiateCheckout", params: { value: META_PRICE, currency: "KRW" } },
+  // 이어보기로 돌아와 누른 것도 광고에는 같은 신호다 — 퍼널에서만 갈라 센다.
+  "pay:click:resume": {
+    name: "InitiateCheckout",
+    params: { value: META_PRICE, currency: "KRW" },
+  },
 };
 
 type FbqFn = (...args: unknown[]) => void;

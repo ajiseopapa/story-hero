@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import AdminShell from "./shell";
+import "./admin.css";
 
 /**
  * 관리 화면은 검색엔진에 절대 올라가면 안 된다.
@@ -12,5 +14,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <AdminShell>{children}</AdminShell>;
 }

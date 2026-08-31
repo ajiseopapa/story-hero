@@ -26,7 +26,11 @@ export const FUNNEL: { key: string; label: string; note: string }[] = [
   { key: "photo", label: "사진 올림", note: "아이 사진을 넣고 자르기까지 끝냄" },
   { key: "sample:start", label: "샘플 생성 시작", note: "주제까지 고르고 만들기를 누름" },
   { key: "sample:done", label: "샘플 완성", note: "표지+장면을 실제로 봄 — 여기가 감정 최고점" },
-  { key: "pay:click", label: "구매 의사", note: "결제/구매 버튼을 누름 — 검증 기간의 핵심 지표" },
+  {
+    key: "pay:click",
+    label: "구매 의사",
+    note: "방금 만든 샘플을 보고 결제/구매를 누름 — 검증 기간의 핵심 지표",
+  },
   {
     key: "pay:done",
     label: "카드 결제 완료",
@@ -44,6 +48,10 @@ export const LEAK_EXCLUDE = new Set(["pay:done"]);
 /** 퍼널 밖 참고 지표 — 이탈 원인·비용 추적용 */
 export const EXTRA: { key: string; label: string }[] = [
   { key: "order:submit", label: "계좌이체 주문 접수" },
+  // 지난 동화 '이어서 보기'·결제 복귀로 책을 연 사람의 구매 클릭.
+  // 퍼널에 넣지 않는다 — 이 사람들은 이번 세션에 샘플을 만들지 않았으므로
+  // 직전 단계(샘플 완성) 대비 전환율에 섞이면 200% 같은 숫자가 나온다.
+  { key: "pay:click:resume", label: "구매 의사(이어보기·복귀)" },
   { key: "sample:fail", label: "샘플 생성 실패" },
   { key: "share:create", label: "공유 링크 생성" },
   // 공유 책(/book/…)이 바이럴 루프로 얼마나 일하는지 — 열람 → 재공유·카드 → 새 방문(src:book:visit)

@@ -85,22 +85,36 @@ export function entrySource(): { source: string; referrer: string } {
 let queue: string[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * 저장소가 막혔을 때의 폴백.
+ *
+ * 예전엔 sessionStorage가 막히면 중복 제거를 통째로 포기했다. 그래서 인앱 브라우저·시크릿
+ * 모드에서는 구매 버튼을 누를 때마다 pay:click이 새로 쌓였고, 잠금 오버레이가 페이지마다
+ * 뜨는 탓에 한 사람이 열 번도 넘게 세어질 수 있었다 (2026-08-30: 샘플 완성 4인데 구매 의사 13).
+ *
+ * 이 Set은 페이지가 살아 있는 동안만 유지된다 — 새로고침하면 사라지므로 세션 단위 정확도까지
+ * 되찾지는 못한다. 다만 "같은 화면에서 여러 번 누른 것"은 확실히 한 번으로 접는다.
+ */
+const memorySeen = new Set<string>();
+
 function seen(): Set<string> {
   try {
     const raw = sessionStorage.getItem(SEEN_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    const set = new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    memorySeen.forEach((n) => set.add(n));
+    return set;
   } catch {
-    return new Set();
+    return new Set(memorySeen);
   }
 }
 
 function remember(names: string[]): void {
+  names.forEach((n) => memorySeen.add(n)); // 저장소가 막혀도 이건 언제나 남는다
   try {
     const set = seen();
-    names.forEach((n) => set.add(n));
     sessionStorage.setItem(SEEN_KEY, JSON.stringify([...set]));
   } catch {
-    // 시크릿 모드 등에서 sessionStorage가 막히면 중복 집계를 감수하고 계속 보낸다
+    /* 저장 못 해도 memorySeen이 이번 페이지의 중복은 막는다 */
   }
 }
 
