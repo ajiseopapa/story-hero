@@ -59,6 +59,17 @@ const nextConfig = {
         destination: "/?utm_source=instagram&utm_medium=reels&utm_campaign=kidstel&s=kidstel",
         permanent: false,
       },
+      // 커뮤니티 글·카톡 시딩용 — 인스타와 갈라서 어느 채널이 손님을 데려오는지 본다
+      {
+        source: "/cafe",
+        destination: "/?utm_source=community&utm_medium=post&utm_campaign=momcafe&s=cafe",
+        permanent: false,
+      },
+      {
+        source: "/talk",
+        destination: "/?utm_source=kakao&utm_medium=dm&utm_campaign=seeding&s=talk",
+        permanent: false,
+      },
     ];
   },
 };
