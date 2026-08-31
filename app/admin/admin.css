@@ -586,26 +586,29 @@
   display: block;
   overflow: visible;
 }
-.adm-chart .bar {
+/* 클래스 이름은 반드시 adm- 로 시작한다.
+   globals.css의 `.bar { height: 12px }`가 SVG rect의 height 속성을 이겨서
+   막대가 전부 12px 정사각형으로 그려졌다 (CSS는 프레젠테이션 속성보다 우선한다). */
+.adm-chart .adm-bar {
   fill: var(--blue);
   opacity: 0.85;
 }
-.adm-chart .bar.dim {
+.adm-chart .adm-bar.dim {
   opacity: 0.32;
 }
-.adm-chart .bar:hover {
+.adm-chart .adm-bar:hover {
   opacity: 1;
 }
-.adm-chart .grid {
+.adm-chart .adm-gridline {
   stroke: var(--line);
   stroke-width: 1;
 }
-.adm-chart .axis {
+.adm-chart .adm-axis {
   fill: var(--txt-3);
   font-size: 9.5px;
   font-family: inherit;
 }
-.adm-chart .dot-order {
+.adm-chart .adm-dot {
   fill: var(--green);
 }
 

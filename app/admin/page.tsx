@@ -94,7 +94,7 @@ function entryOf(o: Order): { text: string; kind: "tag" | "ref" | "none" } {
 
 export default function AdminOverviewPage() {
   const [key, setKey] = useState("");
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState(7);
   const [metric, setMetric] = useState<string>("visit");
   const [stats, setStats] = useState<Stats | null>(null);
   const [orders, setOrders] = useState<Order[] | null>(null);
@@ -247,12 +247,50 @@ export default function AdminOverviewPage() {
     return { rows, max };
   }, [period, metric, ordersIn]);
 
+  /**
+   * 퍼널·참고 지표·출처를 **선택한 기간으로 다시 계산한다.**
+   *
+   * 서버는 비교용으로 두 배 기간(days*2)을 한 번에 주기 때문에, 응답에 들어 있는 합계
+   * (stats.steps·extra·sources)는 항상 두 배 기간의 값이다. 그걸 그대로 그리면
+   * "최근 7일"을 골라도 퍼널만 14일치가 보인다 — 한 화면에서 기간이 어긋난다.
+   */
+  const view = useMemo(() => {
+    if (!stats || !period) return null;
+    const { cur } = period;
+    const total = (k: string) => cur.reduce((a, d) => a + (d.counts[k] ?? 0), 0);
+    const top = total(stats.steps[0]?.key ?? "visit");
+    const steps = stats.steps.map((s, i, arr) => {
+      const count = total(s.key);
+      const prev = i === 0 ? count : total(arr[i - 1].key);
+      return {
+        ...s,
+        count,
+        fromPrev: i === 0 ? null : prev > 0 ? count / prev : null,
+        fromTop: top > 0 ? count / top : null,
+      };
+    });
+    const extra = stats.extra.map((e) => ({ ...e, count: total(e.key) }));
+    const sources: Record<string, Record<string, number>> = {};
+    for (const d of cur) {
+      for (const [k, v] of Object.entries(d.counts)) {
+        if (!k.startsWith("src:")) continue;
+        const rest = k.slice(4);
+        const cut = rest.indexOf(":");
+        if (cut <= 0) continue;
+        const name = rest.slice(0, cut);
+        const step = rest.slice(cut + 1);
+        (sources[name] ??= {})[step] = (sources[name][step] ?? 0) + v;
+      }
+    }
+    return { steps, extra, sources, top };
+  }, [stats, period]);
+
   // ----- 출처별 성적 (꼬리표 방문 + 실제 주문) -----
   const sourceRows = useMemo(() => {
-    if (!stats) return [];
+    if (!view) return [];
     const byName: Record<string, { visit: number; sample: number; pay: number; orders: number }> =
       {};
-    for (const [name, counts] of Object.entries(stats.sources ?? {})) {
+    for (const [name, counts] of Object.entries(view.sources)) {
       byName[name] = {
         visit: counts["visit"] ?? 0,
         sample: counts["sample:done"] ?? 0,
@@ -266,18 +304,18 @@ export default function AdminOverviewPage() {
       (byName[n] ??= { visit: 0, sample: 0, pay: 0, orders: 0 }).orders += 1;
     }
     return Object.entries(byName).sort((a, b) => b[1].visit - a[1].visit);
-  }, [stats, ordersIn]);
+  }, [view, ordersIn]);
 
   const untaggedOrders = ordersIn.filter((o) => !o.source).length;
 
   const exclude = new Set(stats?.leakExclude ?? []);
   const worst =
-    stats?.steps
+    view?.steps
       .slice(1)
       .filter((s) => s.fromPrev !== null && !exclude.has(s.key))
       .sort((a, b) => (a.fromPrev ?? 1) - (b.fromPrev ?? 1))[0] ?? null;
 
-  const top = stats?.steps[0]?.count ?? 0;
+  const top = view?.top ?? 0;
 
   return (
     <div className="wrap">
@@ -315,7 +353,7 @@ export default function AdminOverviewPage() {
         </div>
       )}
 
-      {stats && period && (
+      {stats && period && view && (
         <>
           <div className="adm-toolbar">
             <div className="adm-seg">
@@ -418,7 +456,7 @@ export default function AdminOverviewPage() {
             <section className="card">
               <div className="adm-cardhead">
                 <div>
-                  <h2>퍼널 (최근 {stats.days}일)</h2>
+                  <h2>퍼널 (최근 {days}일)</h2>
                   <div className="hint">세션당 한 번씩 셉니다. 사람 수에 가깝습니다.</div>
                 </div>
                 <a className="btn secondary" href="/admin/funnel">
@@ -428,7 +466,7 @@ export default function AdminOverviewPage() {
               {top === 0 ? (
                 <div className="adm-empty">아직 방문 기록이 없어요.</div>
               ) : (
-                stats.steps.map((s) => (
+                view.steps.map((s) => (
                   <div
                     className={`adm-step${
                       s.key === worst?.key ? " leak" : s.key === "pay:done" ? " done" : ""
@@ -454,10 +492,10 @@ export default function AdminOverviewPage() {
                   </div>
                 ))
               )}
-              {stats.extra.some((e) => e.key === "pay:click:resume" && e.count > 0) && (
+              {view.extra.some((e) => e.key === "pay:click:resume" && e.count > 0) && (
                 <div className="hint" style={{ marginTop: 12 }}>
                   이어보기·결제 복귀로 돌아와 구매를 누른 건{" "}
-                  <b>{stats.extra.find((e) => e.key === "pay:click:resume")?.count}</b>건 — 위
+                  <b>{view.extra.find((e) => e.key === "pay:click:resume")?.count}</b>건 — 위
                   퍼널에는 넣지 않았습니다(이번 세션에 샘플을 만든 사람이 아니라, 섞으면 전환율이
                   100%를 넘습니다).
                 </div>
@@ -567,14 +605,14 @@ export default function AdminOverviewPage() {
           <section className="card">
             <div className="adm-cardhead">
               <div>
-                <h2>운영 지표 (최근 {stats.days}일)</h2>
+                <h2>운영 지표 (최근 {days}일)</h2>
                 <div className="hint">
                   퍼널과 달리 발생할 때마다 셉니다. 같은 사람이 여러 번 세어질 수 있어요.
                 </div>
               </div>
             </div>
             <div className="adm-kpis" style={{ marginTop: 0 }}>
-              {stats.extra.map((e) => (
+              {view.extra.map((e) => (
                 <div className="adm-kpi" key={e.key}>
                   <div className="k-top">{e.label}</div>
                   <div className="k-val" style={{ fontSize: 22 }}>
@@ -582,19 +620,14 @@ export default function AdminOverviewPage() {
                   </div>
                 </div>
               ))}
-              <div className="adm-kpi">
-                <div className="k-top">샘플 실패율</div>
-                <div className="k-val" style={{ fontSize: 22 }}>
-                  {(() => {
-                    const start = stats.steps.find((s) => s.key === "sample:start")?.count ?? 0;
-                    const fail = stats.extra.find((e) => e.key === "sample:fail")?.count ?? 0;
-                    return start > 0 ? pct(fail / start) : "—";
-                  })()}
-                </div>
-                <div className="hint" style={{ fontSize: 11, marginTop: 6 }}>
-                  생성 시작 대비 실패 횟수
-                </div>
-              </div>
+            </div>
+            <div className="hint" style={{ marginTop: 12 }}>
+              여기 값을 위 퍼널 숫자로 나누지 마세요. 퍼널은 세션당 한 번, 이 값들은 발생할
+              때마다 세므로 기준이 다릅니다 — 예컨대 "샘플 생성 실패 {
+                view.extra.find((e) => e.key === "sample:fail")?.count ?? 0
+              }회"는 재시도까지 포함한 횟수이고, "샘플 생성 시작 {
+                view.steps.find((s) => s.key === "sample:start")?.count ?? 0
+              }"은 사람 수에 가깝습니다.
             </div>
           </section>
         </>
@@ -630,8 +663,8 @@ function Trend({
           const y = H - padB - (t / max) * (H - padB - 10);
           return (
             <g key={t}>
-              <line className="grid" x1={padL} y1={y} x2={W} y2={y} />
-              <text className="axis" x={0} y={y + 3}>
+              <line className="adm-gridline" x1={padL} y1={y} x2={W} y2={y} />
+              <text className="adm-axis" x={0} y={y + 3}>
                 {t}
               </text>
             </g>
@@ -644,7 +677,7 @@ function Trend({
           return (
             <g key={r.date}>
               <rect
-                className={`bar${r.v === 0 ? " dim" : ""}`}
+                className={`adm-bar${r.v === 0 ? " dim" : ""}`}
                 x={x + bw * 0.16}
                 y={H - padB - h}
                 width={bw * 0.68}
@@ -653,9 +686,9 @@ function Trend({
               >
                 <title>{`${r.date} · ${r.v}`}</title>
               </rect>
-              {isOrderDay && <circle className="dot-order" cx={x + bw / 2} cy={H - padB + 7} r={3} />}
+              {isOrderDay && <circle className="adm-dot" cx={x + bw / 2} cy={H - padB + 7} r={3} />}
               {(i === 0 || i === rows.length - 1 || i === Math.floor(rows.length / 2)) && (
-                <text className="axis" x={x + bw / 2} y={H - 2} textAnchor="middle">
+                <text className="adm-axis" x={x + bw / 2} y={H - 2} textAnchor="middle">
                   {r.date.slice(5)}
                 </text>
               )}
