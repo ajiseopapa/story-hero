@@ -47,6 +47,13 @@ const THEME_LABEL: Record<string, string> = {
   jungle: "정글 탐험",
 };
 
+/** 날짜×출처 표에서 세로로 볼 단계 — 방문은 도달, 구매 의사는 주문 직전이라 주문 추정에 가깝다. */
+const CROSS_STEPS = [
+  { key: "pay:click", label: "구매 의사" },
+  { key: "sample:done", label: "샘플 완성" },
+  { key: "visit", label: "방문" },
+] as const;
+
 function pct(v: number | null): string {
   return v === null ? "—" : `${Math.round(v * 100)}%`;
 }
@@ -58,6 +65,7 @@ export default function FunnelAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [crossStep, setCrossStep] = useState<string>("pay:click");
 
   useEffect(() => {
     setKey(recallAdminKey());
@@ -330,6 +338,97 @@ export default function FunnelAdminPage() {
               </section>
             );
           })}
+
+          {(() => {
+            // 날짜 × 출처 — 유입이 저장되기 전(2026-08-31 이전) 주문이 어디서 왔는지
+            // 되짚어보려고 만든 표다. 주문일에 어느 꼬리표가 움직였는지 보여줄 뿐,
+            // "이 주문 = 이 링크"를 증명하지는 못한다. 하루 주문이 한 건일 때만 쓸 만하다.
+            const rows = data.daily
+              .map((d) => {
+                const per: Record<string, number> = {};
+                for (const [k, v] of Object.entries(d.counts)) {
+                  if (!k.startsWith("src:")) continue;
+                  const rest = k.slice(4);
+                  const cut = rest.indexOf(":");
+                  if (cut <= 0 || rest.slice(cut + 1) !== crossStep) continue;
+                  per[rest.slice(0, cut)] = v;
+                }
+                return { date: d.date, per, orders: d.counts["order:submit"] ?? 0 };
+              })
+              .filter((r) => Object.keys(r.per).length > 0 || r.orders > 0)
+              .reverse();
+            const names = [...new Set(rows.flatMap((r) => Object.keys(r.per)))].sort();
+            if (rows.length === 0) return null;
+            return (
+              <section className="card">
+                <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>날짜별 출처</h2>
+                <div className="hint" style={{ marginBottom: 10 }}>
+                  주문일에 어느 꼬리표가 움직였는지 봅니다. 유입 저장 기능이 붙기 전(8/31 이전)
+                  주문이 어디서 왔는지 <b>추정</b>할 때 쓰세요 — 그날 주문이 한 건이고 움직인
+                  꼬리표도 하나라면 사실상 그 링크입니다. 증거는 아닙니다.
+                </div>
+                <div className="share-actions" style={{ marginBottom: 10 }}>
+                  {CROSS_STEPS.map((s) => (
+                    <button
+                      key={s.key}
+                      className={`btn ${crossStep === s.key ? "" : "secondary"}`}
+                      onClick={() => setCrossStep(s.key)}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ borderCollapse: "collapse", width: "100%", fontSize: ".9rem" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: "left", padding: "6px 8px" }}>날짜</th>
+                        <th style={{ textAlign: "right", padding: "6px 8px" }}>주문</th>
+                        {names.map((n) => (
+                          <th key={n} style={{ textAlign: "right", padding: "6px 8px" }}>
+                            {n}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => (
+                        <tr key={r.date} style={{ borderTop: "1px solid rgba(0,0,0,.08)" }}>
+                          <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{r.date}</td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              padding: "6px 8px",
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: r.orders > 0 ? 700 : 400,
+                            }}
+                          >
+                            {r.orders}
+                          </td>
+                          {names.map((n) => (
+                            <td
+                              key={n}
+                              style={{
+                                textAlign: "right",
+                                padding: "6px 8px",
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {r.per[n] ?? 0}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="hint" style={{ marginTop: 10 }}>
+                  꼬리표를 안 붙인 유입은 이 표에 안 잡힙니다. 8/31 이후 주문은 주문 관리
+                  화면에서 유입이 <b>주문별로</b> 바로 보입니다.
+                </div>
+              </section>
+            );
+          })()}
 
           <section className="card">
             <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>일별</h2>

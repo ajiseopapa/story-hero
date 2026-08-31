@@ -17,6 +17,7 @@ interface Order {
   paidAt?: number;
   source?: string;
   referrer?: string;
+  memo?: string;
 }
 
 /** 유입 한 줄 — 꼬리표(?s=)와 유입 링크 호스트 중 있는 것만 보여준다. */
@@ -46,6 +47,10 @@ export default function OrderAdminPage() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // 주문별 메모 입력값. 유입이 저장되기 전 주문의 출처를 손으로 적어두는 칸이라
+  // 자동 저장된 유입(위 한 줄)과 섞이지 않게 따로 보여준다.
+  const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
+  const [memoSaved, setMemoSaved] = useState<string | null>(null);
   const { confirmDialog, ask } = useConfirm();
 
   useEffect(() => {
@@ -101,6 +106,23 @@ export default function OrderAdminPage() {
         body: JSON.stringify({ id, action }),
       });
       await load(key);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** 메모만 저장한다 — 지금 상태를 그대로 다시 보내므로 입금 확인 메일이 다시 나가지 않는다. */
+  const saveMemo = async (o: Order) => {
+    setBusy(o.id);
+    try {
+      await fetch("/api/order/admin", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-key": key },
+        body: JSON.stringify({ id: o.id, action: o.status, memo: memoDraft[o.id] ?? "" }),
+      });
+      await load(key);
+      setMemoSaved(o.id);
+      setTimeout(() => setMemoSaved((v) => (v === o.id ? null : v)), 2000);
     } finally {
       setBusy(null);
     }
@@ -192,6 +214,22 @@ export default function OrderAdminPage() {
           </div>
           <div className="hint" style={{ marginTop: 4 }}>
             유입 {entry(o)}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+            <input
+              style={{ flex: 1, minWidth: 0 }}
+              placeholder="메모 (예: 인스타 릴스 추정, 지인 소개)"
+              value={memoDraft[o.id] ?? o.memo ?? ""}
+              onChange={(e) => setMemoDraft((m) => ({ ...m, [o.id]: e.target.value }))}
+            />
+            <button
+              className="btn secondary"
+              disabled={busy === o.id || (memoDraft[o.id] ?? o.memo ?? "") === (o.memo ?? "")}
+              onClick={() => saveMemo(o)}
+            >
+              {memoSaved === o.id ? "저장됨" : "메모 저장"}
+            </button>
           </div>
 
           <div className="share-actions" style={{ marginTop: 12 }}>
