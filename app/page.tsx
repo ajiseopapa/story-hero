@@ -22,6 +22,7 @@ import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-cl
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import { trackEvery, trackStep } from "@/lib/track";
 import { postLong, ramp } from "@/lib/long-fetch";
+import PhotoGuide from "./photo-guide";
 import BankOrderBox, {
   checkBankOrderPaid,
   clearBankOrder,
@@ -724,6 +725,7 @@ export default function Home() {
           <br />
           <b>표지와 첫 장면은 무료</b>로 먼저 보여드려요 — 마음에 들 때만 결제하시면 됩니다.
         </p>
+        <p className="hero-nosignup">회원가입 없이 바로 만들어요</p>
         <ul className="hero-points">
           <li>
             <span className="hp-emoji">👀</span>
@@ -792,6 +794,28 @@ export default function Home() {
               <figcaption>다른 장면, 같은 주인공</figcaption>
             </figure>
           </div>
+        </section>
+      )}
+
+      {/* 사진을 올리기 직전에 가장 많이 망설인다 — 방문 170명 중 사진까지 온 사람이 8명이었다
+          (2026-09-01 집계). 망설이는 이유를 여기서 미리 하나씩 지운다. */}
+      {phase === "form" && (
+        <section className="trust">
+          <h2>안심하고 만들어보세요</h2>
+          <ul>
+            <li>
+              <b>회원가입이 없어요</b> — 이메일도, 비밀번호도 묻지 않습니다
+            </li>
+            <li>
+              <b>표지와 첫 장면은 무료</b> — 결제는 결과를 보고 정하세요
+            </li>
+            <li>
+              <b>사진 원본은 서버에 저장하지 않아요</b> — 그림을 그리는 순간에만 씁니다
+            </li>
+            <li>
+              <b>만든 동화는 이 기기 안에</b> — 언제든 직접 지울 수 있어요
+            </li>
+          </ul>
         </section>
       )}
 
@@ -950,6 +974,7 @@ export default function Home() {
                 )}
                 {!kid.photo && (
                   <>
+                    <PhotoGuide />
                     <ul className="photo-guide">
                       <li className="good">
                         <span>✅</span> 정면을 보고 <b>얼굴이 크고 또렷한</b> 사진
@@ -972,7 +997,10 @@ export default function Home() {
                     </details>
                   </>
                 )}
-                <div className="hint">사진은 삽화를 그리는 데에만 쓰이고 저장하지 않아요.</div>
+                <div className="hint">
+                  🔒 사진 원본은 <b>서버에 저장하지 않아요.</b> 그림을 그리는 그 순간에만 쓰고
+                  바로 버립니다.
+                </div>
               </div>
             </div>
           ))}
