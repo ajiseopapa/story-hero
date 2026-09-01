@@ -21,6 +21,7 @@ import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import { trackEvery, trackStep } from "@/lib/track";
+import { postLong, ramp } from "@/lib/long-fetch";
 import BankOrderBox, {
   checkBankOrderPaid,
   clearBankOrder,
@@ -213,18 +214,18 @@ async function fetchImage(
   art: string,
   order?: { id: string; token: string }, // 결제한 주문이면 서버가 IP 한도 대신 주문 한도를 쓴다
 ): Promise<string> {
-  const res = await fetch("/api/image", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const res = await postLong(
+    "/api/image",
+    {
       photos: await fitPhotosToBudget(photos),
       imagePrompt,
       kind,
       children,
       art,
       order,
-    }),
-  });
+    },
+    150_000,
+  );
   const json = await safeJson(res);
   if (!res.ok) throw new Error((json.error as string) || "삽화 생성 실패");
   return json.image as string;
@@ -383,6 +384,13 @@ export default function Home() {
     }
   }, []);
 
+  // 파일 선택창을 여는 유일한 통로. 여기와 handleFile 사이가 인앱 브라우저에서 끊기는 구간이라
+  // 두 지점을 따로 센다 — 안 그러면 "관심이 없어서 안 올렸다"와 "브라우저가 막았다"가 구별되지 않는다.
+  const openPicker = useCallback((idx: number) => {
+    trackStep("photo:open");
+    fileRefs.current[idx]?.click();
+  }, []);
+
   // 고른 사진은 바로 쓰지 않고 자르기 화면을 먼저 띄운다 (얼굴 비율이 닮음을 좌우)
   const handleFile = useCallback(async (idx: number, file: File | undefined) => {
     if (!file) return;
@@ -390,6 +398,7 @@ export default function Home() {
       setError("이미지 파일을 올려주세요.");
       return;
     }
+    trackStep("photo:pick"); // 선택창을 연 사람 중 몇 %가 여기까지 오는가 — 인앱 브라우저 진단선
     try {
       setError(null);
       const dataUrl = await fileToScaledDataUrl(file, 1600); // 자르기 화면용 원본
@@ -453,15 +462,12 @@ export default function Home() {
     // 그림체·주제·아이 수는 고를 때마다 센다(퍼널 전환율 계산에는 안 씀)
     trackEvery(`art:${art}`, `theme:${theme}`, `kids:${kids.length}`);
     setPhase("generating");
-    setProgressPct(4);
-    setProgressStep("이야기를 짓고 있어요…");
+    setProgressStep("이야기를 짓고 있어요… 1분쯤 걸려요");
+    // 이야기 구간은 서버가 진행을 알려주지 않는다 — 시간으로 채운다(4 → 45%)
+    let stopRamp = ramp(setProgressPct, 4, 45, 80);
 
     try {
-      const storyRes = await fetch("/api/story", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ children, theme }),
-      });
+      const storyRes = await postLong("/api/story", { children, theme }, 180_000);
       const story = (await safeJson(storyRes)) as unknown as StoryData & { error?: string };
       if (!storyRes.ok) throw new Error(story.error || "이야기 생성 실패");
 
@@ -485,14 +491,20 @@ export default function Home() {
       // 무료 범위만 생성: 표지(0) + 장면 1..FREE_SCENES
       const freeCount = FREE_SCENES + 1;
       let cur = skeleton;
+      stopRamp();
       for (let i = 0; i < freeCount; i++) {
         setProgressStep(
           i === 0 ? "표지 삽화를 그리고 있어요…" : `샘플 ${i} / ${FREE_SCENES} 장면을 그리고 있어요…`,
         );
+        // 남은 55%를 삽화 장수로 나눠, 한 장 그리는 동안에도 막대가 움직이게 한다
+        const base = 45 + (i * 55) / freeCount;
+        const next = 45 + ((i + 1) * 55) / freeCount;
+        stopRamp = ramp(setProgressPct, base, next, 55);
         const img = await fetchImage(photos, cur[i].imagePrompt, cur[i].kind, children, art);
+        stopRamp();
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
         setPages(cur);
-        setProgressPct(Math.round(((i + 1) / freeCount) * 100));
+        setProgressPct(Math.round(next));
       }
 
       // 새 책이므로 이전 결제 기록·녹음 제거 후 초안 저장
@@ -516,6 +528,8 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "문제가 발생했어요. 다시 시도해주세요.");
       setPhase("form");
       trackEvery("sample:fail"); // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다
+    } finally {
+      stopRamp(); // 성공·실패 어느 쪽이든 타이머가 남으면 안 된다
     }
   }, [canSubmit, kids, theme, art, saved, ask]);
 
@@ -880,14 +894,14 @@ export default function Home() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={kid.photo} alt="업로드한 아이 사진" />
                     </div>
-                    <div className="change" onClick={() => fileRefs.current[idx]?.click()}>
+                    <div className="change" onClick={() => openPicker(idx)}>
                       다른 사진으로 바꾸기
                     </div>
                   </div>
                 ) : (
                   <div
                     className={`upload ${dragOver === idx ? "drag" : ""}`}
-                    onClick={() => fileRefs.current[idx]?.click()}
+                    onClick={() => openPicker(idx)}
                     onDragOver={(e) => {
                       e.preventDefault();
                       setDragOver(idx);

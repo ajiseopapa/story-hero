@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
     // ----- 비용 방어 -----
     // 결제한 주문(자격 증명 제시)은 주문별 상한, 그 외(무료 샘플)는 IP별 일일 한도.
     // 예전엔 전역 한도뿐이라 스크립트 하나가 하루치를 소진해 유료 고객까지 막을 수 있었다.
+    let paidOrder = false;
     if (order?.id && order?.token) {
       const found = ID_RE.test(order.id) ? await getOrder(order.id) : null;
       if (!found || found.status !== "paid" || !tokenMatches(found.token, order.token)) {
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
           { status: 429 },
         );
       }
+      paidOrder = true;
     } else if (!(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "오늘 무료로 그릴 수 있는 양을 다 쓰셨어요. 내일 다시 시도해주세요." },
@@ -114,7 +116,9 @@ export async function POST(req: NextRequest) {
       image: files.length === 1 ? files[0] : files,
       prompt,
       size: "1024x1536", // 세로형 동화책 판형
-      quality: kind === "cover" ? "high" : "medium", // 표지는 고품질
+      // 돈 낸 책의 표지만 high로 그린다. 무료 샘플 표지는 medium — high는 한 장에 수십 초가
+      // 더 붙는데, 그 시간을 못 견디고 나가는 사람이 품질로 얻는 것보다 많았다(2026-09-01).
+      quality: paidOrder && kind === "cover" ? "high" : "medium",
       // @ts-expect-error — SDK 타입에 아직 없지만 API가 지원: 사진 속 얼굴을 최대한 보존
       input_fidelity: "high",
     });
