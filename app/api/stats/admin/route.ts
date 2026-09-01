@@ -1,4 +1,5 @@
 import { EXTRA, FUNNEL, LEAK_EXCLUDE, isStoreConfigured, readStats, sumCounts } from "@/lib/stats";
+import { testToken } from "@/lib/test-pass";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,11 @@ export async function GET(req: Request): Promise<Response> {
       breakdown,
       sources,
       devices,
+      // 한도에 걸리지 않고 인앱 브라우저를 확인할 때 쓰는 링크 (lib/test-pass.ts)
+      testUrl: (() => {
+        const token = testToken();
+        return token ? `${url.origin}/api/test-pass?t=${token}` : null;
+      })(),
       daily,
       leakExclude: [...LEAK_EXCLUDE],
     },

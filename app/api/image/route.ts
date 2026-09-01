@@ -11,6 +11,7 @@ import {
 } from "@/lib/limits";
 import { ID_RE, consumeOrderImage, getOrder, tokenMatches } from "@/lib/orders";
 import { alertAdmin } from "@/lib/alerts";
+import { hasTestPass } from "@/lib/test-pass";
 import { adminAlert, classifyOpenAIError, userMessage } from "@/lib/openai-error";
 
 export const runtime = "nodejs";
@@ -92,7 +93,11 @@ export async function POST(req: NextRequest) {
         );
       }
       paidOrder = true;
-    } else if (!(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))) {
+    } else if (
+      // 테스트 통행증은 IP 한도만 건너뛴다. 아래 전체 한도는 통행증과 무관하게 적용된다.
+      !hasTestPass(req) &&
+      !(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))
+    ) {
       return NextResponse.json(
         { error: "오늘 무료로 그릴 수 있는 양을 다 쓰셨어요. 내일 다시 시도해주세요." },
         { status: 429 },

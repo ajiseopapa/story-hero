@@ -30,6 +30,7 @@ interface Data {
   breakdown: Record<string, Record<string, number>>;
   sources: Record<string, Record<string, number>>;
   devices: Record<string, Record<string, number>>;
+  testUrl: string | null;
   daily: { date: string; counts: Record<string, number> }[];
   leakExclude: string[];
 }
@@ -162,6 +163,7 @@ export default function FunnelAdminPage() {
   const [crossStep, setCrossStep] = useState<string>("pay:click");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setKey(recallAdminKey());
@@ -279,6 +281,40 @@ export default function FunnelAdminPage() {
               ))}
             </div>
           </section>
+
+          {data.testUrl && (
+            <section className="card">
+              <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>테스트 링크</h2>
+              <div className="hint" style={{ marginBottom: 10 }}>
+                이 링크로 연 브라우저는 <b>하루 3회 한도를 건너뛰고</b>, 그 브라우저에서 만든
+                방문·클릭은 <b>퍼널 집계에서 빠집니다</b>. 인앱 브라우저를 확인할 때 이 링크를
+                나에게 DM으로 보내 앱 안에서 열면 됩니다. 한 번 열면 30일간 유지돼요.
+                <br />
+                남에게 주지 마세요 — 무료 샘플 한도를 건너뛰는 링크입니다.
+              </div>
+              <div className="share-actions">
+                <button
+                  className="btn"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(data.testUrl ?? "");
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? "복사했어요 ✓" : "링크 복사"}
+                </button>
+                <a className="btn secondary" href={`${origin}/?test=0`}>
+                  집계 다시 켜기
+                </a>
+              </div>
+              <div
+                className="hint"
+                style={{ marginTop: 10, wordBreak: "break-all", fontFamily: "monospace" }}
+              >
+                {data.testUrl}
+              </div>
+            </section>
+          )}
 
           <section className="card">
             <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>CSV 내보내기</h2>

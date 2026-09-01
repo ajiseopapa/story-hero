@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import { alertAdmin } from "@/lib/alerts";
+import { hasTestPass } from "@/lib/test-pass";
 import { adminAlert, classifyOpenAIError, userMessage } from "@/lib/openai-error";
 import {
   DEVICE_COOKIE,
@@ -111,14 +112,16 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
       return NextResponse.json({ error: "이야기 주제를 선택해주세요." }, { status: 400 });
     }
 
-    // 일일 무료 샘플 한도 (기기 → IP 백스톱 → 전체 순서로 소진)
-    if (!(await consumeQuota(`device/${deviceId}`, FREE_DEVICE_DAILY_LIMIT))) {
+    // 일일 무료 샘플 한도 (기기 → IP 백스톱 → 전체 순서로 소진).
+    // 테스트 통행증이 있으면 기기·IP 한도만 건너뛴다 — 전체 한도는 비용 상한이라 그대로 지킨다.
+    const testing = hasTestPass(req);
+    if (!testing && !(await consumeQuota(`device/${deviceId}`, FREE_DEVICE_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "오늘 이 기기에서 만들 수 있는 무료 샘플을 모두 사용했어요. 내일 다시 만나요 🌙" },
         { status: 429 },
       );
     }
-    if (!(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))) {
+    if (!testing && !(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "지금 같은 네트워크에서 만든 샘플이 많아 잠시 쉬어갈게요. 내일 다시 만나요 🌙" },
         { status: 429 },

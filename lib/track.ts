@@ -16,6 +16,7 @@ import { metaTrackStep } from "@/lib/meta-pixel";
 
 const SEEN_KEY = "kidsbook:tracked";
 const DEV_KEY = "kidsbook:dev";
+const MUTE_KEY = "kidsbook:notrack";
 const SRC_KEY = "kidsbook:src";
 const REF_KEY = "kidsbook:ref";
 const FLUSH_MS = 400;
@@ -129,6 +130,25 @@ export function entrySource(): { source: string; referrer: string } {
   return { source: source(), referrer: referrer() };
 }
 
+/**
+ * 이 브라우저의 이벤트를 집계에서 뺀다.
+ *
+ * 테스트 통행증 링크(/api/test-pass)로 들어오면 홈 주소에 ?test=1이 붙는다. 그 표식을
+ * 이 브라우저에 남겨, 내가 인앱 브라우저를 확인하며 만든 방문·클릭이 운영 퍼널에 섞이지
+ * 않게 한다 — 숫자를 근거로 판단하려면 내 테스트가 들어가면 안 된다(2026-09-01).
+ * ?test=0 으로 다시 켠다.
+ */
+function muted(): boolean {
+  try {
+    const flag = new URLSearchParams(window.location.search).get("test");
+    if (flag === "1") localStorage.setItem(MUTE_KEY, "1");
+    if (flag === "0") localStorage.removeItem(MUTE_KEY);
+    return localStorage.getItem(MUTE_KEY) === "1";
+  } catch {
+    return false; // 저장소가 막힌 브라우저는 평소대로 집계한다
+  }
+}
+
 let queue: string[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -187,7 +207,7 @@ function flush(): void {
  * 예: trackStep("sample:done")
  */
 export function trackStep(...names: string[]): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || muted()) return;
   const already = seen();
   const fresh = names.filter((n) => !already.has(n));
   if (fresh.length === 0) return;
@@ -211,7 +231,7 @@ export function trackStep(...names: string[]): void {
  * 퍼널 전환율 계산에는 쓰지 않는다.
  */
 export function trackEvery(...names: string[]): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || muted()) return;
   queue.push(...names);
   if (!timer) timer = setTimeout(flush, FLUSH_MS);
 }
