@@ -4,6 +4,14 @@
 // 방문자용 화면은 몰라도 관리 화면은 한국어로 읽혀야 한다.
 import { useCallback, useEffect, useState } from "react";
 import { recallAdminKey } from "@/lib/admin-key";
+import {
+  type ExportOrder,
+  downloadCsv,
+  eventRows,
+  funnelRows,
+  kstStamp,
+  orderRows,
+} from "@/lib/funnel-csv";
 
 interface Step {
   key: string;
@@ -66,6 +74,8 @@ export default function FunnelAdminPage() {
   const [loading, setLoading] = useState(false);
   const [origin, setOrigin] = useState("");
   const [crossStep, setCrossStep] = useState<string>("pay:click");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     setKey(recallAdminKey());
@@ -94,6 +104,36 @@ export default function FunnelAdminPage() {
   useEffect(() => {
     if (key) load(key, days);
   }, [key, days, load]);
+
+  // 파일 이름에 기간을 박아둔다 — 여러 번 뽑아도 뭘 뽑은 건지 파일명만 보고 읽힌다.
+  const from = data?.daily[0]?.date ?? "";
+  const to = data?.daily[data.daily.length - 1]?.date ?? "";
+  const range = `${from}_${to}`;
+
+  // 주문은 퍼널 API에 없다(개인정보라 저장소가 다르다) — 받을 때만 따로 불러온다.
+  const downloadOrders = useCallback(async () => {
+    if (!key) return;
+    setExportError(null);
+    setExporting(true);
+    try {
+      const res = await fetch("/api/order/admin", { headers: { "x-admin-key": key } });
+      if (!res.ok) {
+        setExportError("주문을 불러오지 못했어요.");
+        return;
+      }
+      const { orders } = (await res.json()) as { orders: ExportOrder[] };
+      // 화면에서 고른 기간과 같은 구간만 자른다 — 퍼널 숫자와 나란히 놓고 읽으려면 기간이 맞아야 한다.
+      const inRange = orders.filter((o) => {
+        const day = kstStamp(o.createdAt).slice(0, 10);
+        return day >= from && day <= to;
+      });
+      downloadCsv(`kidsbook-orders-${range}.csv`, orderRows(inRange));
+    } catch {
+      setExportError("주문을 불러오지 못했어요.");
+    } finally {
+      setExporting(false);
+    }
+  }, [key, from, to, range]);
 
   const top = data?.steps[0]?.count ?? 0;
 
@@ -152,6 +192,54 @@ export default function FunnelAdminPage() {
                 </button>
               ))}
             </div>
+          </section>
+
+          <section className="card">
+            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>CSV 내보내기</h2>
+            <div className="hint" style={{ marginBottom: 10 }}>
+              위에서 고른 <b>최근 {data.days}일</b>({from} ~ {to}) 구간을 그대로 내보냅니다. 엑셀에서
+              바로 열려요.
+            </div>
+            <div className="share-actions">
+              <button
+                className="btn"
+                onClick={() => downloadCsv(`kidsbook-events-${range}.csv`, eventRows(data.daily))}
+              >
+                이벤트 원본
+              </button>
+              <button
+                className="btn secondary"
+                onClick={() =>
+                  downloadCsv(`kidsbook-funnel-${range}.csv`, funnelRows(data.daily, data.steps))
+                }
+              >
+                퍼널(일별)
+              </button>
+              <button className="btn secondary" onClick={downloadOrders} disabled={exporting}>
+                {exporting ? "받는 중…" : "주문"}
+              </button>
+            </div>
+            {exportError && (
+              <div className="error" style={{ marginTop: 10 }}>
+                {exportError}
+              </div>
+            )}
+            <ul className="hint" style={{ margin: "10px 0 0", paddingLeft: 18 }}>
+              <li>
+                <b>이벤트 원본</b> — 한 줄이 하루 × 이벤트 하나. 출처(<code>?s=</code>)와 단계가
+                컬럼으로 갈라져 있어 피벗으로 바로 돌립니다. <code>unit</code>이{" "}
+                <code>session</code>인 것만 사람 수예요 — <code>action</code>(그림체·주제·재시도)은
+                발생할 때마다 세니 전환율 계산에 섞으면 안 됩니다.
+              </li>
+              <li>
+                <b>퍼널(일별)</b> — 한 줄이 하루. 카드결제는 아직 안 열었으니 계좌이체 주문 접수까지
+                붙여뒀습니다.
+              </li>
+              <li>
+                <b>주문</b> — 금액·상태·유입만 담습니다. 이름·이메일·책 제목(아이 이름)은
+                개인정보라 파일에 넣지 않아요.
+              </li>
+            </ul>
           </section>
 
           <section className="card">
