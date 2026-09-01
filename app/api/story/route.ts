@@ -27,6 +27,9 @@ export const runtime = "nodejs";
 // (Vercel Fluid Compute에서 Hobby도 최대 300초 허용)
 export const maxDuration = 300;
 
+/** 테스트 통행증 전용 일일 상한 — 통행증이 새더라도 하루 비용이 정해져 있어야 한다. */
+const TEST_STORY_DAILY_LIMIT = Number(process.env.TEST_STORY_DAILY_LIMIT ?? "20");
+
 type StoryScene = { text: string; imagePrompt: string };
 type StoryResult = {
   title: string;
@@ -127,7 +130,16 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
         { status: 429 },
       );
     }
-    if (!(await consumeQuota("story", FREE_DAILY_LIMIT))) {
+    // 통행증은 전체 한도와 따로 센다. 같이 세면 하루 종일 확인하다가 손님 몫을 깎아먹고,
+    // 반대로 손님이 많은 날엔 정작 내가 확인을 못 한다. 대신 테스트도 상한은 있다.
+    if (testing) {
+      if (!(await consumeQuota("story-test", TEST_STORY_DAILY_LIMIT))) {
+        return NextResponse.json(
+          { error: "오늘 테스트로 만들 수 있는 샘플을 다 썼어요(관리자용 한도)." },
+          { status: 429 },
+        );
+      }
+    } else if (!(await consumeQuota("story", FREE_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "오늘 준비된 무료 샘플이 모두 소진됐어요. 내일 다시 찾아와주세요 🌙" },
         { status: 429 },

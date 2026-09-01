@@ -2131,3 +2131,37 @@ a.btn {
   padding-top: 16px;
   border-top: 1px dashed #e0d3bd;
 }
+
+/* ---------- PC: 책 펼침면 ----------
+   본문 폭이 760px이라 세로 2:3 그림 한 장이 1,140px까지 커진다. 노트북 화면보다 커서
+   그림을 보면 글이 화면 밖으로 밀렸다 (2026-09-01). PC에서는 그림과 글을 좌우로 편다.
+   판형은 그대로 2:3이라 PDF·인쇄본에는 영향이 없다. 폰은 지금처럼 위아래. */
+@media (min-width: 900px) {
+  .page {
+    display: grid;
+    /* 왼쪽 칸 너비를 화면 높이에서 끌어온다 — 그림 높이가 화면을 넘지 않게 */
+    grid-template-columns: calc(68vh * 2 / 3) minmax(240px, 1fr);
+    align-items: stretch;
+  }
+  .page .illus {
+    max-height: 68vh;
+    /* 잠금 안내처럼 키 큰 내용은 잘리지 않고 스크롤되게 */
+    overflow-y: auto;
+  }
+  .page .caption {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 68vh;
+    overflow-y: auto;
+    padding: 24px 28px;
+  }
+  /* 표지와 잠금 화면은 옆에 펼 글이 없다 — 한 칸으로 두되 그림이 화면을 넘지 않게 폭을 줄인다 */
+  .page:has(.cover-caption),
+  .page:has(.locked) {
+    display: block;
+    max-width: calc(68vh * 2 / 3);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

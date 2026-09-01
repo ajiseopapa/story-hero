@@ -18,6 +18,9 @@ export const runtime = "nodejs";
 // gpt-image-1은 한 장에 60~90초 걸릴 수 있음 (Vercel Fluid Compute에서 Hobby도 최대 300초 허용)
 export const maxDuration = 300;
 
+/** 테스트 통행증 전용 일일 상한 (무료 샘플 한 번에 2장이니 20번쯤 확인할 수 있다) */
+const TEST_IMAGE_DAILY_LIMIT = Number(process.env.TEST_IMAGE_DAILY_LIMIT ?? "40");
+
 // data URL(base64) → Buffer + mime
 function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null {
   const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(dataUrl);
@@ -77,6 +80,7 @@ export async function POST(req: NextRequest) {
     // ----- 비용 방어 -----
     // 결제한 주문(자격 증명 제시)은 주문별 상한, 그 외(무료 샘플)는 IP별 일일 한도.
     // 예전엔 전역 한도뿐이라 스크립트 하나가 하루치를 소진해 유료 고객까지 막을 수 있었다.
+    const testing = hasTestPass(req);
     let paidOrder = false;
     if (order?.id && order?.token) {
       const found = ID_RE.test(order.id) ? await getOrder(order.id) : null;
@@ -94,8 +98,8 @@ export async function POST(req: NextRequest) {
       }
       paidOrder = true;
     } else if (
-      // 테스트 통행증은 IP 한도만 건너뛴다. 아래 전체 한도는 통행증과 무관하게 적용된다.
-      !hasTestPass(req) &&
+      // 테스트 통행증은 IP 한도를 건너뛴다 (전체 한도는 아래에서 따로 센다)
+      !testing &&
       !(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))
     ) {
       return NextResponse.json(
@@ -104,8 +108,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 일일 삽화 생성 백스톱 (직접 호출 남용·폭주 방지, 정상 사용량보다 넉넉하게)
-    if (!(await consumeQuota("image", IMAGE_DAILY_LIMIT))) {
+    // 일일 삽화 생성 백스톱 (직접 호출 남용·폭주 방지, 정상 사용량보다 넉넉하게).
+    // 통행증은 따로 센다 — 하루 확인하다 손님 몫을 깎아먹지 않게, 그러면서도 상한은 남게.
+    if (testing) {
+      if (!(await consumeQuota("image-test", TEST_IMAGE_DAILY_LIMIT))) {
+        return NextResponse.json(
+          { error: "오늘 테스트로 그릴 수 있는 양을 다 썼어요(관리자용 한도)." },
+          { status: 429 },
+        );
+      }
+    } else if (!(await consumeQuota("image", IMAGE_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "오늘 그림을 그릴 수 있는 양이 모두 소진됐어요. 잠시 후 다시 시도해주세요." },
         { status: 429 },
