@@ -432,10 +432,12 @@ input[type="tel"]:focus,
   cursor: pointer;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 21px;
+  font-size: 18px;
   color: #fff;
   padding: 16px;
   border-radius: 15px;
+  /* 한글은 글자 단위로 끊으면 "만들 / 기"처럼 어색하게 잘린다 — 낱말 단위로 넘긴다 */
+  word-break: keep-all;
   background: linear-gradient(135deg, #e79a86, #e08a7b 60%, #d97a6b);
   box-shadow: 0 12px 26px -12px var(--accent);
   transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
@@ -462,7 +464,7 @@ a.btn {
   color: var(--accent);
   border: 1.5px solid var(--accent);
   box-shadow: none;
-  font-size: 17px;
+  font-size: 16px;
 }
 .btn.share {
   background: linear-gradient(135deg, #8fb0d6, #7ba0cc 60%, #6b91c2);
@@ -479,7 +481,7 @@ a.btn {
   text-align: center;
 }
 .share-actions.book-share .btn {
-  font-size: 19px;
+  font-size: 17px;
   white-space: nowrap;
 }
 

@@ -423,7 +423,7 @@ export default function Home() {
           message: saved.paid
             ? `《 ${saved.draft.title} 》는 결제하신 책이에요!\n지우기 전에 '이어서 보기'로 열어 공유 링크를 만들어두면 1년간 보관됩니다.`
             : `《 ${saved.draft.title} 》를 보관하고 싶다면\n'이어서 보기'로 열어 공유 링크를 만들어두세요.`,
-          confirmLabel: "그래도 새로 만들기",
+          confirmLabel: "새로 만들기",
           cancelLabel: "취소",
         });
         if (!ok) return;
@@ -437,7 +437,7 @@ export default function Home() {
           message:
             `주문번호 ${pendingBank.orderNo} — 새 동화를 만들면 주문하신 동화가 지워지고,\n` +
             "입금하셔도 열 수 없게 돼요.",
-          confirmLabel: "그래도 새로 만들기",
+          confirmLabel: "새로 만들기",
           cancelLabel: "취소",
         });
         if (!ok) return;
@@ -624,7 +624,7 @@ export default function Home() {
         message:
           "이 기기에서 지워지면 되돌릴 수 없어요.\n" +
           "PDF 저장이나 보관·공유 링크를 아직 안 만드셨다면 먼저 만들어두세요.",
-        confirmLabel: "지우고 새로 만들기",
+        confirmLabel: "지우고 만들기",
         cancelLabel: "취소",
       });
       if (!ok) return;
