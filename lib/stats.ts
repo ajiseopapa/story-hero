@@ -23,7 +23,17 @@ export function kstDate(offsetDays = 0): string {
  */
 export const FUNNEL: { key: string; label: string; note: string }[] = [
   { key: "visit", label: "방문", note: "첫 화면에 도착" },
-  { key: "photo", label: "사진 올림", note: "아이 사진을 넣고 자르기까지 끝냄" },
+  {
+    key: "photo:open",
+    label: "사진 선택창 엶",
+    note: "사진 올리기를 눌러 파일 선택창을 띄움 — 여기서 다음 칸으로 못 넘어가면 브라우저가 막은 것이다",
+  },
+  {
+    key: "photo:pick",
+    label: "사진 고름",
+    note: "선택창에서 사진이 실제로 넘어옴. 끌어다 놓기로 올리면 선택창 없이 여기부터 잡힌다",
+  },
+  { key: "photo", label: "사진 올림", note: "자르기까지 끝냄 — 여기서 새면 자르기 화면 문제다" },
   { key: "sample:start", label: "샘플 생성 시작", note: "주제까지 고르고 만들기를 누름" },
   { key: "sample:done", label: "샘플 완성", note: "표지+장면을 실제로 봄 — 여기가 감정 최고점" },
   {
@@ -87,7 +97,8 @@ function countable(): boolean {
 
 export async function track(events: string[]): Promise<void> {
   if (!countable()) return;
-  const valid = events.filter(isValidEvent).slice(0, 10);
+  // 한 단계마다 전체·출처별·기기별 세 벌이 쌓이므로 상한이 10이면 조용히 잘려나갔다.
+  const valid = events.filter(isValidEvent).slice(0, 30);
   if (valid.length === 0) return;
   const day = kstDate();
   const key = PREFIX + day;

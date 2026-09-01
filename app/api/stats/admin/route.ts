@@ -40,17 +40,23 @@ export async function GET(req: Request): Promise<Response> {
     if (group in breakdown && rest.length > 0) breakdown[group][rest.join(":")] = v;
   }
 
-  // 유입 출처별 퍼널 — 링크에 ?s=... 를 붙인 방문만 여기 쌓인다(lib/track.ts).
-  // 키 모양은 `src:<출처>:<단계>` 이고, 단계 이름 자체에 콜론이 있어서(sample:done) 첫 콜론에서만 자른다.
-  const sources: Record<string, Record<string, number>> = {};
-  for (const [k, v] of Object.entries(totals)) {
-    if (!k.startsWith("src:")) continue;
-    const rest = k.slice(4);
-    const cut = rest.indexOf(":");
-    if (cut <= 0) continue;
-    const name = rest.slice(0, cut);
-    (sources[name] ??= {})[rest.slice(cut + 1)] = v;
+  // 접두사로 갈라 쌓아둔 교차 집계를 푼다(lib/track.ts).
+  //  `src:<출처>:<단계>` — 링크에 ?s=... 를 붙인 방문만 쌓인다
+  //  `dev:<기기>:<단계>` — 모든 방문이 쌓인다 (ios / aos / pc, 인앱이면 ios-insta 처럼)
+  // 단계 이름 자체에 콜론이 있어서(sample:done) 첫 콜론에서만 자른다.
+  function cross(prefix: string): Record<string, Record<string, number>> {
+    const out: Record<string, Record<string, number>> = {};
+    for (const [k, v] of Object.entries(totals)) {
+      if (!k.startsWith(prefix)) continue;
+      const rest = k.slice(prefix.length);
+      const cut = rest.indexOf(":");
+      if (cut <= 0) continue;
+      (out[rest.slice(0, cut)] ??= {})[rest.slice(cut + 1)] = v;
+    }
+    return out;
   }
+  const sources = cross("src:");
+  const devices = cross("dev:");
 
   return Response.json(
     {
@@ -60,6 +66,7 @@ export async function GET(req: Request): Promise<Response> {
       extra: EXTRA.map((e) => ({ ...e, count: totals[e.key] ?? 0 })),
       breakdown,
       sources,
+      devices,
       daily,
       leakExclude: [...LEAK_EXCLUDE],
     },

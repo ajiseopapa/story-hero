@@ -15,6 +15,7 @@
 import { metaTrackStep } from "@/lib/meta-pixel";
 
 const SEEN_KEY = "kidsbook:tracked";
+const DEV_KEY = "kidsbook:dev";
 const SRC_KEY = "kidsbook:src";
 const REF_KEY = "kidsbook:ref";
 const FLUSH_MS = 400;
@@ -71,6 +72,52 @@ function referrer(): string {
   } catch {
     return "";
   }
+}
+
+/** 인앱 브라우저 판별 — UA에 자기 이름을 남기는 앱들. 스레드가 인스타 이름을 함께 달고 나와 순서가 중요하다. */
+const IN_APP: [RegExp, string][] = [
+  [/Threads|Barcelona/i, "threads"],
+  [/Instagram/i, "insta"],
+  [/KAKAOTALK/i, "kakao"],
+  [/FBAN|FBAV|FB_IAB/i, "fb"],
+  [/NAVER\(inapp/i, "naver"],
+  [/DaumApps/i, "daum"],
+  [/\bLine\//i, "line"],
+];
+
+/**
+ * 기기 꼬리표 — 출처와 같은 방식으로 `dev:<기기>:<단계>` 를 단계마다 하나씩 더 쌓는다.
+ *
+ * 왜 필요한가: 방문 170명 중 사진을 올린 사람이 8명뿐인데(2026-09-01 집계), 인스타·카톡
+ * 인앱 브라우저는 파일 선택 자체가 막히거나 곧바로 닫히는 일이 흔하다. 기기별로 갈라 보지
+ * 않으면 "사람들이 관심이 없다"와 "그 브라우저에선 아예 못 올린다"를 구별할 수 없다.
+ *
+ * 값은 `ios`·`aos`·`pc`, 인앱이면 `ios-insta`처럼 앱 이름을 붙인다.
+ * UA 문자열에서 이 분류값만 뽑아 보낸다 — UA 원문이나 개인을 식별하는 값은 남기지 않는다.
+ * 판별은 순수 함수(deviceBucket)로 빼둔다 — 브라우저 없이 UA 문자열만으로 검증할 수 있게.
+ */
+export function deviceBucket(ua: string): string {
+  const plat = /iPhone|iPad|iPod/i.test(ua) ? "ios" : /Android/i.test(ua) ? "aos" : "pc";
+  let app = IN_APP.find(([re]) => re.test(ua))?.[1] ?? "";
+  // 이름을 안 밝히는 인앱 웹뷰: 안드로이드는 UA에 `; wv)`, 아이폰은 Safari 토큰이 없다.
+  if (!app && (/;\s*wv\)/i.test(ua) || (plat === "ios" && !/Safari/i.test(ua)))) app = "inapp";
+  return app ? `${plat}-${app}` : plat;
+}
+
+function device(): string {
+  try {
+    const saved = sessionStorage.getItem(DEV_KEY);
+    if (saved) return saved;
+  } catch {
+    /* 저장소가 막히면 매번 다시 계산한다 — 값은 같다 */
+  }
+  const bucket = deviceBucket(navigator.userAgent || "");
+  try {
+    sessionStorage.setItem(DEV_KEY, bucket);
+  } catch {
+    /* 못 저장해도 다음 호출에서 같은 값이 나온다 */
+  }
+  return bucket;
 }
 
 /**
@@ -153,6 +200,9 @@ export function trackStep(...names: string[]): void {
   const src = source();
   referrer(); // 첫 화면에서 유입 링크를 굳혀둔다 — 나중엔 우리 주소로 바뀐다
   if (src) queue.push(...fresh.map((n) => `src:${src}:${n}`));
+  // 기기별로도 같은 단계를 쌓는다. 전체 퍼널은 그대로 두고 곁에 하나 더 남기는 것이라 숫자가 어긋나지 않는다.
+  const dev = device();
+  if (dev) queue.push(...fresh.map((n) => `dev:${dev}:${n}`));
   if (!timer) timer = setTimeout(flush, FLUSH_MS);
 }
 

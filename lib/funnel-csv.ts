@@ -7,7 +7,7 @@
  * 그래서 여기서 만들 수 있는 최대치는 아래 세 장이고, 그 이상(체류시간·재방문·경로)은
  * 추적을 더 심기 전에는 어떤 형태로 내보내도 나오지 않는다.
  *
- *  1) 이벤트 원본(long)  — 피벗용. 한 줄 = 하루 × 이벤트 하나.
+ *  1) 이벤트 원본(long)  — 피벗용. 한 줄 = 하루 × 이벤트 하나. 출처(src:)·기기(dev:)는 컬럼으로 갈라둔다.
  *  2) 퍼널 일별(wide)    — 엑셀에서 바로 꺾은선 그리는 용도.
  *  3) 주문               — 카드결제(pay:done) 밖에 있는 계좌이체 전환은 이 파일로만 읽힌다.
  *
@@ -18,6 +18,8 @@
 /** 이벤트가 "사람 수"인지 "행동 수"인지. 섞어서 읽으면 전환율이 무너진다. */
 const SESSION_STEPS = new Set([
   "visit",
+  "photo:open",
+  "photo:pick",
   "photo",
   "sample:start",
   "sample:done",
@@ -41,13 +43,23 @@ export function unitOf(step: string): "session" | "server" | "action" {
   return "action";
 }
 
-/** `src:reel1:sample:done` → { source: "reel1", step: "sample:done" }. 단계 이름에도 콜론이 있어 첫 콜론에서만 자른다. */
-export function splitEvent(key: string): { source: string; step: string } {
-  if (!key.startsWith("src:")) return { source: "", step: key };
+/**
+ * 교차 집계 키를 컬럼으로 쪼갠다. 단계 이름에도 콜론이 있어(sample:done) 첫 콜론에서만 자른다.
+ *  `src:reel1:sample:done` → source=reel1
+ *  `dev:ios-insta:photo`   → device=ios-insta
+ */
+export function splitEvent(key: string): { source: string; device: string; step: string } {
+  const prefix = key.startsWith("src:") ? "src" : key.startsWith("dev:") ? "dev" : "";
+  if (!prefix) return { source: "", device: "", step: key };
   const rest = key.slice(4);
   const cut = rest.indexOf(":");
-  if (cut <= 0) return { source: "", step: key };
-  return { source: rest.slice(0, cut), step: rest.slice(cut + 1) };
+  if (cut <= 0) return { source: "", device: "", step: key };
+  const name = rest.slice(0, cut);
+  return {
+    source: prefix === "src" ? name : "",
+    device: prefix === "dev" ? name : "",
+    step: rest.slice(cut + 1),
+  };
 }
 
 export type Cell = string | number;
@@ -83,11 +95,11 @@ export interface DailyRow {
 
 /** ① 이벤트 원본 — 한 줄 = 하루 × 이벤트 하나. 출처·단계·단위를 컬럼으로 쪼개야 피벗이 돈다. */
 export function eventRows(daily: DailyRow[]): Cell[][] {
-  const rows: Cell[][] = [["date", "event", "source", "step", "unit", "count"]];
+  const rows: Cell[][] = [["date", "event", "source", "device", "step", "unit", "count"]];
   for (const d of daily) {
     for (const key of Object.keys(d.counts).sort()) {
-      const { source, step } = splitEvent(key);
-      rows.push([d.date, key, source, step, unitOf(step), d.counts[key] ?? 0]);
+      const { source, device, step } = splitEvent(key);
+      rows.push([d.date, key, source, device, step, unitOf(step), d.counts[key] ?? 0]);
     }
   }
   return rows;

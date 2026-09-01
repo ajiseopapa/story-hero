@@ -29,6 +29,7 @@ interface Data {
   extra: { key: string; label: string; count: number }[];
   breakdown: Record<string, Record<string, number>>;
   sources: Record<string, Record<string, number>>;
+  devices: Record<string, Record<string, number>>;
   daily: { date: string; counts: Record<string, number> }[];
   leakExclude: string[];
 }
@@ -54,6 +55,91 @@ const THEME_LABEL: Record<string, string> = {
   train: "마법 기차",
   jungle: "정글 탐험",
 };
+
+const DEVICE_LABEL: Record<string, string> = { ios: "아이폰", aos: "안드로이드", pc: "PC" };
+
+const APP_LABEL: Record<string, string> = {
+  insta: "인스타 인앱",
+  threads: "스레드 인앱",
+  kakao: "카톡 인앱",
+  fb: "페북 인앱",
+  naver: "네이버 인앱",
+  daum: "다음 인앱",
+  line: "라인 인앱",
+  inapp: "이름 모를 인앱",
+};
+
+/** `ios-insta` → `아이폰 · 인스타 인앱` */
+function deviceLabel(bucket: string): string {
+  const [plat, app] = bucket.split("-");
+  const base = DEVICE_LABEL[plat] ?? plat;
+  return app ? `${base} · ${APP_LABEL[app] ?? app}` : base;
+}
+
+/** 출처별·기기별 퍼널은 표 모양이 같다 — 한 곳에서 그린다. */
+function StepTable({
+  head,
+  rows,
+  steps,
+  label,
+}: {
+  head: string;
+  rows: [string, Record<string, number>][];
+  steps: { key: string; label: string }[];
+  label?: (name: string) => string;
+}) {
+  const visitKey = steps[0]?.key ?? "visit";
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ borderCollapse: "collapse", width: "100%", fontSize: ".9rem" }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: "6px 8px" }}>{head}</th>
+            {steps.map((s) => (
+              <th key={s.key} style={{ textAlign: "right", padding: "6px 8px" }}>
+                {s.label}
+              </th>
+            ))}
+            <th style={{ textAlign: "right", padding: "6px 8px" }}>구매의사율</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([name, counts]) => {
+            const visits = counts[visitKey] ?? 0;
+            return (
+              <tr key={name} style={{ borderTop: "1px solid rgba(0,0,0,.08)" }}>
+                <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
+                  <b>{label ? label(name) : name}</b>
+                </td>
+                {steps.map((s) => (
+                  <td
+                    key={s.key}
+                    style={{
+                      textAlign: "right",
+                      padding: "6px 8px",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {counts[s.key] ?? 0}
+                  </td>
+                ))}
+                <td
+                  style={{
+                    textAlign: "right",
+                    padding: "6px 8px",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {visits > 0 ? `${Math.round(((counts["pay:click"] ?? 0) / visits) * 100)}%` : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 /** 날짜×출처 표에서 세로로 볼 단계 — 방문은 도달, 구매 의사는 주문 직전이라 주문 추정에 가깝다. */
 const CROSS_STEPS = [
@@ -312,67 +398,36 @@ export default function FunnelAdminPage() {
             </div>
             {(() => {
               const visitKey = data.steps[0]?.key ?? "visit";
-              const payKey = "pay:click";
               const rows = Object.entries(data.sources ?? {}).sort(
                 (a, b) => (b[1][visitKey] ?? 0) - (a[1][visitKey] ?? 0),
               );
               if (rows.length === 0) {
                 return <div className="hint">아직 꼬리표가 붙은 방문이 없어요.</div>;
               }
-              return (
-                <div style={{ overflowX: "auto" }}>
-                  <table
-                    style={{ borderCollapse: "collapse", width: "100%", fontSize: ".9rem" }}
-                  >
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left", padding: "6px 8px" }}>출처</th>
-                        {data.steps.map((s) => (
-                          <th key={s.key} style={{ textAlign: "right", padding: "6px 8px" }}>
-                            {s.label}
-                          </th>
-                        ))}
-                        <th style={{ textAlign: "right", padding: "6px 8px" }}>구매의사율</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map(([name, counts]) => {
-                        const visits = counts[visitKey] ?? 0;
-                        return (
-                          <tr key={name} style={{ borderTop: "1px solid rgba(0,0,0,.08)" }}>
-                            <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
-                              <b>{name}</b>
-                            </td>
-                            {data.steps.map((s) => (
-                              <td
-                                key={s.key}
-                                style={{
-                                  textAlign: "right",
-                                  padding: "6px 8px",
-                                  fontVariantNumeric: "tabular-nums",
-                                }}
-                              >
-                                {counts[s.key] ?? 0}
-                              </td>
-                            ))}
-                            <td
-                              style={{
-                                textAlign: "right",
-                                padding: "6px 8px",
-                                fontVariantNumeric: "tabular-nums",
-                              }}
-                            >
-                              {visits > 0
-                                ? `${Math.round(((counts[payKey] ?? 0) / visits) * 100)}%`
-                                : "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              return <StepTable head="출처" rows={rows} steps={data.steps} />;
+            })()}
+          </section>
+
+          <section className="card">
+            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>기기·브라우저</h2>
+            <div className="hint" style={{ marginBottom: 10 }}>
+              꼬리표와 달리 <b>모든 방문</b>이 여기 잡힙니다. 인스타·카톡 인앱 브라우저는 사진
+              선택이 막히는 일이 있어요 — <b>사진 선택창 엶</b> 대비 <b>사진 고름</b>이 유독 낮은
+              줄이 있으면 그 브라우저가 막고 있다는 뜻입니다.
+            </div>
+            {(() => {
+              const visitKey = data.steps[0]?.key ?? "visit";
+              const rows = Object.entries(data.devices ?? {}).sort(
+                (a, b) => (b[1][visitKey] ?? 0) - (a[1][visitKey] ?? 0),
               );
+              if (rows.length === 0) {
+                return (
+                  <div className="hint">
+                    아직 기록이 없어요. 이 기능을 배포한 뒤 들어온 방문부터 쌓입니다.
+                  </div>
+                );
+              }
+              return <StepTable head="기기" rows={rows} steps={data.steps} label={deviceLabel} />;
             })()}
           </section>
 
