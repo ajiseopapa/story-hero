@@ -57,6 +57,21 @@ ${inner}
 <p style="margin-top:28px;font-size:12px;color:#9a8c7c">키즈북 · <a href="${SITE}" style="color:#9a8c7c">story.kidstel.co.kr</a> · 문의 support@kidstel.co.kr</p>
 </div>`;
 
+/**
+ * 서비스가 멈추는 사고 알림 (크레딧 소진·키 오류 등). 발송 실패는 삼킨다 — 이 메일 때문에
+ * 손님 응답이 늦어지면 안 된다. 잦은 재발송은 호출부(lib/alerts.ts)가 막는다.
+ */
+export async function mailAdminAlert(subject: string, body: string): Promise<void> {
+  if (!ADMIN) return;
+  await send(
+    ADMIN,
+    `[키즈북 ⚠️] ${subject}`,
+    WRAP(`<h2 style="font-size:18px">${esc(subject)}</h2>
+<p style="white-space:pre-wrap">${esc(body)}</p>
+<p><a href="${SITE}/admin/funnel">퍼널 지표 보기</a></p>`),
+  );
+}
+
 /** 주문 접수 직후 손님에게: 주문번호와 입금 계좌 안내 */
 export async function mailOrderReceived(o: {
   email: string;

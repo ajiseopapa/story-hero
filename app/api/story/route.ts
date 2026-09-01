@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
+import { alertAdmin } from "@/lib/alerts";
+import { adminAlert, classifyOpenAIError, userMessage } from "@/lib/openai-error";
 import {
   DEVICE_COOKIE,
   FREE_DAILY_LIMIT,
@@ -181,7 +183,14 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
       scenes,
     } satisfies StoryResult);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "알 수 없는 오류";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // 원문은 서버 로그에만 남긴다 — 손님 화면에 영어 오류가 그대로 뜨면 안 된다
+    console.error("story failed:", err instanceof Error ? err.message : err);
+    const kind = classifyOpenAIError(err);
+    const alert = adminAlert(kind, "이야기 생성");
+    if (alert) await alertAdmin(kind, alert.subject, alert.body);
+    return NextResponse.json(
+      { error: userMessage(kind, "이야기를 짓다 문제가 생겼어요. 다시 시도해주세요.") },
+      { status: 500 },
+    );
   }
 }

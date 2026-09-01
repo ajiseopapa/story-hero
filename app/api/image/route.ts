@@ -10,6 +10,8 @@ import {
   ipBucket,
 } from "@/lib/limits";
 import { ID_RE, consumeOrderImage, getOrder, tokenMatches } from "@/lib/orders";
+import { alertAdmin } from "@/lib/alerts";
+import { adminAlert, classifyOpenAIError, userMessage } from "@/lib/openai-error";
 
 export const runtime = "nodejs";
 // gpt-image-1은 한 장에 60~90초 걸릴 수 있음 (Vercel Fluid Compute에서 Hobby도 최대 300초 허용)
@@ -130,13 +132,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ image: `data:image/png;base64,${b64}` });
   } catch (err) {
-    // OpenAI 콘텐츠 정책/키 오류 등을 사용자에게 부드럽게 전달
-    let message = "삽화를 그리는 중 오류가 났어요.";
-    if (err instanceof OpenAI.APIError) {
-      message = err.message || message;
-    } else if (err instanceof Error) {
-      message = err.message;
-    }
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("image failed:", err instanceof Error ? err.message : err);
+    const kind = classifyOpenAIError(err);
+    const alert = adminAlert(kind, "삽화 생성");
+    if (alert) await alertAdmin(kind, alert.subject, alert.body);
+    // 콘텐츠 정책처럼 손님이 사진을 바꾸면 풀리는 오류는 원문이 도움이 된다(한국어로 온다).
+    const fallback =
+      err instanceof OpenAI.APIError && err.message
+        ? err.message
+        : "삽화를 그리는 중 오류가 났어요. 다시 시도해주세요.";
+    return NextResponse.json({ error: userMessage(kind, fallback) }, { status: 500 });
   }
 }
