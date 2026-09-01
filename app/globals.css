@@ -2185,3 +2185,85 @@ a.btn {
 .test-badge.bad {
   background: #b8412a;
 }
+
+/* ---------- 가격 구성 ---------- */
+/* 무엇이 포함되는지 흩어진 문장으로만 있으면 사려는 사람이 값을 못 매긴다 — 한 상자로 모은다 */
+.price-card {
+  margin-top: 22px;
+  padding: 18px 20px 20px;
+  background: var(--paper-2);
+  border: 1px solid #e8dcc6;
+  border-radius: 16px;
+}
+.price-what {
+  margin: 14px 0 8px;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 16px;
+}
+.price-includes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.price-includes li {
+  padding-left: 24px;
+  position: relative;
+  word-break: keep-all;
+}
+.price-includes li::before {
+  content: "✓";
+  position: absolute;
+  left: 4px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ---------- 부모 목소리 (핵심 혜택) ---------- */
+.voice-pitch {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f1f5ec;
+  border: 1px solid #dbe6d0;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+/* ---------- 자주 묻는 질문 ---------- */
+.faq {
+  margin-top: 30px;
+}
+.faq h2 {
+  font-family: var(--display);
+  font-size: 20px;
+  text-align: center;
+  margin: 0 0 14px;
+}
+.faq .fold {
+  background: var(--paper-2);
+  border: 1px solid #e8dcc6;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+.faq .fold summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15.5px;
+  word-break: keep-all;
+}
+.faq .fold p {
+  margin: 10px 0 2px;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--ink-soft);
+  word-break: keep-all;
+}

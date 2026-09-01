@@ -114,6 +114,7 @@ function draftToKids(draft: Draft): ChildForm[] {
 }
 
 const FREE_SCENES = 1; // 무료 샘플: 표지 + 1장면 (샘플 원가 절감)
+const TOTAL_PAGES = 11; // 표지 1 + 장면 10 — 화면 곳곳에 적는 "11페이지"의 근거
 const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "14900");
 // 결제 방식. 토스 카드결제를 열기 전까지는 계좌이체로 받는다.
 // 라이브 키를 넣으면 NEXT_PUBLIC_PAY_MODE=card 로 바꾸면 된다.
@@ -718,15 +719,16 @@ export default function Home() {
           주인공이 되는 그림동화
         </h1>
         <p>
-          사진 한 장이면 아이 얼굴 그대로, <b>표지 포함 11페이지</b> 동화책이 완성돼요.
+          아이 사진 한 장으로, <b>우리 아이를 닮은 주인공</b>이 등장하는{" "}
+          <b>표지 포함 11페이지</b> 그림동화를 만들어요.
           <br />
-          <b>표지는 무료</b>로 먼저 보여드려요 — 마음에 들 때만 결제하시면 됩니다.
+          <b>표지와 첫 장면은 무료</b>로 먼저 보여드려요 — 마음에 들 때만 결제하시면 됩니다.
         </p>
         <ul className="hero-points">
           <li>
             <span className="hp-emoji">👀</span>
             결제 전<br />
-            얼굴 확인
+            결과 확인
           </li>
           <li>
             <span className="hp-emoji">🔊</span>
@@ -751,7 +753,7 @@ export default function Home() {
           <p className="hint">
             아래 두 그림은 <b>왼쪽 사진 한 장</b>으로 만든 거예요.
             <br />
-            장면이 바뀌어도 <b>같은 얼굴</b>로 그려집니다.
+            장면이 바뀌어도 <b>같은 아이</b>가 주인공으로 이어집니다.
           </p>
           <div className="ba-row">
             <figure className="ba-photo">
@@ -787,7 +789,7 @@ export default function Home() {
                 height={SAMPLE_H}
                 sizes="(max-width: 560px) 62vw, 220px"
               />
-              <figcaption>다른 장면, 같은 얼굴</figcaption>
+              <figcaption>다른 장면, 같은 주인공</figcaption>
             </figure>
           </div>
         </section>
@@ -1051,22 +1053,82 @@ export default function Home() {
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
             표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요.
             <br />
-            아이 얼굴이 마음에 들 때만 결제하시면,
-            <br />
-            <b>표지 포함 11페이지</b> 전체와 읽어주기·PDF·공유 링크가 열립니다.
+            결제 전에 우리 아이가 어떻게 그려지는지 확인할 수 있어요.
           </div>
-          <div className="hint" style={{ textAlign: "center", marginTop: 8, fontSize: 15 }}>
-            🎁 <b>부모 목소리 녹음</b>도 지금은 <b>오픈 기념 무료</b> — 정식 오픈 후 유료 전환
-            예정이에요.
+          <div className="voice-pitch">
+            🔊 <b>엄마·아빠 목소리로 동화를 들려주세요.</b>
+            <br />
+            아이 사진 + 아이 이름 + 부모 목소리 — 세상에 하나뿐인 동화가 됩니다.
+            <br />
+            <span className="hint">
+              지금은 오픈 기념으로 무료예요 (정식 오픈 시 제공 조건이 바뀔 수 있어요).
+            </span>
           </div>
           <div className="hint" style={{ textAlign: "center", marginTop: 8, fontSize: 13 }}>
             무료 샘플을 만들면 <a href="/terms">이용약관</a>에 동의한 것으로 봅니다. 결제 관련
             동의는 결제하실 때 따로 받습니다.
           </div>
-          <div className="price-anchor">
-            <s>정가 {LIST_PRICE.toLocaleString()}원</s>
-            <b>출시 기념 {PRICE.toLocaleString()}원</b>
+          <div className="price-card">
+            <div className="price-anchor">
+              <s>정가 {LIST_PRICE.toLocaleString()}원</s>
+              <b>출시 기념 {PRICE.toLocaleString()}원</b>
+            </div>
+            <div className="price-what">이 가격에 모두 포함돼요</div>
+            <ul className="price-includes">
+              <li>표지 포함 11페이지 그림동화</li>
+              <li>우리 아이 맞춤 이야기</li>
+              <li>엄마·아빠 목소리로 읽어주기</li>
+              <li>AI 목소리 읽어주기</li>
+              <li>PDF 저장 · 소리책</li>
+              <li>가족 공유 링크</li>
+              <li>1년간 보관 (기기를 바꿔도 다시 열람)</li>
+            </ul>
           </div>
+        </section>
+      )}
+
+      {phase === "form" && (
+        <section className="faq">
+          <h2>자주 묻는 질문</h2>
+          {[
+            {
+              q: "정말 무료인가요?",
+              a: `표지와 첫 장면까지 무료로 확인할 수 있어요. 전체 ${TOTAL_PAGES}페이지 동화를 만들고 싶을 때만 결제하시면 됩니다.`,
+            },
+            {
+              q: "아이 사진은 서버에 저장되나요?",
+              a: "원본 사진은 서버에 저장하지 않아요. AI가 그림을 그리는 과정에서만 사용하고, 만들어진 동화는 이 기기(브라우저) 안에 저장됩니다.",
+            },
+            {
+              q: "아이와 똑같이 나오나요?",
+              a: "AI가 사진을 참고해 아이를 닮은 주인공으로 그립니다. 사진과 100% 같은 모습을 보장하지는 않아요. 그래서 결제 전에 표지와 첫 장면을 무료로 먼저 보여드립니다.",
+            },
+            {
+              q: "형제·자매도 같이 넣을 수 있나요?",
+              a: "네, 최대 3명까지 함께 주인공으로 나올 수 있어요.",
+            },
+            {
+              q: "회원가입을 해야 하나요?",
+              a: "아니요. 가입 없이 바로 만들 수 있어요.",
+            },
+            {
+              q: "결제하면 무엇을 받게 되나요?",
+              a: `표지 포함 ${TOTAL_PAGES}페이지 전체와 읽어주기(부모 목소리·AI 목소리), PDF 저장, 소리책, 가족 공유 링크가 열립니다.`,
+            },
+            {
+              q: "동화는 얼마나 보관되나요?",
+              a: "결제하거나 공유 링크를 만든 동화는 1년간 보관돼요. 폰을 바꿔도 링크로 다시 열 수 있고, 원하면 언제든 직접 지울 수 있습니다.",
+            },
+            {
+              q: "부모 목소리 녹음은 어디에 저장되나요?",
+              a: "녹음은 이 기기(브라우저) 안에 저장돼요. 공유 링크를 만들 때만 소리책에 함께 담깁니다.",
+            },
+          ].map((f) => (
+            <details key={f.q} className="fold">
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
         </section>
       )}
 

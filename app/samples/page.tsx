@@ -32,7 +32,7 @@ export default function SamplesPage() {
         <p>
           사진 한 장만 올리면 됩니다.
           <br />
-          장면이 바뀌어도 <b>같은 얼굴</b>로 그려집니다.
+          장면이 바뀌어도 <b>같은 아이</b>가 주인공으로 이어집니다.
         </p>
       </header>
 
