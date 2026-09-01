@@ -1,6 +1,6 @@
 "use client";
 
-// 관리 화면 껍데기 — 왼쪽 사이드바 + 본문. 화면 넷(개요·퍼널·주문·후기)이 한 벌로 보이게 한다.
+// 관리 화면 껍데기 — 왼쪽 사이드바 + 본문. 화면 다섯(개요·퍼널·주문·후기·쿠폰)이 한 벌로 보이게 한다.
 // 사이드바의 뱃지(처리할 일 건수)는 각 화면이 자기 목록을 불러올 때 채워 넣는다 — 여기서 또
 // API를 부르면 화면을 옮길 때마다 같은 요청이 두 번씩 나간다.
 import { usePathname } from "next/navigation";
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/funnel", ico: "◫", label: "퍼널 지표" },
   { href: "/admin/orders", ico: "◧", label: "주문", badge: "orders" },
   { href: "/admin/reviews", ico: "☆", label: "후기 검수", badge: "reviews" },
+  { href: "/admin/coupons", ico: "◇", label: "무료 쿠폰" },
 ];
 
 /** 각 화면이 세어둔 "처리할 일" 건수. 화면을 옮겨도 사이드바에 그대로 남는다. */

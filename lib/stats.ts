@@ -58,6 +58,7 @@ export const LEAK_EXCLUDE = new Set(["pay:done"]);
 /** 퍼널 밖 참고 지표 — 이탈 원인·비용 추적용 */
 export const EXTRA: { key: string; label: string }[] = [
   { key: "order:submit", label: "계좌이체 주문 접수" },
+  { key: "coupon:use", label: "무료 쿠폰 사용" },
   // 지난 동화 '이어서 보기'·결제 복귀로 책을 연 사람의 구매 클릭.
   // 퍼널에 넣지 않는다 — 이 사람들은 이번 세션에 샘플을 만들지 않았으므로
   // 직전 단계(샘플 완성) 대비 전환율에 섞이면 200% 같은 숫자가 나온다.

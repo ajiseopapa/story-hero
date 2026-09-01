@@ -62,6 +62,9 @@ export default function BankOrderBox({
   const [checking, setChecking] = useState(false);
   const [checkedNote, setCheckedNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [coupon, setCoupon] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // 30초 자동 확인과 수동 확인 버튼이 동시에 입금을 감지해도 onPaid는 한 번만 부른다
   // (두 번 부르면 남은 장면 생성이 두 벌 돌아 비용이 2배로 나간다)
@@ -136,6 +139,39 @@ export default function BankOrderBox({
       setError("연결에 실패했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  /**
+   * 무료 쿠폰 쓰기. 서버가 0원짜리 '입금 확인된 주문'을 만들어주므로,
+   * 그 뒤는 입금이 확인된 경우와 완전히 같은 길을 탄다.
+   */
+  const useCoupon = async () => {
+    setCouponBusy(true);
+    setCouponError(null);
+    try {
+      const res = await fetch("/api/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: coupon, bookTitle }),
+      });
+      const data = (await res.json()) as {
+        id?: string;
+        token?: string;
+        orderNo?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.id || !data.token || !data.orderNo) {
+        setCouponError(data.error ?? "쿠폰을 쓰지 못했어요. 잠시 후 다시 시도해주세요.");
+        return;
+      }
+      if (paidNotifiedRef.current) return; // 입금 확인과 동시에 눌려도 한 번만
+      paidNotifiedRef.current = true;
+      onPaid({ id: data.id, token: data.token, orderNo: data.orderNo, at: Date.now() });
+    } catch {
+      setCouponError("연결에 실패했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setCouponBusy(false);
     }
   };
 
@@ -219,6 +255,29 @@ export default function BankOrderBox({
               이름과 이메일은 입금 확인과 안내에만 씁니다. 자세한 내용은 개인정보처리방침을
               봐주세요.
             </p>
+
+            <div className="coupon-box">
+              <div className="field" style={{ marginBottom: 8 }}>
+                <label>무료 쿠폰이 있으세요?</label>
+                <input
+                  type="text"
+                  value={coupon}
+                  maxLength={20}
+                  placeholder="쿠폰 코드를 입력하세요"
+                  autoCapitalize="characters"
+                  onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                />
+              </div>
+              {couponError && <div className="error">{couponError}</div>}
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={useCoupon}
+                disabled={coupon.trim().length < 4 || couponBusy}
+              >
+                {couponBusy ? "확인하는 중…" : "쿠폰으로 열기"}
+              </button>
+            </div>
           </>
         ) : (
           <>

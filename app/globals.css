@@ -2124,3 +2124,10 @@ a.btn {
     padding: 20px 16px;
   }
 }
+
+/* 결제 창 안의 무료 쿠폰 입력 — 주문 흐름과 섞이지 않게 선으로 나눈다 */
+.coupon-box {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #e0d3bd;
+}
