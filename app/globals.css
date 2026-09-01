@@ -2165,3 +2165,23 @@ a.btn {
     margin-right: auto;
   }
 }
+
+/* 테스트 통행증 상태 — 관리자에게만 보인다(통행증 링크로 들어왔거나 집계가 꺼진 브라우저) */
+.test-badge {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 60;
+  background: #2f6b4f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.5);
+  max-width: calc(100vw - 20px);
+  word-break: keep-all;
+}
+.test-badge.bad {
+  background: #b8412a;
+}

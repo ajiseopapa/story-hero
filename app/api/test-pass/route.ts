@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { TEST_COOKIE, testToken } from "@/lib/test-pass";
+import { TEST_COOKIE, hasTestPass, testToken } from "@/lib/test-pass";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +15,12 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url);
+
+  // 이 브라우저에 통행증이 실제로 붙어 있는지. 링크를 다른 브라우저에서 열면 조용히
+  // 실패하는데(쿠키는 브라우저마다 따로다), 그걸 화면에서 알 수 있어야 한다.
+  if (url.searchParams.get("check")) {
+    return Response.json({ active: hasTestPass(req) }, { headers: { "cache-control": "no-store" } });
+  }
 
   if (url.searchParams.get("off")) {
     const res = NextResponse.redirect(new URL("/?test=0", req.url));
