@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/app/confirm-dialog";
 import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
+import { updateBadges } from "../shell";
 
 interface Order {
   id: string;
@@ -70,6 +71,9 @@ export default function OrderAdminPage() {
       rememberAdminKey(k);
       const data = (await res.json()) as { orders: Order[] };
       setOrders(data.orders);
+      // 사이드바 뱃지는 여기서 다시 센다 — 개요 화면이 세어둔 값만 믿으면,
+      // 이 화면에서 입금 확인·취소를 해도 뱃지에 옛 건수가 남는다.
+      updateBadges({ orders: data.orders.filter((o) => o.status === "pending").length });
     } catch {
       setError("불러오지 못했어요.");
     }

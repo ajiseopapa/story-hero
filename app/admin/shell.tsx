@@ -1,8 +1,8 @@
 "use client";
 
 // 관리 화면 껍데기 — 왼쪽 사이드바 + 본문. 화면 넷(개요·퍼널·주문·후기)이 한 벌로 보이게 한다.
-// 사이드바의 빨간 뱃지(입금 대기 건수)는 개요 화면이 채워 넣는다 — 여기서 또 API를 부르면
-// 화면을 옮길 때마다 같은 요청이 두 번씩 나간다.
+// 사이드바의 뱃지(처리할 일 건수)는 각 화면이 자기 목록을 불러올 때 채워 넣는다 — 여기서 또
+// API를 부르면 화면을 옮길 때마다 같은 요청이 두 번씩 나간다.
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -13,10 +13,21 @@ const NAV = [
   { href: "/admin/reviews", ico: "☆", label: "후기 검수", badge: "reviews" },
 ];
 
-/** 개요 화면이 세어둔 "처리할 일" 건수. 화면을 옮겨도 사이드바에 그대로 남는다. */
+/** 각 화면이 세어둔 "처리할 일" 건수. 화면을 옮겨도 사이드바에 그대로 남는다. */
 const BADGE_KEY = "kb_admin_badges";
+/** 같은 탭 안에서는 storage 이벤트가 안 오므로, 저장할 때 직접 알린다. */
+const BADGE_EVENT = "kb-admin-badges";
 
 export type Badges = { orders?: number; reviews?: number };
+
+export function readBadges(): Badges {
+  try {
+    const raw = sessionStorage.getItem(BADGE_KEY);
+    return raw ? (JSON.parse(raw) as Badges) : {};
+  } catch {
+    return {};
+  }
+}
 
 export function saveBadges(b: Badges): void {
   try {
@@ -24,6 +35,18 @@ export function saveBadges(b: Badges): void {
   } catch {
     /* 저장 못 해도 화면은 그대로 돈다 */
   }
+  // 지금 열려 있는 사이드바도 바로 갱신한다 — 주문을 처리했는데 뱃지만 남아 있으면
+  // 처리할 일이 있는 줄 알고 다시 들어오게 된다.
+  try {
+    window.dispatchEvent(new CustomEvent(BADGE_EVENT));
+  } catch {
+    /* 이벤트를 못 보내도 다음 화면 이동 때 다시 읽는다 */
+  }
+}
+
+/** 한 화면은 자기 몫만 안다 — 나머지 숫자는 건드리지 않고 덮어쓴다. */
+export function updateBadges(part: Badges): void {
+  saveBadges({ ...readBadges(), ...part });
 }
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -31,12 +54,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [badges, setBadges] = useState<Badges>({});
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(BADGE_KEY);
-      if (raw) setBadges(JSON.parse(raw) as Badges);
-    } catch {
-      /* 없으면 뱃지 없이 */
-    }
+    const sync = () => setBadges(readBadges());
+    sync();
+    window.addEventListener(BADGE_EVENT, sync);
+    return () => window.removeEventListener(BADGE_EVENT, sync);
   }, [path]);
 
   return (
@@ -44,7 +65,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <div className="adm-shell">
         <aside className="adm-side">
           <div className="adm-brand">
-            <span className="dot" />
             <b>키즈북 관리</b>
           </div>
           <div className="adm-navlabel">화면</div>

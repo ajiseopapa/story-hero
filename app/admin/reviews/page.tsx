@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { recallAdminKey } from "@/lib/admin-key";
 import { formatDate, type Review } from "@/lib/reviews";
+import { updateBadges } from "../shell";
 
 export default function ReviewAdminPage() {
   const [key, setKey] = useState("");
@@ -26,6 +27,8 @@ export default function ReviewAdminPage() {
     }
     const data = (await res.json()) as { reviews: Review[] };
     setReviews(data.reviews);
+    // 검수한 뒤에도 사이드바에 옛 건수가 남지 않게, 여기서 다시 센다.
+    updateBadges({ reviews: data.reviews.filter((r) => !r.approved).length });
   }, []);
 
   useEffect(() => {
