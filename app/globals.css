@@ -484,6 +484,30 @@ a.btn {
   font-size: 17px;
   white-space: nowrap;
 }
+/* 공유 시트·클립보드가 다 막힌 브라우저용 주소 상자 */
+.book-share .link-box input {
+  text-align: center;
+  font-size: 15px;
+  padding: 11px 13px;
+}
+/* 만든 카드 미리보기 — 내려받기가 막혀도 길게 눌러 저장할 수 있게 화면에 남긴다 */
+.book-share .card-preview {
+  margin: 4px 0 0;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+.book-share .card-preview img {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 14px;
+  box-shadow: 0 14px 30px -16px rgba(74, 63, 53, 0.45);
+}
+.book-share .card-preview .btn.small {
+  width: auto;
+  font-size: 14px;
+  padding: 9px 16px;
+}
 
 /* ---------- 후기 ---------- */
 .review-box {
@@ -1225,27 +1249,6 @@ a.btn {
   margin-bottom: 12px;
 }
 
-.fold {
-  margin: 8px 0 0;
-  font-family: var(--text);
-}
-.fold > summary {
-  cursor: pointer;
-  font-size: 13.5px;
-  color: var(--ink-soft);
-  text-decoration: underline;
-  list-style: none;
-}
-.fold > summary::-webkit-details-marker {
-  display: none;
-}
-.fold > summary::after {
-  content: " ▼";
-  text-decoration: none;
-}
-.fold[open] > summary::after {
-  content: " ▲";
-}
 /* ---------- 결제 전 동의 ---------- */
 .pay-consent {
   display: flex;
@@ -2221,25 +2224,62 @@ a.btn {
   text-align: center;
   margin: 0 0 14px;
 }
-.faq .fold {
+/* 한 장의 카드 안에 실선으로 나눈 줄 — 상자 여덟 개보다 조용하다 */
+.faq-list {
   background: var(--paper-2);
   border: 1px solid #e8dcc6;
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
+  border-radius: 16px;
+  overflow: hidden;
 }
-.faq .fold summary {
+.faq-item + .faq-item {
+  border-top: 1px solid #eee3d2;
+}
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
   cursor: pointer;
+  list-style: none;
+  font-family: var(--text);
   font-weight: 600;
   font-size: 15.5px;
+  color: var(--ink);
   word-break: keep-all;
+  transition: background 0.15s;
 }
-.faq .fold p {
-  margin: 10px 0 2px;
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+.faq-item summary:hover {
+  background: #fffaf2;
+}
+.faq-item[open] summary {
+  background: #fffaf2;
+}
+.faq-q {
+  flex: 1;
+}
+.faq-chev {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: #b8a88e;
+  transition: transform 0.2s;
+}
+.faq-item[open] .faq-chev {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+.faq-a {
+  margin: 0;
+  padding: 0 18px 16px 18px;
+  font-family: var(--text);
   font-size: 14.5px;
-  line-height: 1.75;
+  line-height: 1.8;
   color: var(--ink-soft);
   word-break: keep-all;
+  background: #fffaf2;
 }
 
 /* ---------- 히어로 약속 알약 ---------- */

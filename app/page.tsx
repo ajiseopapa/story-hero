@@ -1083,50 +1083,7 @@ export default function Home() {
         </section>
       )}
 
-      {phase === "form" && (
-        <section className="faq">
-          <h2>자주 묻는 질문</h2>
-          {[
-            {
-              q: "정말 무료인가요?",
-              a: `표지와 첫 장면까지 무료로 확인할 수 있어요. 전체 ${TOTAL_PAGES}페이지 동화를 만들고 싶을 때만 결제하시면 됩니다.`,
-            },
-            {
-              q: "아이 사진은 서버에 저장되나요?",
-              a: "원본 사진은 서버에 저장하지 않아요. AI가 그림을 그리는 과정에서만 사용하고, 만들어진 동화는 이 기기(브라우저) 안에 저장됩니다.",
-            },
-            {
-              q: "아이와 똑같이 나오나요?",
-              a: "AI가 사진을 참고해 아이를 닮은 주인공으로 그립니다. 사진과 100% 같은 모습을 보장하지는 않아요. 그래서 결제 전에 표지와 첫 장면을 무료로 먼저 보여드립니다.",
-            },
-            {
-              q: "형제·자매도 같이 넣을 수 있나요?",
-              a: "네, 최대 3명까지 함께 주인공으로 나올 수 있어요.",
-            },
-            {
-              q: "회원가입을 해야 하나요?",
-              a: "아니요. 가입 없이 바로 만들 수 있어요.",
-            },
-            {
-              q: "결제하면 무엇을 받게 되나요?",
-              a: `표지 포함 ${TOTAL_PAGES}페이지 전체와 읽어주기(부모 목소리·AI 목소리), PDF 저장, 소리책, 가족 공유 링크가 열립니다.`,
-            },
-            {
-              q: "동화는 얼마나 보관되나요?",
-              a: "결제하거나 공유 링크를 만든 동화는 1년간 보관돼요. 폰을 바꿔도 링크로 다시 열 수 있고, 원하면 언제든 직접 지울 수 있습니다.",
-            },
-            {
-              q: "부모 목소리 녹음은 어디에 저장되나요?",
-              a: "녹음은 이 기기(브라우저) 안에 저장돼요. 공유 링크를 만들 때만 소리책에 함께 담깁니다.",
-            },
-          ].map((f) => (
-            <details key={f.q} className="fold">
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))}
-        </section>
-      )}
+      {phase === "form" && <FaqSection />}
 
       {phase === "form" && <ReviewsSection />}
 
@@ -1275,6 +1232,76 @@ function PayConsent({
 }
 
 // 이 브라우저에서 만든 공유 링크 목록 — 새 동화를 만든 뒤에도 지난 링크를 지울 수 있게 한다.
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: "정말 무료인가요?",
+    a: `표지와 첫 장면은 무료예요. 결과를 보고 마음에 들 때만 전체 ${TOTAL_PAGES}페이지를 결제하시면 됩니다.`,
+  },
+  {
+    q: "아이 사진은 서버에 저장되나요?",
+    a: "아니요. 원본 사진은 그림을 그리는 그 순간에만 쓰고 바로 버려요. 만든 동화는 이 기기(브라우저) 안에 저장됩니다.",
+  },
+  {
+    q: "아이와 똑같이 나오나요?",
+    a: "사진을 참고해 아이를 닮은 주인공으로 그려요. 100% 같지는 않을 수 있어서, 결제 전에 표지와 첫 장면을 먼저 보여드립니다.",
+  },
+  {
+    q: "형제·자매도 같이 넣을 수 있나요?",
+    a: "네, 최대 3명까지 함께 주인공이 될 수 있어요.",
+  },
+  {
+    q: "회원가입을 해야 하나요?",
+    a: "필요 없어요. 이메일도 비밀번호도 묻지 않고 바로 만듭니다.",
+  },
+  {
+    q: "결제하면 무엇을 받게 되나요?",
+    a: `표지 포함 ${TOTAL_PAGES}페이지 전체, 읽어주기(엄마·아빠 목소리 또는 AI 목소리), PDF 저장, 소리책, 가족 공유 링크가 열려요.`,
+  },
+  {
+    q: "동화는 얼마나 보관되나요?",
+    a: "결제했거나 공유 링크를 만든 동화는 1년간 보관돼요. 폰을 바꿔도 링크로 다시 열 수 있고, 언제든 직접 지울 수 있어요.",
+  },
+  {
+    q: "부모 목소리 녹음은 어디에 저장되나요?",
+    a: "이 기기(브라우저) 안에만 저장돼요. 공유 링크를 만들 때만 소리책에 함께 담깁니다.",
+  },
+];
+
+/**
+ * 자주 묻는 질문 — 한 번에 하나만 펼쳐지는 아코디언.
+ * 예전엔 .fold를 그대로 써서 밑줄 친 링크에 ▼ 글자가 붙은 모양이었다 (2026-09-02).
+ */
+function FaqSection() {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <section className="faq">
+      <h2>자주 묻는 질문</h2>
+      <div className="faq-list">
+        {FAQ.map((f, i) => (
+          <details
+            key={f.q}
+            className="faq-item"
+            open={open === i}
+            onToggle={(e) => {
+              // 네이티브 토글이 먼저 일어난 뒤 불린다 — 열렸으면 나머지를 닫고, 닫혔으면 비운다
+              if (e.currentTarget.open) setOpen(i);
+              else if (open === i) setOpen(null);
+            }}
+          >
+            <summary>
+              <span className="faq-q">{f.q}</span>
+              <svg className="faq-chev" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </summary>
+            <p className="faq-a">{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SavedShareList() {
   const [shares, setShares] = useState<SavedShare[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
