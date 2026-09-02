@@ -725,7 +725,16 @@ export default function Home() {
           <br />
           <b>표지와 첫 장면은 무료</b>로 먼저 보여드려요 — 마음에 들 때만 결제하시면 됩니다.
         </p>
-        <p className="hero-nosignup">회원가입 없이 바로 만들어요</p>
+        {/* 폼 위에 있던 "안심하고 만들어보세요" 박스를 지우고 여기로 압축했다 —
+            같은 약속을 히어로·박스·FAQ 세 군데서 되풀이하고 있었다 (2026-09-02). */}
+        <ul className="hero-promise">
+          <li>
+            <span aria-hidden="true">🔓</span> 회원가입 없음
+          </li>
+          <li>
+            <span aria-hidden="true">🔒</span> 사진 원본 저장 안 함
+          </li>
+        </ul>
         <ul className="hero-points">
           <li>
             <span className="hp-emoji">👀</span>
@@ -794,28 +803,6 @@ export default function Home() {
               <figcaption>다른 장면, 같은 주인공</figcaption>
             </figure>
           </div>
-        </section>
-      )}
-
-      {/* 사진을 올리기 직전에 가장 많이 망설인다 — 방문 170명 중 사진까지 온 사람이 8명이었다
-          (2026-09-01 집계). 망설이는 이유를 여기서 미리 하나씩 지운다. */}
-      {phase === "form" && (
-        <section className="trust">
-          <h2>안심하고 만들어보세요</h2>
-          <ul>
-            <li>
-              <b>회원가입이 없어요</b> — 이메일도, 비밀번호도 묻지 않습니다
-            </li>
-            <li>
-              <b>표지와 첫 장면은 무료</b> — 결제는 결과를 보고 정하세요
-            </li>
-            <li>
-              <b>사진 원본은 서버에 저장하지 않아요</b> — 그림을 그리는 순간에만 씁니다
-            </li>
-            <li>
-              <b>만든 동화는 이 기기 안에</b> — 언제든 직접 지울 수 있어요
-            </li>
-          </ul>
         </section>
       )}
 
@@ -975,32 +962,13 @@ export default function Home() {
                 {!kid.photo && (
                   <>
                     <PhotoGuide />
-                    <ul className="photo-guide">
-                      <li className="good">
-                        <span>✅</span> 정면을 보고 <b>얼굴이 크고 또렷한</b> 사진
-                      </li>
-                    </ul>
-                    {/* ❌ 세 줄은 접어둔다 — 사진을 올리기도 전에 조건부터 읽으면 까다로워 보인다 */}
-                    <details className="fold">
-                      <summary>이런 사진은 피해주세요</summary>
-                      <ul className="photo-guide">
-                        <li>
-                          <span>❌</span> 옆모습·뒷모습, 눈을 감은 사진
-                        </li>
-                        <li>
-                          <span>❌</span> 여러 명이 함께 있거나 얼굴이 작게 나온 사진
-                        </li>
-                        <li>
-                          <span>❌</span> 모자·마스크·손으로 얼굴이 가려진 사진
-                        </li>
-                      </ul>
-                    </details>
+                    {/* 그림 넉 장이 좋고 나쁨을 다 보여준다 — 같은 말을 글로 되풀이하지 않는다.
+                        그림으로 못 그리는 두 가지(눈 감음·여러 명)만 한 줄로 남긴다. */}
+                    <p className="pg-note">눈을 감았거나 여러 명이 함께 나온 사진도 피해주세요.</p>
                   </>
                 )}
-                <div className="hint">
-                  🔒 사진 원본은 <b>서버에 저장하지 않아요.</b> 그림을 그리는 그 순간에만 쓰고
-                  바로 버립니다.
-                </div>
+                {/* "원본은 저장하지 않는다"는 히어로 알약과 동의 박스(consent-box.tsx)에서 이미 말한다 —
+                    여기까지 세 번 적혀 있었다. */}
               </div>
             </div>
           ))}
