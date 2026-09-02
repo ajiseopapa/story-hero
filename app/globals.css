@@ -2200,6 +2200,15 @@ a.btn {
   color: var(--accent);
   font-weight: 700;
 }
+/* 넓은 화면에선 오른쪽이 비어 보였다 — 세로로 먼저 채우는 2열 (왼쪽 4개, 오른쪽 3개) */
+@media (min-width: 560px) {
+  .price-includes {
+    grid-auto-flow: column;
+    grid-template-rows: repeat(4, auto);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 20px;
+  }
+}
 
 /* ---------- 부모 목소리 (핵심 혜택) ---------- */
 .voice-pitch {
