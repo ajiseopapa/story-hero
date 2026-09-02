@@ -243,6 +243,7 @@
 .adm input[type="text"],
 .adm input[type="password"],
 .adm input[type="email"],
+.adm input[type="number"],
 .adm .field select,
 .adm input:not([type]) {
   width: 100%;
@@ -330,6 +331,164 @@
 }
 .adm tbody tr:hover td {
   background: var(--card-2);
+}
+
+/* ---------- 입력 폼 (쿠폰 발급) ---------- */
+/* number 칸은 위 목록에 없어서 브라우저 기본 모양으로 튀었다 (2026-09-02) */
+.adm .field input.mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+/* 안내문까지 고정폭으로 벌어지면 한글이 띄엄띄엄 읽힌다 */
+.adm .field input.mono::placeholder {
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif;
+  letter-spacing: -0.01em;
+}
+.adm-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 2px 14px;
+  margin-top: 14px;
+}
+.adm-form .field {
+  margin-bottom: 10px;
+}
+/* 숫자 칸 오른쪽에 단위를 붙인다 — "일 단위"를 라벨에 풀어 쓰지 않아도 된다 */
+.adm-unit {
+  position: relative;
+}
+.adm-unit input {
+  padding-right: 34px;
+}
+.adm-unit input::-webkit-outer-spin-button,
+.adm-unit input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.adm-unit input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.adm-unit span {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12.5px;
+  color: var(--txt-3);
+  pointer-events: none;
+}
+.adm-formfoot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.adm-sum {
+  display: flex;
+  gap: 14px;
+  font-size: 12.5px;
+  color: var(--txt-2);
+  white-space: nowrap;
+}
+.adm-sum b {
+  color: var(--txt);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 쿠폰 표 */
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.adm-table th,
+.adm-table td {
+  text-align: left;
+}
+.adm-table .num {
+  text-align: right;
+}
+.adm-table tr.dim td {
+  color: var(--txt-3);
+}
+.adm-table td.memo {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-table td .none {
+  color: var(--txt-3);
+}
+.adm-table td.date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt-2);
+}
+.adm-table td.acts {
+  white-space: nowrap;
+  text-align: right;
+}
+.adm-table td.acts .btn + .btn {
+  margin-left: 6px;
+}
+.adm .btn.small {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+.adm .btn.danger:hover:not(:disabled) {
+  color: var(--red);
+  border-color: rgba(215, 56, 44, 0.4);
+}
+.adm-code {
+  font: inherit;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--txt);
+  background: rgba(127, 127, 127, 0.12);
+  border: none;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.adm-code:hover {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.adm-use {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.adm-use b {
+  font-weight: 650;
+}
+.adm-usebar {
+  display: block;
+  height: 4px;
+  width: 64px;
+  margin: 5px 0 0 auto;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.18);
+  overflow: hidden;
+}
+.adm-usebar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--blue);
+}
+.adm-table tr.dim .adm-usebar i {
+  background: var(--txt-3);
+}
+
+@media (max-width: 560px) {
+  .adm-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---------- 대시보드 부품 ---------- */

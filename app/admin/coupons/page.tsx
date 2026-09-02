@@ -99,10 +99,16 @@ export default function CouponAdminPage() {
     setTimeout(() => setCopied(""), 2000);
   };
 
+  const total = coupons?.length ?? 0;
+  const live =
+    coupons?.filter((c) => c.used < c.maxUses && !(c.expiresAt && c.expiresAt < Date.now()))
+      .length ?? 0;
+  const usedSum = coupons?.reduce((a, c) => a + c.used, 0) ?? 0;
+
   return (
     <main className="wrap">
       <header className="hero">
-        <span className="badge">무료 쿠폰 🔒</span>
+        <span className="badge">무료 쿠폰</span>
         <h1>공짜로 열어주기</h1>
         <p>지인·체험단에게 줄 코드를 만듭니다. 쓰면 그 책 한 권이 결제한 것처럼 전부 열려요.</p>
       </header>
@@ -125,106 +131,151 @@ export default function CouponAdminPage() {
       {key && (
         <>
           <section className="card">
-            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>쿠폰 만들기</h2>
-            <div className="field">
-              <label>코드 (비우면 자동으로 지어드려요)</label>
-              <input
-                type="text"
-                value={code}
-                placeholder="예: KIDSTEL2026"
-                maxLength={20}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-              />
+            <div className="adm-cardhead">
+              <div>
+                <h2>쿠폰 만들기</h2>
+                <div className="hint">코드는 비워두면 KIDS로 시작하는 코드를 자동으로 지어요.</div>
+              </div>
             </div>
-            <div className="field">
-              <label>몇 번 쓸 수 있나</label>
-              <input
-                type="number"
-                min={1}
-                max={1000}
-                value={maxUses}
-                onChange={(e) => setMaxUses(Number(e.target.value) || 1)}
-              />
+
+            {/* 짧은 값(횟수·기간)은 좁은 칸에 단위와 함께 — 네 칸이 세로로 늘어서면 폼이 길어 보인다 */}
+            <div className="adm-form">
+              <div className="field">
+                <label>코드</label>
+                <input
+                  type="text"
+                  className="mono"
+                  value={code}
+                  placeholder="비우면 자동 · 예: KIDSTEL2026"
+                  maxLength={20}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                />
+              </div>
+              <div className="field">
+                <label>사용 횟수</label>
+                <div className="adm-unit">
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={maxUses}
+                    onChange={(e) => setMaxUses(Number(e.target.value) || 1)}
+                  />
+                  <span>번</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>메모</label>
+                <input
+                  type="text"
+                  value={memo}
+                  maxLength={60}
+                  placeholder="누구에게 줬는지 · 예: 유치원 학부모 체험단"
+                  onChange={(e) => setMemo(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>유효기간</label>
+                <div className="adm-unit">
+                  <input
+                    type="number"
+                    min={1}
+                    value={days}
+                    placeholder="무기한"
+                    onChange={(e) => setDays(e.target.value)}
+                  />
+                  <span>일</span>
+                </div>
+              </div>
             </div>
-            <div className="field">
-              <label>메모 (누구에게 줬는지)</label>
-              <input
-                type="text"
-                value={memo}
-                maxLength={60}
-                placeholder="예: 유치원 학부모 체험단"
-                onChange={(e) => setMemo(e.target.value)}
-              />
+
+            <div className="adm-formfoot">
+              <button className="btn" onClick={issue} disabled={busy}>
+                {busy ? "만드는 중…" : "쿠폰 만들기"}
+              </button>
+              <span className="hint">
+                {maxUses}번 쓸 수 있는 쿠폰 · {Number(days) > 0 ? days + "일 뒤 만료" : "무기한"}
+              </span>
             </div>
-            <div className="field">
-              <label>유효기간 (일 단위, 비우면 무기한)</label>
-              <input
-                type="number"
-                min={1}
-                value={days}
-                placeholder="예: 30"
-                onChange={(e) => setDays(e.target.value)}
-              />
-            </div>
-            <button className="btn" onClick={issue} disabled={busy}>
-              {busy ? "만드는 중…" : "쿠폰 만들기"}
-            </button>
           </section>
 
           <section className="card">
-            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>발급한 쿠폰</h2>
+            <div className="adm-cardhead">
+              <h2>발급한 쿠폰</h2>
+              {coupons && coupons.length > 0 && (
+                <div className="adm-sum">
+                  <span>
+                    살아 있음 <b>{live}</b>
+                  </span>
+                  <span>
+                    총 <b>{total}</b>장
+                  </span>
+                  <span>
+                    쓰인 횟수 <b>{usedSum}</b>
+                  </span>
+                </div>
+              )}
+            </div>
+
             {coupons === null ? (
-              <div className="hint">불러오는 중…</div>
+              <div className="adm-empty">불러오는 중…</div>
             ) : coupons.length === 0 ? (
-              <div className="hint">아직 만든 쿠폰이 없어요.</div>
+              <div className="adm-empty">아직 만든 쿠폰이 없어요. 위에서 첫 쿠폰을 만들어보세요.</div>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ borderCollapse: "collapse", width: "100%", fontSize: ".9rem" }}>
+                <table className="adm-table">
                   <thead>
                     <tr>
-                      <th style={{ textAlign: "left", padding: "6px 8px" }}>코드</th>
-                      <th style={{ textAlign: "right", padding: "6px 8px" }}>사용</th>
-                      <th style={{ textAlign: "left", padding: "6px 8px" }}>메모</th>
-                      <th style={{ textAlign: "left", padding: "6px 8px" }}>만료</th>
-                      <th style={{ padding: "6px 8px" }}></th>
+                      <th>코드</th>
+                      <th className="num">사용</th>
+                      <th>메모</th>
+                      <th>만료</th>
+                      <th>상태</th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {coupons.map((c) => {
                       const done = c.used >= c.maxUses;
                       const expired = !!c.expiresAt && c.expiresAt < Date.now();
+                      const dim = done || expired;
                       return (
-                        <tr key={c.code} style={{ borderTop: "1px solid rgba(0,0,0,.08)" }}>
-                          <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
-                            <b
-                              style={{
-                                fontFamily: "monospace",
-                                opacity: done || expired ? 0.45 : 1,
-                              }}
+                        <tr key={c.code} className={dim ? "dim" : undefined}>
+                          <td>
+                            <button
+                              type="button"
+                              className="adm-code"
+                              title="누르면 복사"
+                              onClick={() => copy(c.code)}
                             >
                               {c.code}
-                            </b>
+                            </button>
                           </td>
-                          <td
-                            style={{
-                              textAlign: "right",
-                              padding: "6px 8px",
-                              fontVariantNumeric: "tabular-nums",
-                              color: done ? "#dc2626" : undefined,
-                            }}
-                          >
-                            {c.used} / {c.maxUses}
+                          <td className="num">
+                            <span className="adm-use">
+                              <b>{c.used}</b> / {c.maxUses}
+                            </span>
+                            <i className="adm-usebar" aria-hidden="true">
+                              <i style={{ width: Math.min(100, (c.used / c.maxUses) * 100) + "%" }} />
+                            </i>
                           </td>
-                          <td style={{ padding: "6px 8px" }}>{c.memo ?? ""}</td>
-                          <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
-                            {c.expiresAt ? `${day(c.expiresAt)}${expired ? " (지남)" : ""}` : "무기한"}
+                          <td className="memo">{c.memo ?? <span className="none">—</span>}</td>
+                          <td className="date">{c.expiresAt ? day(c.expiresAt) : "무기한"}</td>
+                          <td>
+                            {expired ? (
+                              <span className="adm-pill canceled">만료</span>
+                            ) : done ? (
+                              <span className="adm-pill muted">다 씀</span>
+                            ) : (
+                              <span className="adm-pill paid">남음</span>
+                            )}
                           </td>
-                          <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
+                          <td className="acts">
                             <button className="btn secondary small" onClick={() => copy(c.code)}>
                               {copied === c.code ? "복사됨 ✓" : "복사"}
-                            </button>{" "}
+                            </button>
                             <button
-                              className="btn secondary small"
+                              className="btn secondary small danger"
                               onClick={() => remove(c.code)}
                               disabled={busy}
                             >
@@ -238,7 +289,7 @@ export default function CouponAdminPage() {
                 </table>
               </div>
             )}
-            <div className="hint" style={{ marginTop: 10 }}>
+            <div className="hint" style={{ marginTop: 12 }}>
               쿠폰을 쓰면 <b>0원짜리 주문</b>이 하나 생겨 주문 목록에 남습니다. 매출 계산에는
               섞이지 않아요(금액 0원).
             </div>
