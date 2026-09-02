@@ -1,5 +1,6 @@
 import { consumeQuota, ipBucket } from "@/lib/limits";
 import { CODE_RE, normalizeCode, redeemCoupon } from "@/lib/coupons";
+import { mailAdminCouponUsed, mailCouponUsed } from "@/lib/mail";
 import { isStoreReady, newOrderId, newOrderToken, saveOrder, shortId } from "@/lib/orders";
 import type { Order } from "@/lib/orders";
 import { track } from "@/lib/stats";
@@ -93,5 +94,15 @@ export async function POST(req: Request): Promise<Response> {
     /* 통계 실패가 쿠폰 사용을 되돌리면 안 된다 */
   }
 
-  return Response.json({ ok: true, id: order.id, token: order.token, orderNo: shortId(order.id) });
+  // 확인 메일(손님)·사용 알림(관리자). 발송이 실패해도 책은 이미 열렸다 (send는 fail-open).
+  const orderNo = shortId(order.id);
+  const mailInfo = { name, email, bookTitle, orderNo, code };
+  await mailCouponUsed(mailInfo);
+  await mailAdminCouponUsed({
+    ...mailInfo,
+    used: result.coupon.used,
+    maxUses: result.coupon.maxUses,
+  });
+
+  return Response.json({ ok: true, id: order.id, token: order.token, orderNo });
 }

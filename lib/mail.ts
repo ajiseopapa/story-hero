@@ -167,6 +167,46 @@ export async function mailOrderPaid(o: {
   );
 }
 
+/** 무료 쿠폰 사용 직후 손님에게: 책이 열렸다는 안내. 입금 확인 메일의 쿠폰판이다 —
+ *  결제한 사람과 같은 길을 타므로 "그 기기·브라우저로 돌아오라"는 말이 똑같이 필요하다. */
+export async function mailCouponUsed(o: {
+  email: string;
+  name: string;
+  bookTitle: string;
+  orderNo: string;
+  code: string;
+}): Promise<void> {
+  await send(
+    o.email,
+    `[키즈북] 쿠폰이 적용됐어요 — 동화책이 열렸어요 (주문번호 ${o.orderNo})`,
+    WRAP(`<h2 style="font-size:18px">쿠폰이 적용됐어요 🎁</h2>
+<p>${esc(o.name)}님, 쿠폰 <b>${esc(o.code)}</b>으로 《 ${esc(o.bookTitle)} 》 한 권이 열렸습니다.<br/>주문번호는 <b>${o.orderNo}</b>예요.</p>
+<p><b>책을 만들던 그 기기·브라우저로</b> <a href="${SITE}">키즈북</a>에 다시 들어오시면 나머지 장면 생성과 PDF·소리책이 모두 열립니다.</p>
+<p>혹시 화면이 그대로라면 페이지를 새로고침해 주세요.</p>
+<p>책이 완성되면 1년간 언제든 다시 열 수 있는 <b>보관 링크</b>도 이 주소로 보내드릴게요.</p>`),
+  );
+}
+
+/** 무료 쿠폰 사용 직후 관리자에게: 누가 어떤 코드를 썼는지 */
+export async function mailAdminCouponUsed(o: {
+  name: string;
+  email: string;
+  bookTitle: string;
+  orderNo: string;
+  code: string;
+  used: number;
+  maxUses: number;
+}): Promise<void> {
+  if (!ADMIN) return;
+  await send(
+    ADMIN,
+    `[키즈북] 쿠폰 사용 ${o.code} · ${o.name} (${o.used}/${o.maxUses})`,
+    WRAP(`<h2 style="font-size:18px">무료 쿠폰이 쓰였어요</h2>
+<p>쿠폰 <b>${esc(o.code)}</b> (${o.used}/${o.maxUses}번째)<br/>이름 <b>${esc(o.name)}</b><br/>이메일 ${esc(o.email)}<br/>책 제목 《 ${esc(o.bookTitle)} 》<br/>주문번호 <b>${o.orderNo}</b></p>
+<p><a href="${SITE}/admin/coupons">쿠폰 관리</a> · <a href="${SITE}/admin/orders">주문 목록</a></p>`),
+  );
+}
+
 /** 책 완성 후 손님에게: 1년 보관 링크 전달 (기기가 바뀌어도 이 링크로 다시 연다).
  *  성공 여부를 돌려준다 — 호출부가 "보냈음" 표식을 성공했을 때만 남겨 재시도가 가능하게. */
 export async function mailBookLink(o: {
