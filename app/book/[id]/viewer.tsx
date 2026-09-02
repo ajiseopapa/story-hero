@@ -97,8 +97,12 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
   // ----- 다시 공유하기 — 받은 사람이 또 퍼뜨릴 수 있어야 루프가 돈다 -----
   const shareUrl = `${SITE_ORIGIN}/book/${id}`;
   const [copied, setCopied] = useState(false);
+  // 공유 시트도 클립보드도 안 되는 브라우저(인앱·내장 웹뷰)용 — 주소를 눈에 보이게 꺼내 준다
+  const [linkBox, setLinkBox] = useState(false);
   const [cardBusy, setCardBusy] = useState(false);
   const [cardMsg, setCardMsg] = useState("");
+  // 만든 카드는 화면에도 띄운다 — 내려받기가 막힌 브라우저에서는 길게 눌러 저장하는 길뿐이다
+  const [cardUrl, setCardUrl] = useState("");
 
   const shareLink = async () => {
     const data = {
@@ -110,18 +114,22 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
       try {
         await navigator.share(data);
         trackEvery("book:share");
-      } catch {
-        // 공유 시트를 닫은 것 — 센다면 허수다
+        return;
+      } catch (err) {
+        // 시트를 닫은 것은 센다면 허수다. 그 밖의 실패(PC 크롬·내장 웹뷰가 share는 있는데
+        // 실제로는 안 되는 경우)는 아무 일도 없던 것처럼 보였다 (2026-09-02) — 복사로 물러난다.
+        if (err instanceof DOMException && err.name === "AbortError") return;
       }
-      return;
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
       trackEvery("book:share");
       setCopied(true);
+      setLinkBox(false);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // 클립보드가 막힌 브라우저 — 주소창 복사로도 충분해서 안내하지 않는다
+      // 클립보드까지 막혔으면 주소를 꺼내 보여준다 — 길게 눌러 복사하면 된다
+      setLinkBox(true);
     }
   };
 
@@ -131,6 +139,10 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
     setCardMsg("");
     try {
       const blob = await drawShareCard(imgSrc(0), title);
+      // 어떤 길로 가든 카드는 화면에 남긴다 — a.download가 조용히 막히는 브라우저가 있다
+      if (cardUrl) URL.revokeObjectURL(cardUrl);
+      const previewUrl = URL.createObjectURL(blob);
+      setCardUrl(previewUrl);
       const file = new File([blob], "kidsbook.png", { type: "image/png" });
       // 모바일이면 공유 시트로 바로 인스타에 보낼 수 있게 한다
       if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
@@ -138,18 +150,20 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
           await navigator.share({ files: [file], title: `《 ${title} 》` });
           trackEvery("book:card");
           return;
-        } catch {
-          return; // 시트를 닫은 것 — 파일까지 내려받게 하면 성가시다
+        } catch (err) {
+          // 시트를 닫은 것 — 파일까지 내려받게 하면 성가시다
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          // 인앱 브라우저(인스타·카톡)는 canShare가 true여도 실제 공유에 실패한다.
+          // 2026-09-02: 브라우저 공유 시트가 "공유할 수 있는 일부 방법만 표시됩니다"를
+          // 띄우고 끝나 카드가 저장되지 않았다. 실패면 아래 내려받기로 되돌린다.
         }
       }
-      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = previewUrl;
       a.download = "우리아이동화책.png";
       a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 30_000);
       trackEvery("book:card");
-      setCardMsg("카드를 저장했어요 — 인스타에 올려 자랑해 주세요 💛");
+      setCardMsg("카드를 만들었어요 — 저장이 안 됐다면 아래 그림을 길게 눌러(PC는 오른쪽 클릭) 저장해 주세요.");
     } catch {
       setCardMsg("카드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -221,12 +235,34 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
             📤 이 동화책 공유하기
           </button>
           {copied && <div className="hint">링크를 복사했어요 — 붙여넣기만 하면 돼요!</div>}
+          {linkBox && (
+            <div className="link-box">
+              <input
+                type="text"
+                readOnly
+                value={shareUrl}
+                onFocus={(e) => e.currentTarget.select()}
+                onClick={(e) => e.currentTarget.select()}
+                aria-label="이 동화책 주소"
+              />
+              <div className="hint">주소를 길게 눌러 복사한 뒤 카톡에 붙여넣어 주세요.</div>
+            </div>
+          )}
           {pages[0]?.hasImage && (
             <button className="btn secondary" onClick={saveCard} disabled={cardBusy}>
               {cardBusy ? "카드를 만드는 중…" : "🖼️ 인스타 자랑 카드 저장"}
             </button>
           )}
           {cardMsg && <div className="hint">{cardMsg}</div>}
+          {cardUrl && (
+            <figure className="card-preview">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={cardUrl} alt="인스타 자랑 카드" />
+              <a className="btn secondary small" href={cardUrl} download="우리아이동화책.png">
+                카드 다시 내려받기
+              </a>
+            </figure>
+          )}
         </div>
 
         {/* ?s=book — 공유 책을 보고 넘어온 방문을 퍼널에서 따로 센다 */}
