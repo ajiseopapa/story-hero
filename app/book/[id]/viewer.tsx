@@ -104,13 +104,22 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
   // 만든 카드는 화면에도 띄운다 — 내려받기가 막힌 브라우저에서는 길게 눌러 저장하는 길뿐이다
   const [cardUrl, setCardUrl] = useState("");
 
+  /**
+   * 공유 시트는 폰에서만 쓴다. PC 크롬도 navigator.share가 있지만 그걸 부르면 Windows OS
+   * 공유 창이 뜨고, 앱이 없으면 "다시 시도하세요 — 공유할 수 있는 일부 방법만 표시됩니다"만
+   * 남는다 (2026-09-02). 브라우저 입장에선 실패가 아니라 물러날 길도 없다. PC는 복사가 답이다.
+   */
+  const useShareSheet = () =>
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent)); // iPadOS는 Mac인 척한다
+
   const shareLink = async () => {
     const data = {
       title: `《 ${title} 》`,
       text: "우리 아이가 주인공인 그림동화예요 💛",
       url: shareUrl,
     };
-    if (typeof navigator.share === "function") {
+    if (useShareSheet() && typeof navigator.share === "function") {
       try {
         await navigator.share(data);
         trackEvery("book:share");
@@ -145,7 +154,11 @@ export default function BookViewer({ id, title, pages, expiry }: Props) {
       setCardUrl(previewUrl);
       const file = new File([blob], "kidsbook.png", { type: "image/png" });
       // 모바일이면 공유 시트로 바로 인스타에 보낼 수 있게 한다
-      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+      if (
+        useShareSheet() &&
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files: [file] })
+      ) {
         try {
           await navigator.share({ files: [file], title: `《 ${title} 》` });
           trackEvery("book:card");
