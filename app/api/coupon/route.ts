@@ -10,6 +10,12 @@ export const dynamic = "force-dynamic";
 // 코드를 무차별로 넣어보는 것을 막는다. 정상 사용은 한 사람이 한두 번이다.
 const COUPON_IP_DAILY_LIMIT = Number(process.env.COUPON_IP_DAILY_LIMIT ?? "10");
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function clean(v: unknown, max: number): string {
+  return typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "";
+}
+
 /**
  * 손님이 쿠폰 코드를 쓰는 곳.
  *
@@ -24,7 +30,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  let body: { code?: unknown; bookTitle?: unknown };
+  let body: { code?: unknown; bookTitle?: unknown; name?: unknown; email?: unknown };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -34,6 +40,17 @@ export async function POST(req: Request): Promise<Response> {
   const code = normalizeCode(body.code);
   if (!CODE_RE.test(code)) {
     return Response.json({ error: "쿠폰 코드를 다시 확인해주세요." }, { status: 400 });
+  }
+
+  // 무료라도 이름·이메일은 받는다 — 누가 썼는지 남기고 안내를 보낼 수 있어야 한다(2026-09-02).
+  // 쿠폰을 깎기 전에 검사해야 한다 — 뒤에서 튕기면 한 장이 그냥 사라진다.
+  const name = clean(body.name, 40);
+  const email = clean(body.email, 120);
+  if (name.length < 1) {
+    return Response.json({ error: "이름을 적어주세요." }, { status: 400 });
+  }
+  if (!EMAIL_RE.test(email)) {
+    return Response.json({ error: "이메일 주소를 다시 확인해주세요." }, { status: 400 });
   }
 
   if (!(await consumeQuota(`coupon-${ipBucket(req)}`, COUPON_IP_DAILY_LIMIT))) {
@@ -59,8 +76,8 @@ export async function POST(req: Request): Promise<Response> {
   const order: Order = {
     id: newOrderId(),
     token: newOrderToken(),
-    name: `쿠폰 ${code}`,
-    email: "",
+    name,
+    email,
     amount: 0, // 매출과 섞이지 않게 0원으로 남긴다
     bookTitle,
     status: "paid",

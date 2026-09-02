@@ -153,7 +153,8 @@ export default function BankOrderBox({
       const res = await fetch("/api/coupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: coupon, bookTitle }),
+        // 쿠폰도 이름·이메일을 받는다 — 누가 썼는지 남기고, 안내 메일을 보낼 수 있어야 한다
+        body: JSON.stringify({ code: coupon, bookTitle, name, email }),
       });
       const data = (await res.json()) as {
         id?: string;
@@ -221,12 +222,12 @@ export default function BankOrderBox({
             )}
 
             <div className="field">
-              <label>입금하실 분 이름</label>
+              <label>이름</label>
               <input
                 type="text"
                 value={name}
                 maxLength={40}
-                placeholder="통장에 찍히는 이름으로 적어주세요"
+                placeholder="입금하실 때는 통장에 찍히는 이름으로"
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
@@ -236,7 +237,7 @@ export default function BankOrderBox({
                 type="email"
                 value={email}
                 maxLength={120}
-                placeholder="입금 확인 안내를 받으실 주소"
+                placeholder="안내를 받으실 이메일 주소"
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
@@ -269,11 +270,17 @@ export default function BankOrderBox({
                 />
               </div>
               {couponError && <div className="error">{couponError}</div>}
+              {/* 쿠폰도 위의 이름·이메일이 있어야 쓴다 — 버튼만 죽여두면 왜 안 눌리는지 모른다 */}
+              {coupon.trim().length >= 4 && !canSubmit && (
+                <div className="hint" style={{ marginBottom: 8 }}>
+                  위에 이름과 이메일을 먼저 적어주세요.
+                </div>
+              )}
               <button
                 type="button"
                 className="btn secondary"
                 onClick={useCoupon}
-                disabled={coupon.trim().length < 4 || couponBusy}
+                disabled={coupon.trim().length < 4 || !canSubmit || couponBusy}
               >
                 {couponBusy ? "확인하는 중…" : "쿠폰으로 열기"}
               </button>
