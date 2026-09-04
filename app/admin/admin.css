@@ -41,6 +41,13 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* 팝업 카드가 .adm 토큰을 쓰려고 같은 클래스를 달면 위의 min-height:100vh까지 물려받아
+   화면 끝까지 늘어난다(2026-09-04 무료 쿠폰 고치기 창). 카드는 내용만큼만. */
+.modal-card.adm {
+  min-height: 0;
+  background: var(--card);
+}
+
 @media (prefers-color-scheme: dark) {
   .adm {
     --bg: #131316;
