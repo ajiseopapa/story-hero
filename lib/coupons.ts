@@ -99,6 +99,49 @@ export async function createCoupon(c: {
   return coupon;
 }
 
+export interface CouponPatch {
+  maxUses?: number;
+  /** null이면 지운다 */
+  memo?: string | null;
+  /** null이면 무기한으로 */
+  expiresAt?: number | null;
+}
+
+/**
+ * 발급한 쿠폰 고치기 — 횟수·메모·만료일만. 코드와 사용 횟수는 못 바꾼다.
+ * 지웠다 다시 만들면 사용 횟수가 0으로 돌아가 버려서 따로 둔 함수다.
+ */
+export async function updateCoupon(code: string, patch: CouponPatch): Promise<Coupon | null> {
+  const coupon = await getCoupon(code);
+  if (!coupon) return null;
+
+  const sets: (string | number)[] = [];
+  const dels: string[] = [];
+
+  if (patch.maxUses !== undefined) {
+    coupon.maxUses = Math.min(Math.max(Math.round(patch.maxUses) || 1, 1), 1000);
+    sets.push("maxUses", coupon.maxUses);
+  }
+  if (patch.memo !== undefined) {
+    const memo = patch.memo?.trim().slice(0, 60) || "";
+    coupon.memo = memo || undefined;
+    if (memo) sets.push("memo", memo);
+    else dels.push("memo");
+  }
+  if (patch.expiresAt !== undefined) {
+    const at = patch.expiresAt && Number.isFinite(patch.expiresAt) ? patch.expiresAt : undefined;
+    coupon.expiresAt = at;
+    if (at) sets.push("expiresAt", at);
+    else dels.push("expiresAt");
+  }
+
+  const cmds: (string | number)[][] = [];
+  if (sets.length) cmds.push(["HSET", KEY(code), ...sets]);
+  if (dels.length) cmds.push(["HDEL", KEY(code), ...dels]);
+  if (cmds.length) await pipeline(cmds);
+  return coupon;
+}
+
 export async function deleteCoupon(code: string): Promise<boolean> {
   if (!(await getCoupon(code))) return false;
   await pipeline([

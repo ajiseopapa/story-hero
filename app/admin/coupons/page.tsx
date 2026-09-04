@@ -3,6 +3,7 @@
 // 무료 쿠폰 발급·관리. 쿠폰을 쓰면 0원짜리 '입금 확인된 주문'이 생긴다(lib/coupons.ts).
 import { useCallback, useEffect, useState } from "react";
 import { recallAdminKey } from "@/lib/admin-key";
+import { useConfirm } from "@/app/confirm-dialog";
 
 interface Coupon {
   code: string;
@@ -25,6 +26,14 @@ export default function CouponAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState("");
+  const { confirmDialog, ask } = useConfirm();
+
+  // 수정 창 — 횟수·메모·만료일만 고친다. 코드·사용 횟수는 못 바꾼다.
+  const [editing, setEditing] = useState<Coupon | null>(null);
+  const [eMaxUses, setEMaxUses] = useState(1);
+  const [eMemo, setEMemo] = useState("");
+  const [eExpiresOn, setEExpiresOn] = useState("");
+  const [eError, setEError] = useState<string | null>(null);
 
   // 발급 폼
   const [code, setCode] = useState("");
@@ -80,7 +89,52 @@ export default function CouponAdminPage() {
     }
   };
 
+  const openEdit = (c: Coupon) => {
+    setEditing(c);
+    setEMaxUses(c.maxUses);
+    setEMemo(c.memo ?? "");
+    setEExpiresOn(c.expiresAt ? day(c.expiresAt) : "");
+    setEError(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setBusy(true);
+    setEError(null);
+    try {
+      const res = await fetch("/api/coupon/admin", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-key": key },
+        body: JSON.stringify({
+          code: editing.code,
+          maxUses: eMaxUses,
+          memo: eMemo,
+          expiresOn: eExpiresOn,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setEError(data.error ?? "저장하지 못했어요.");
+        return;
+      }
+      setEditing(null);
+      await load(key);
+    } catch {
+      setEError("저장하지 못했어요.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const remove = async (c: string) => {
+    if (
+      !(await ask({
+        title: "쿠폰을 삭제할까요?",
+        message: `${c} 코드가 지워지고, 되돌릴 수 없어요.\n기간만 늘리려면 삭제 말고 수정을 쓰세요.`,
+        confirmLabel: "삭제",
+      }))
+    )
+      return;
     setBusy(true);
     try {
       await fetch(`/api/coupon/admin?code=${encodeURIComponent(c)}`, {
@@ -275,6 +329,13 @@ export default function CouponAdminPage() {
                               {copied === c.code ? "복사됨 ✓" : "복사"}
                             </button>
                             <button
+                              className="btn secondary small"
+                              onClick={() => openEdit(c)}
+                              disabled={busy}
+                            >
+                              수정
+                            </button>
+                            <button
                               className="btn secondary small danger"
                               onClick={() => remove(c.code)}
                               disabled={busy}
@@ -296,6 +357,79 @@ export default function CouponAdminPage() {
           </section>
         </>
       )}
+
+      {editing && (
+        <div className="modal-back" role="dialog" aria-modal="true">
+          <div className="modal-card adm">
+            <h3 style={{ marginTop: 0 }}>
+              <span className="mono">{editing.code}</span> 고치기
+            </h3>
+            <p className="hint" style={{ marginTop: 4 }}>
+              지금까지 <b>{editing.used}</b>번 쓰였어요. 횟수를 그보다 적게 잡으면 바로 &ldquo;다
+              씀&rdquo;이 돼요.
+            </p>
+            <div className="field">
+              <label>사용 횟수</label>
+              <div className="adm-unit">
+                <input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={eMaxUses}
+                  onChange={(e) => setEMaxUses(Number(e.target.value) || 1)}
+                />
+                <span>번</span>
+              </div>
+            </div>
+            <div className="field">
+              <label>메모</label>
+              <input
+                type="text"
+                value={eMemo}
+                maxLength={60}
+                placeholder="비우면 메모 없음"
+                onChange={(e) => setEMemo(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>만료일</label>
+              <div className="adm-date">
+                <input
+                  type="date"
+                  value={eExpiresOn}
+                  onChange={(e) => setEExpiresOn(e.target.value)}
+                />
+                {eExpiresOn ? (
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={() => setEExpiresOn("")}
+                  >
+                    무기한으로
+                  </button>
+                ) : (
+                  <span>무기한</span>
+                )}
+              </div>
+              <div className="hint">그날 밤 12시(한국시간)까지 쓸 수 있어요.</div>
+            </div>
+            {eError && <div className="error">{eError}</div>}
+            <div className="share-actions">
+              <button className="btn" onClick={saveEdit} disabled={busy}>
+                {busy ? "저장 중…" : "저장"}
+              </button>
+              <button
+                className="btn secondary"
+                onClick={() => setEditing(null)}
+                disabled={busy}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDialog}
     </main>
   );
 }
