@@ -269,7 +269,7 @@ export default function FunnelAdminPage() {
         <>
           <section className="card">
             <div className="share-actions" style={{ marginBottom: 4 }}>
-              {[7, 30, 90].map((d) => (
+              {[7, 30, 60, 90].map((d) => (
                 <button
                   key={d}
                   className={`btn ${days === d ? "" : "secondary"}`}
