@@ -839,3 +839,69 @@
     padding: 18px 16px 60px;
   }
 }
+
+/* ---------- 후기 요청 메일 창 (주문 관리) ---------- */
+.modal-card.rv-card {
+  max-width: 560px;
+}
+.rv-card .adm-form {
+  grid-template-columns: minmax(0, 1fr) 120px;
+  margin-top: 6px;
+}
+.rv-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 4px 0 12px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.rv-check input {
+  margin-top: 3px;
+}
+.rv-check .hint {
+  display: block;
+  margin-top: 2px;
+}
+.rv-coupon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--card-2);
+  margin-bottom: 12px;
+}
+.adm b.mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+.rv-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.rv-row input {
+  flex: 1;
+  min-width: 0;
+}
+.adm textarea.rv-body {
+  width: 100%;
+  min-height: 300px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--txt);
+  background: var(--card-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  padding: 10px 12px;
+  box-shadow: none;
+}
+.adm textarea.rv-body:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}

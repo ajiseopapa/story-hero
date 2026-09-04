@@ -31,6 +31,7 @@ export interface Order {
   memo?: string; // 관리자 메모
   source?: string; // 유입 꼬리표 (?s=...) — 없으면 꼬리표 없이 들어온 것
   referrer?: string; // 유입 링크 호스트 (예: instagram.com)
+  reviewCoupon?: string; // 후기 요청 메일과 함께 발급한 답례 쿠폰 코드 (한 주문에 한 장)
 }
 
 export const ID_RE = /^[a-f0-9]{16}$/;
@@ -93,6 +94,7 @@ async function writeOrder(order: Order, addToIndex: boolean): Promise<void> {
       ...(order.memo ? ["memo", order.memo] : []),
       ...(order.source ? ["source", order.source] : []),
       ...(order.referrer ? ["referrer", order.referrer] : []),
+      ...(order.reviewCoupon ? ["reviewCoupon", order.reviewCoupon] : []),
     ],
     // HSET은 기존 필드를 지우지 않는다 — paid를 pending/canceled로 되돌릴 때
     // 이전 paidAt·memo가 남아 관리 화면에 유령 "확인 시각"이 보이지 않게 지운다.
@@ -131,6 +133,7 @@ function parse(raw: unknown): Order | null {
     memo: r.memo || undefined,
     source: r.source || undefined,
     referrer: r.referrer || undefined,
+    reviewCoupon: r.reviewCoupon || undefined,
   };
 }
 
@@ -155,6 +158,15 @@ export async function setOrderStatus(
   };
   await writeOrder(next, false); // 상태 변경일 뿐이니 목록에 다시 올리지 않는다
   return next;
+}
+
+/**
+ * 후기 답례 쿠폰을 주문에 묶어둔다 — 메일 만들기를 다시 눌러도 같은 코드가 나오게.
+ * 필드 하나만 얹는 것이라 writeOrder를 거치지 않는다(다른 필드를 건드릴 이유가 없다).
+ */
+export async function setOrderReviewCoupon(id: string, code: string): Promise<void> {
+  if (!ID_RE.test(id)) return;
+  await pipeline([["HSET", KEY(id), "reviewCoupon", code]]);
 }
 
 /**

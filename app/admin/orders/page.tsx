@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/app/confirm-dialog";
 import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
+import { guessChildName, type Honorific } from "@/lib/review-mail";
 import { updateBadges } from "../shell";
 
 interface Order {
@@ -19,6 +20,16 @@ interface Order {
   source?: string;
   referrer?: string;
   memo?: string;
+  reviewCoupon?: string;
+}
+
+/** 후기 요청 메일 만들기 결과 (app/api/order/admin/review-mail) */
+interface ReviewMail {
+  to: string;
+  subject: string;
+  body: string;
+  coupon: { code: string; expiresAt?: number };
+  reused: boolean;
 }
 
 /** 유입 한 줄 — 꼬리표(?s=)와 유입 링크 호스트 중 있는 것만 보여준다. */
@@ -53,6 +64,16 @@ export default function OrderAdminPage() {
   const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
   const [memoSaved, setMemoSaved] = useState<string | null>(null);
   const { confirmDialog, ask } = useConfirm();
+
+  // 후기 요청 메일 창 — 아이 이름·호칭을 채우고 누르면 답례 쿠폰이 생기고 본문이 완성된다.
+  const [rv, setRv] = useState<Order | null>(null);
+  const [rvChild, setRvChild] = useState("");
+  const [rvHonorific, setRvHonorific] = useState<Honorific>("어머님");
+  const [rvFirst, setRvFirst] = useState(false);
+  const [rvBusy, setRvBusy] = useState(false);
+  const [rvError, setRvError] = useState<string | null>(null);
+  const [rvMail, setRvMail] = useState<ReviewMail | null>(null);
+  const [rvCopied, setRvCopied] = useState<"subject" | "body" | "code" | null>(null);
 
   useEffect(() => {
     setKey(recallAdminKey());
@@ -131,6 +152,59 @@ export default function OrderAdminPage() {
       setBusy(null);
     }
   };
+
+  const openReview = (o: Order) => {
+    setRv(o);
+    setRvChild(guessChildName(o.bookTitle));
+    setRvHonorific("어머님");
+    // 첫 손님 문장은 실제로 첫 결제 주문일 때만 기본 켜짐 — 두 번째부터는 빼야 한다
+    const paid = (orders ?? []).filter((x) => x.status === "paid" && x.amount > 0);
+    setRvFirst(paid.length > 0 && paid[paid.length - 1].id === o.id);
+    setRvError(null);
+    setRvMail(null);
+    setRvCopied(null);
+  };
+
+  const makeReview = async () => {
+    if (!rv) return;
+    setRvBusy(true);
+    setRvError(null);
+    try {
+      const res = await fetch("/api/order/admin/review-mail", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-key": key },
+        body: JSON.stringify({
+          id: rv.id,
+          childName: rvChild,
+          honorific: rvHonorific,
+          firstCustomer: rvFirst,
+        }),
+      });
+      const data = (await res.json()) as ReviewMail & { error?: string };
+      if (!res.ok) {
+        setRvError(data.error ?? "만들지 못했어요.");
+        return;
+      }
+      setRvMail(data);
+      if (!data.reused) await load(key); // 카드에 쿠폰 코드가 보이게
+    } catch {
+      setRvError("만들지 못했어요.");
+    } finally {
+      setRvBusy(false);
+    }
+  };
+
+  const copyReview = (what: "subject" | "body" | "code") => {
+    if (!rvMail) return;
+    const text =
+      what === "subject" ? rvMail.subject : what === "body" ? rvMail.body : rvMail.coupon.code;
+    void navigator.clipboard?.writeText(text);
+    setRvCopied(what);
+    setTimeout(() => setRvCopied((v) => (v === what ? null : v)), 2000);
+  };
+
+  const mailtoHref = (m: ReviewMail) =>
+    `mailto:${m.to}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
 
   const pending = orders?.filter((o) => o.status === "pending") ?? [];
   const paidTotal = (orders ?? [])
@@ -218,6 +292,12 @@ export default function OrderAdminPage() {
           </div>
           <div className="hint" style={{ marginTop: 4 }}>
             유입 {entry(o)}
+            {o.reviewCoupon && (
+              <>
+                {" · 후기 답례 쿠폰 "}
+                <b className="mono">{o.reviewCoupon}</b>
+              </>
+            )}
           </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
@@ -237,6 +317,11 @@ export default function OrderAdminPage() {
           </div>
 
           <div className="share-actions" style={{ marginTop: 12 }}>
+            {o.status === "paid" && (
+              <button className="btn" disabled={busy === o.id} onClick={() => openReview(o)}>
+                {o.reviewCoupon ? "후기 요청 메일 다시 보기" : "후기 요청 메일"}
+              </button>
+            )}
             {o.status !== "paid" && (
               <button className="btn" disabled={busy === o.id} onClick={() => act(o.id, "paid")}>
                 입금 확인
@@ -270,6 +355,131 @@ export default function OrderAdminPage() {
           </div>
         </section>
       ))}
+
+      {rv && (
+        <div className="modal-back" role="dialog" aria-modal="true">
+          <div className="modal-card adm rv-card">
+            <h3 style={{ marginTop: 0 }}>후기 요청 메일</h3>
+            <p className="hint" style={{ marginTop: 4 }}>
+              {rv.name}
+              {rv.email && (
+                <>
+                  {" · "}
+                  <span style={{ wordBreak: "break-all" }}>{rv.email}</span>
+                </>
+              )}
+              {rv.bookTitle && <> · 《 {rv.bookTitle} 》</>}
+            </p>
+
+            {!rvMail ? (
+              <>
+                <div className="adm-form">
+                  <div className="field">
+                    <label>아이 이름</label>
+                    <input
+                      type="text"
+                      value={rvChild}
+                      maxLength={20}
+                      placeholder="책 제목에서 짐작한 이름 · 틀리면 고쳐주세요"
+                      onChange={(e) => setRvChild(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>호칭</label>
+                    <select
+                      value={rvHonorific}
+                      onChange={(e) => setRvHonorific(e.target.value as Honorific)}
+                    >
+                      <option value="어머님">어머님</option>
+                      <option value="아버님">아버님</option>
+                    </select>
+                  </div>
+                </div>
+                <label className="rv-check">
+                  <input
+                    type="checkbox"
+                    checked={rvFirst}
+                    onChange={(e) => setRvFirst(e.target.checked)}
+                  />
+                  <span>
+                    첫 손님 문장 넣기
+                    <span className="hint">
+                      &ldquo;저희 첫 손님이셔서…&rdquo; — 두 번째 손님부터는 꺼야 해요.
+                    </span>
+                  </span>
+                </label>
+                <p className="hint">
+                  {rv.reviewCoupon ? (
+                    <>
+                      이 주문에 묶인 답례 쿠폰 <b className="mono">{rv.reviewCoupon}</b>을 그대로
+                      씁니다.
+                    </>
+                  ) : (
+                    <>누르면 답례 쿠폰(1회 · 30일)이 새로 발급되고 메일 본문에 들어갑니다.</>
+                  )}
+                </p>
+                {rvError && <div className="error">{rvError}</div>}
+                <div className="share-actions">
+                  <button className="btn" onClick={makeReview} disabled={rvBusy || !rvChild.trim()}>
+                    {rvBusy ? "만드는 중…" : "쿠폰 만들고 메일 완성"}
+                  </button>
+                  <button className="btn secondary" onClick={() => setRv(null)} disabled={rvBusy}>
+                    닫기
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="rv-coupon">
+                  <span className="hint">답례 쿠폰{rvMail.reused ? " (기존)" : " 발급됨"}</span>
+                  <b className="mono">{rvMail.coupon.code}</b>
+                  <button className="btn secondary small" onClick={() => copyReview("code")}>
+                    {rvCopied === "code" ? "복사됨 ✓" : "복사"}
+                  </button>
+                </div>
+                <div className="field">
+                  <label>제목</label>
+                  <div className="rv-row">
+                    <input type="text" readOnly value={rvMail.subject} onFocus={(e) => e.target.select()} />
+                    <button className="btn secondary small" onClick={() => copyReview("subject")}>
+                      {rvCopied === "subject" ? "복사됨 ✓" : "복사"}
+                    </button>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>본문</label>
+                  <textarea
+                    className="rv-body"
+                    readOnly
+                    value={rvMail.body}
+                    onFocus={(e) => e.target.select()}
+                  />
+                </div>
+                <div className="share-actions">
+                  <button className="btn" onClick={() => copyReview("body")}>
+                    {rvCopied === "body" ? "본문 복사됨 ✓" : "본문 복사"}
+                  </button>
+                  <a className="btn secondary" href={mailtoHref(rvMail)}>
+                    메일 앱으로 열기
+                  </a>
+                  <button className="btn secondary" onClick={() => setRv(null)}>
+                    닫기
+                  </button>
+                </div>
+                <p className="hint" style={{ marginBottom: 0 }}>
+                  {rvMail.to ? (
+                    <>
+                      보내는 주소는 <b>{rvMail.to}</b> · 발신은 support@kidstel.co.kr 로 맞춰주세요.
+                    </>
+                  ) : (
+                    <>이 주문엔 이메일이 없어요. 발신은 support@kidstel.co.kr 로 맞춰주세요.</>
+                  )}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {confirmDialog}
     </main>
