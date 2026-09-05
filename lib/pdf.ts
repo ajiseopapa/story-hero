@@ -5,9 +5,11 @@
 // ⭐ 14,900원짜리 결과물이다(2026-09-05 TK님). 그래서
 //  - 글 영역은 3배 해상도(인쇄 기준 약 370dpi)로 그려 무손실 PNG로 넣는다. 전에는 페이지
 //    전체를 캔버스 한 장에 그려 JPEG로 넣었더니 글자에 압축 번짐이 들어가 흐릿했다.
-//  - 삽화는 원본 크기 JPEG 0.95 — 눈으로 구분되지 않는 손실만 허용한다.
+//  - 삽화는 브라우저에서 2배(2048×3072)로 업스케일해 넣는다 — 원본 1024×1536은 140mm 폭에서
+//    약 185dpi라 인쇄엔 모자란다. pica(Lanczos3 + 언샤프)로 키우면 약 370dpi. API 비용 0원.
 //  - 파일 정보(제목·제작자)를 넣고, 맨 뒤에 "누구를 위해 언제 만든 책인지" 판권 페이지를 붙인다.
 import { jsPDF } from "jspdf";
+import Pica from "pica";
 
 export type PdfPage = {
   kind: "cover" | "scene";
@@ -29,7 +31,8 @@ const TEXT_SCALE = 3; // 글 영역 해상도 배율 — 인쇄해도 획이 뭉
 // 인쇄 대화상자에서 "용지보다 큰 페이지"로 뜬다. A4에 맞춤 인쇄하면 164×297mm.
 const PAGE_W_MM = 140;
 const MM = PAGE_W_MM / W; // px → mm
-const IMAGE_QUALITY = 0.95;
+const IMAGE_SCALE = 2; // 삽화 업스케일 배율 (2048×3072)
+const IMAGE_QUALITY = 0.92; // 2배 크기라 0.95면 장당 1.5MB를 넘긴다 — 0.92면 화질 차이 없이 절반
 const PAPER = "#fbf6ec";
 const INK = "#4a3f35";
 const INK_SOFT = "#7a6a58";
@@ -96,17 +99,41 @@ function textCanvas(
   return { canvas, ctx };
 }
 
-// 삽화 → 원본 크기 JPEG (data URL이 PNG면 여기서 줄어든다)
+let pica: Pica.Pica | null = null;
+
+// 삽화 → 2배 업스케일 JPEG. 손님 브라우저에서 돈다(서버·API 비용 없음).
 async function renderImage(src: string): Promise<string> {
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = IMG_H;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("PDF 페이지를 그릴 수 없어요.");
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, W, IMG_H);
-  ctx.drawImage(await loadImage(src), 0, 0, W, IMG_H);
-  return canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
+  const img = await loadImage(src);
+  const from = document.createElement("canvas");
+  from.width = W;
+  from.height = IMG_H;
+  const fctx = from.getContext("2d");
+  if (!fctx) throw new Error("PDF 페이지를 그릴 수 없어요.");
+  fctx.fillStyle = PAPER;
+  fctx.fillRect(0, 0, W, IMG_H);
+  fctx.drawImage(img, 0, 0, W, IMG_H);
+
+  const to = document.createElement("canvas");
+  to.width = W * IMAGE_SCALE;
+  to.height = IMG_H * IMAGE_SCALE;
+  try {
+    pica ??= new Pica();
+    // Lanczos3로 키우고 살짝 선명하게 — 그냥 키우면 물에 번진 듯 흐려진다
+    await pica.resize(from, to, {
+      filter: "lanczos3",
+      unsharpAmount: 60,
+      unsharpRadius: 0.6,
+      unsharpThreshold: 2,
+    });
+  } catch {
+    // pica가 못 도는 환경(아주 옛 브라우저)에서는 캔버스 보간으로라도 키운다
+    const tctx = to.getContext("2d");
+    if (!tctx) throw new Error("PDF 페이지를 그릴 수 없어요.");
+    tctx.imageSmoothingEnabled = true;
+    tctx.imageSmoothingQuality = "high";
+    tctx.drawImage(from, 0, 0, to.width, to.height);
+  }
+  return to.toDataURL("image/jpeg", IMAGE_QUALITY);
 }
 
 // 삽화 아래 글 영역 → 고해상도 PNG
