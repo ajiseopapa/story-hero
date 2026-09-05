@@ -2104,31 +2104,13 @@ a.btn {
   border-top: 1px dashed #e0d3bd;
 }
 
-/* 무료 샘플 버튼 아래 쿠폰 칸 — 평소엔 글자 링크 하나, 누르거나 한도에 막히면 입력 칸이 펼쳐진다 */
+/* 무료 샘플 버튼 아래 쿠폰 칸 — 항상 펼쳐 둔다(접어두면 쿠폰 손님이 못 찾는다) */
 .coupon-entry {
-  margin-top: 12px;
-  text-align: center;
-}
-.coupon-entry .field {
-  text-align: left;
+  margin-top: 16px;
 }
 .coupon-entry input {
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-.link-btn {
-  background: none;
-  border: none;
-  padding: 6px 8px;
-  font-family: var(--text);
-  font-size: 15px;
-  color: var(--ink-soft);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.link-btn:hover {
-  color: var(--ink);
 }
 
 /* ---------- PC: 책 펼침면 ----------

@@ -267,14 +267,8 @@ export default function Home() {
   // 쿠폰을 넣는 결제 창까지 못 갔다(2026-09-05). 서버는 확인만 하고, 실제 차감은 책을 열 때.
   // 이 브라우저에 기억해 두어 새로고침·결제 창에서도 다시 적지 않게 한다.
   const [coupon, setCoupon] = useState("");
-  const [couponOpen, setCouponOpen] = useState(false);
   useEffect(() => {
-    kvGet<string>("coupon").then((saved) => {
-      if (saved) {
-        setCoupon(saved);
-        setCouponOpen(true);
-      }
-    });
+    kvGet<string>("coupon").then((saved) => saved && setCoupon(saved));
   }, []);
   const changeCoupon = (raw: string) => {
     const code = raw.toUpperCase().replace(/[^A-Z0-9-\s]/g, "").slice(0, 24);
@@ -519,15 +513,8 @@ export default function Home() {
         { children, theme, coupon: couponCode || undefined },
         180_000,
       );
-      const story = (await safeJson(storyRes)) as unknown as StoryData & {
-        error?: string;
-        limit?: string;
-      };
-      if (!storyRes.ok) {
-        // 기기·IP 한도에 막혔으면 쿠폰 칸을 펼쳐 준다 — 쿠폰이 있는 손님이 갈 길을 보이게
-        if (story.limit) setCouponOpen(true);
-        throw new Error(story.error || "이야기 생성 실패");
-      }
+      const story = (await safeJson(storyRes)) as unknown as StoryData & { error?: string };
+      if (!storyRes.ok) throw new Error(story.error || "이야기 생성 실패");
 
       const skeleton: BookPage[] = [
         {
@@ -662,7 +649,6 @@ export default function Home() {
       // 책이 열렸으면 적어둔 쿠폰은 할 일을 다했다 — 남겨두면 다음 샘플에서 "이미 사용된
       // 쿠폰" 오류로 손님을 막는다
       setCoupon("");
-      setCouponOpen(false);
       await kvDel("coupon");
       const draft: Draft = {
         title,
@@ -1094,31 +1080,26 @@ export default function Home() {
             무료 샘플 만들기 🪄
           </button>
 
+          {/* 항상 펼쳐 둔다 — 접어두면 쿠폰 손님이 못 찾는다(2026-09-05 TK님) */}
           <div className="coupon-entry">
-            {couponOpen ? (
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label htmlFor="coupon-code">무료 쿠폰 코드</label>
-                <input
-                  id="coupon-code"
-                  type="text"
-                  value={coupon}
-                  maxLength={24}
-                  placeholder="예) KIDS-ABCDE"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  onChange={(e) => changeCoupon(e.target.value)}
-                />
-                <div className="hint">
-                  {couponCode.length >= 4
-                    ? "쿠폰이 있으면 하루 샘플 횟수에 걸리지 않아요. 샘플이 마음에 들면 결제 창에서 이 쿠폰으로 책 전체를 열 수 있어요."
-                    : "쿠폰 코드를 적어두면 하루 무료 샘플 횟수에 걸리지 않아요. 쿠폰은 책을 열 때 한 번만 쓰여요."}
-                </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="coupon-code">무료 쿠폰이 있으세요?</label>
+              <input
+                id="coupon-code"
+                type="text"
+                value={coupon}
+                maxLength={24}
+                placeholder="쿠폰 코드를 입력하세요 (없으면 비워두세요)"
+                autoCapitalize="characters"
+                autoComplete="off"
+                onChange={(e) => changeCoupon(e.target.value)}
+              />
+              <div className="hint">
+                {couponCode.length >= 4
+                  ? "쿠폰이 있으면 하루 샘플 횟수에 걸리지 않아요. 샘플이 마음에 들면 결제 창에서 이 쿠폰으로 책 전체를 열 수 있어요."
+                  : "쿠폰 코드를 적어두면 하루 무료 샘플 횟수에 걸리지 않아요. 쿠폰은 책을 열 때 한 번만 쓰여요."}
               </div>
-            ) : (
-              <button type="button" className="link-btn" onClick={() => setCouponOpen(true)}>
-                무료 쿠폰이 있으세요?
-              </button>
-            )}
+            </div>
           </div>
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
             표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요.
