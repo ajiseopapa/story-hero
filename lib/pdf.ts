@@ -1,6 +1,10 @@
 // 동화책 → PDF 저장.
-// jsPDF에는 한글 내장 폰트가 없으므로, 각 페이지를 canvas에 그린 뒤(브라우저 폰트 사용)
+// jsPDF에는 한글 내장 폰트가 없으므로, 글은 canvas에 그린 뒤(브라우저 폰트 사용)
 // 이미지로 넣는 방식으로 한글을 처리한다.
+//
+// ⭐ 삽화와 글은 따로 넣는다(2026-09-05). 전에는 페이지 전체를 캔버스 한 장에 그려 JPEG로
+// 넣었더니 글자에 JPEG 압축 번짐이 들어가 흐릿했다. 지금은 삽화만 JPEG, 글 영역은 2배
+// 해상도로 그려 무손실 PNG로 넣는다 — 글 배경이 단색이라 PNG여도 몇십 KB다.
 import { jsPDF } from "jspdf";
 
 export type PdfPage = {
@@ -13,8 +17,11 @@ const W = 1024; // 삽화 원본 폭
 const IMG_H = 1536; // 삽화 원본 높이 (1024x1536)
 const CAP_H = 320; // 텍스트 영역 높이
 const PAGE_H = IMG_H + CAP_H;
+const TEXT_SCALE = 2; // 글 영역 해상도 배율 — 인쇄해도 획이 뭉개지지 않게
 const PAPER = "#fbf6ec";
 const INK = "#4a3f35";
+// 고운바탕은 400/700 두 굵기뿐 — 800을 주면 브라우저가 가짜 굵게를 만들어 뭉개진다
+const FONT = "'Gowun Batang', 'Nanum Myeongjo', serif";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -58,69 +65,71 @@ function wrapText(
   return lines;
 }
 
-async function renderPage(page: PdfPage, pageNum: number): Promise<string> {
+// 삽화 → 원본 크기 JPEG (data URL이 PNG면 여기서 줄어든다)
+async function renderImage(src: string): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = W;
-  canvas.height = PAGE_H;
+  canvas.height = IMG_H;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("PDF 페이지를 그릴 수 없어요.");
-
-  // 배경
   ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, W, PAGE_H);
+  ctx.fillRect(0, 0, W, IMG_H);
+  ctx.drawImage(await loadImage(src), 0, 0, W, IMG_H);
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
 
-  // 삽화
-  if (page.image) {
-    const img = await loadImage(page.image);
-    ctx.drawImage(img, 0, 0, W, IMG_H);
-  }
+// 글 영역 → 2배 해상도 PNG. 좌표는 원래 크기(W × CAP_H) 기준으로 쓴다.
+function renderCaption(page: PdfPage, pageNum: number): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = W * TEXT_SCALE;
+  canvas.height = CAP_H * TEXT_SCALE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("PDF 페이지를 그릴 수 없어요.");
+  ctx.scale(TEXT_SCALE, TEXT_SCALE);
 
-  // 텍스트 영역
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, CAP_H);
   ctx.fillStyle = INK;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   if (page.kind === "cover") {
     // 표지 제목도 줄바꿈 — 형제 이름이 여럿 붙으면 한 줄에 안 들어가 잘린다
-    let fontSize = 56;
     let lineHeight = 78;
-    ctx.font = `800 ${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
+    ctx.font = `700 56px ${FONT}`;
     let lines = wrapText(ctx, `《 ${page.text} 》`, W - 140);
     // 넘치면 폰트 축소
     if (lines.length * lineHeight > CAP_H - 40) {
-      fontSize = 44;
       lineHeight = 62;
-      ctx.font = `800 ${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
+      ctx.font = `700 44px ${FONT}`;
       lines = wrapText(ctx, `《 ${page.text} 》`, W - 120);
     }
-    const startY = IMG_H + (CAP_H - (lines.length - 1) * lineHeight) / 2;
-    lines.forEach((line, i) => {
-      ctx.fillText(line, W / 2, startY + i * lineHeight);
-    });
+    const startY = (CAP_H - (lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, i) =>
+      ctx.fillText(line, W / 2, startY + i * lineHeight),
+    );
   } else {
-    let fontSize = 34;
     let lineHeight = 52;
-    ctx.font = `${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
+    ctx.font = `34px ${FONT}`;
     let lines = wrapText(ctx, page.text, W - 140);
     // 넘치면 폰트 축소
     if (lines.length * lineHeight > CAP_H - 40) {
-      fontSize = 28;
       lineHeight = 42;
-      ctx.font = `${fontSize}px 'Gowun Batang', 'Nanum Myeongjo', serif`;
+      ctx.font = `28px ${FONT}`;
       lines = wrapText(ctx, page.text, W - 120);
     }
-    const startY = IMG_H + (CAP_H - (lines.length - 1) * lineHeight) / 2 - 14;
-    lines.forEach((line, i) => {
-      ctx.fillText(line, W / 2, startY + i * lineHeight);
-    });
+    const startY = (CAP_H - (lines.length - 1) * lineHeight) / 2 - 14;
+    lines.forEach((line, i) =>
+      ctx.fillText(line, W / 2, startY + i * lineHeight),
+    );
 
     // 페이지 번호 (장면 페이지만)
-    ctx.font = "22px 'Gowun Batang', 'Nanum Myeongjo', serif";
+    ctx.font = `22px ${FONT}`;
     ctx.fillStyle = "#7a6a58";
-    ctx.fillText(`— ${pageNum} —`, W / 2, PAGE_H - 32);
+    ctx.fillText(`— ${pageNum} —`, W / 2, CAP_H - 32);
   }
 
-  return canvas.toDataURL("image/jpeg", 0.88);
+  return canvas.toDataURL("image/png");
 }
 
 export async function downloadStoryPdf(
@@ -141,9 +150,15 @@ export async function downloadStoryPdf(
 
   for (let i = 0; i < pages.length; i++) {
     if (i > 0) doc.addPage([W, PAGE_H], "portrait");
-    const pageImg = await renderPage(pages[i], i); // 표지=0, 장면은 1부터
-
-    doc.addImage(pageImg, "JPEG", 0, 0, W, PAGE_H);
+    const page = pages[i];
+    if (page.image) {
+      doc.addImage(await renderImage(page.image), "JPEG", 0, 0, W, IMG_H);
+    } else {
+      doc.setFillColor(PAPER);
+      doc.rect(0, 0, W, IMG_H, "F");
+    }
+    // 표지=0, 장면은 1부터. 2배로 그린 PNG를 원래 크기로 넣으면 PDF 안에서 고해상도로 남는다
+    doc.addImage(renderCaption(page, i), "PNG", 0, IMG_H, W, CAP_H);
     onProgress?.(i + 1, pages.length);
   }
 
