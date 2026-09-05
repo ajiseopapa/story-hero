@@ -11,6 +11,7 @@ import {
   FREE_DEVICE_DAILY_LIMIT,
   FREE_IP_DAILY_LIMIT,
   consumeQuota,
+  couponDailyLimit,
   ipBucket,
   readDeviceId,
 } from "@/lib/limits";
@@ -139,7 +140,8 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
           { status: 400 },
         );
       }
-      if (!(await consumeQuota(`coupon-story/${couponCode}`, COUPON_STORY_DAILY_LIMIT))) {
+      const perDay = couponDailyLimit(check.coupon.maxUses, COUPON_STORY_DAILY_LIMIT);
+      if (!(await consumeQuota(`coupon-story/${couponCode}`, perDay))) {
         return NextResponse.json(
           { error: "이 쿠폰으로 오늘 만들 수 있는 샘플을 다 썼어요. 마음에 드는 샘플을 열어주세요 🌙" },
           { status: 429 },

@@ -64,6 +64,17 @@ export const FREE_IP_DAILY_LIMIT = Number(process.env.FREE_IP_DAILY_LIMIT ?? "20
 // 재시도 여유)이면 넉넉하고, 코드 하나가 새도 하루 손실은 정해져 있다.
 export const COUPON_STORY_DAILY_LIMIT = Number(process.env.COUPON_STORY_DAILY_LIMIT ?? "5");
 export const COUPON_IMAGE_DAILY_LIMIT = Number(process.env.COUPON_IMAGE_DAILY_LIMIT ?? "15");
+
+/**
+ * 쿠폰별 하루 한도. 손님 쿠폰(1회용 체험단)은 기본값(샘플 5회·삽화 15장)이면 넉넉한데,
+ * TK님 테스트용 고정 쿠폰(사용 횟수 100 이상으로 발급)은 하루에 여러 번 돌려야 해서
+ * 한도를 크게 준다. 전체 일일 한도(비용 상한)는 그대로 지킨다. (2026-09-05)
+ */
+const TEST_COUPON_MIN_USES = 100;
+const TEST_COUPON_DAILY_LIMIT = 200;
+export function couponDailyLimit(maxUses: number, base: number): number {
+  return maxUses >= TEST_COUPON_MIN_USES ? Math.max(base, TEST_COUPON_DAILY_LIMIT) : base;
+}
 // 삽화 생성/일 (유료 이어그리기 포함 백스톱).
 // 1장당 약 156원(2026-08-13 실측)이라 한도가 곧 사고 시 최대 손실액이다.
 // 1500이면 하루 23만원이 걸리는데, 정상 사용으로 그 수치가 나오려면 하루 136권(매출 200만원)이

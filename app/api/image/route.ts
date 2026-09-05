@@ -8,6 +8,7 @@ import {
   IMAGE_FREE_IP_DAILY_LIMIT,
   ORDER_IMAGE_LIMIT,
   consumeQuota,
+  couponDailyLimit,
   ipBucket,
 } from "@/lib/limits";
 import { ID_RE, consumeOrderImage, getOrder, tokenMatches } from "@/lib/orders";
@@ -107,7 +108,8 @@ export async function POST(req: NextRequest) {
       const couponCode = normalizeCode(coupon);
       const check = couponCode ? await checkCoupon(couponCode) : null;
       if (check?.ok) {
-        if (!(await consumeQuota(`coupon-image/${couponCode}`, COUPON_IMAGE_DAILY_LIMIT))) {
+        const perDay = couponDailyLimit(check.coupon.maxUses, COUPON_IMAGE_DAILY_LIMIT);
+        if (!(await consumeQuota(`coupon-image/${couponCode}`, perDay))) {
           return NextResponse.json(
             { error: "이 쿠폰으로 오늘 그릴 수 있는 샘플 삽화를 다 썼어요. 마음에 드는 샘플을 열어주세요." },
             { status: 429 },
