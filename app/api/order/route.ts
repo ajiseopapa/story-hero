@@ -1,6 +1,13 @@
 import { consumeQuota, ipBucket } from "@/lib/limits";
 import { mailAdminNewOrder, mailOrderReceived } from "@/lib/mail";
-import { isStoreReady, newOrderId, newOrderToken, saveOrder, shortId } from "@/lib/orders";
+import {
+  isStoreReady,
+  newOrderId,
+  newOrderToken,
+  payDeadline,
+  saveOrder,
+  shortId,
+} from "@/lib/orders";
 import type { Order } from "@/lib/orders";
 import { track } from "@/lib/stats";
 
@@ -102,6 +109,7 @@ export async function POST(req: Request): Promise<Response> {
     bookTitle: order.bookTitle,
     amount: order.amount,
     orderNo,
+    deadline: payDeadline(order.createdAt),
   });
   await mailAdminNewOrder({
     name: order.name,

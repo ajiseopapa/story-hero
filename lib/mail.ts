@@ -79,7 +79,12 @@ export async function mailOrderReceived(o: {
   bookTitle: string;
   amount: number;
   orderNo: string;
+  /** 입금 기한(ms). 지나면 자동 취소된다는 안내에 쓴다 */
+  deadline?: number;
 }): Promise<void> {
+  const until = o.deadline
+    ? `<p><b>입금 기한은 ${koreanDateTime(o.deadline)}까지</b>예요. 기한이 지나면 주문이 자동으로 취소되니, 그 뒤에는 다시 주문해주세요.</p>`
+    : "";
   const bank = BANK_ACCOUNT
     ? `<p style="background:#f7efe2;padding:14px 16px;border-radius:10px">아래 계좌로 <b>${o.amount.toLocaleString()}원</b>을 보내주세요.<br/><b style="font-size:16px">${esc(BANK_ACCOUNT)}</b></p>`
     : `<p>입금 계좌를 곧 이 주소로 안내드릴게요.</p>`;
@@ -89,8 +94,35 @@ export async function mailOrderReceived(o: {
     WRAP(`<h2 style="font-size:18px">주문이 접수됐어요 📚</h2>
 <p>${esc(o.name)}님, 《 ${esc(o.bookTitle)} 》 주문이 접수됐습니다.<br/>주문번호는 <b>${o.orderNo}</b>예요.</p>
 ${bank}
+${until}
 <p>입금이 확인되면 이 주소로 다시 알려드릴게요. 보통 몇 시간 안에 확인됩니다.</p>`),
   );
+}
+
+/** 입금 기한이 지나 자동 취소됐을 때 손님에게 */
+export async function mailOrderExpired(o: {
+  email: string;
+  name: string;
+  bookTitle: string;
+  orderNo: string;
+}): Promise<void> {
+  await send(
+    o.email,
+    `[키즈북] 입금 기한이 지나 주문이 취소됐어요 (주문번호 ${o.orderNo})`,
+    WRAP(`<h2 style="font-size:18px">주문이 취소됐어요</h2>
+<p>${esc(o.name)}님, 《 ${esc(o.bookTitle)} 》 주문(주문번호 <b>${o.orderNo}</b>)이 입금 기한 안에 확인되지 않아 취소됐습니다.</p>
+<p>만들어 두신 동화는 주문하신 기기의 브라우저에 그대로 남아 있어요. <a href="${SITE}">키즈북</a>에 다시 들어가 결제 창에서 새로 주문하시면 이어서 열 수 있습니다.</p>
+<p>이미 입금하셨다면 이 메일에 답장으로 알려주세요. 바로 확인해서 열어드릴게요.</p>`),
+  );
+}
+
+/** "9월 8일 오후 2시" — 한국 시간 */
+function koreanDateTime(ms: number): string {
+  const d = new Date(ms + 9 * 60 * 60 * 1000);
+  const h = d.getUTCHours();
+  const ampm = h < 12 ? "오전" : "오후";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${ampm} ${h12}시`;
 }
 
 /** 주문 접수 직후 관리자에게: 새 주문 알림 */

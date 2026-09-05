@@ -1,11 +1,9 @@
 // 일일 생성 한도 (무료 샘플 비용 폭탄 방지 — 앱인토스 등 트래픽 유입 대비).
 //
-// ⭐ 2026-09-05부터 KV(Redis) INCR로 센다. 원래는 Vercel Blob에 요청당 마커 블롭을 남기고
-// prefix 개수를 셌는데, Blob 스토어가 "suspended"로 쓰기가 막히자 검사가 오류를 내고
-// fail-closed 규칙에 걸려 모든 손님이 "오늘 한도를 다 썼어요"를 봤다(실제 사용량 0인데도).
+// KV(Redis) INCR로 센다(2026-09-05). 원래는 Vercel Blob에 요청당 마커 블롭을 남기고 prefix
+// 개수를 셌는데, 그 목록 조회가 무료 플랜 작업 횟수를 다 먹어 스토어가 정지됐고, 검사가
+// 오류를 내자 fail-closed 규칙에 걸려 모든 손님이 "오늘 한도를 다 썼어요"를 봤다.
 // INCR는 원자적이라 동시 요청 레이스가 없고, 주문·쿠폰이 이미 같은 KV를 쓴다.
-// KV가 없으면(옛 환경) Blob 마커 방식으로 떨어진다.
-import { list, put } from "@vercel/blob";
 import { createHash } from "node:crypto";
 import { isStoreConfigured, pipeline } from "@/lib/kv";
 
@@ -15,8 +13,8 @@ function todayKST(): string {
 }
 
 // bucket의 오늘 사용량이 limit 미만이면 1 소진하고 true, 초과면 false.
-// 토큰이 없으면(로컬 개발) 통과시키되, 검사 자체가 오류를 내면 막는다(fail-closed) —
-// Blob 장애 순간에 한도가 통째로 풀리면 그 시간 동안 OpenAI 비용 상한이 사라진다.
+// KV가 없으면(로컬 개발) 통과시키되, 검사 자체가 오류를 내면 막는다(fail-closed) —
+// 장애 순간에 한도가 통째로 풀리면 그 시간 동안 OpenAI 비용 상한이 사라진다.
 export async function consumeQuota(bucket: string, limit: number): Promise<boolean> {
   if (isStoreConfigured()) {
     const key = `limits:${todayKST()}:${bucket}`;
@@ -36,23 +34,7 @@ export async function consumeQuota(bucket: string, limit: number): Promise<boole
       return false;
     }
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return true;
-  try {
-    const prefix = `limits/${todayKST()}/${bucket}/`;
-    const { blobs, hasMore } = await list({
-      prefix,
-      limit: Math.min(limit, 1000),
-    });
-    if (hasMore || blobs.length >= limit) return false;
-    await put(`${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, "1", {
-      access: "private",
-      addRandomSuffix: true,
-    });
-    return true;
-  } catch (err) {
-    console.error("quota check failed (fail-closed):", err);
-    return false;
-  }
+  return true; // 저장소가 없는 로컬 개발은 통과
 }
 
 // 요청 IP를 짧은 해시로 (프라이버시 보호 + 버킷 키로 사용)

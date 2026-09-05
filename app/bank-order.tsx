@@ -14,6 +14,7 @@ import { kvDel, kvGet, kvSet } from "@/lib/store";
 import { BUSINESS } from "@/lib/business";
 import { metaTrack, META_PRICE } from "@/lib/meta-pixel";
 import { entrySource } from "@/lib/track";
+import { PAY_DEADLINE_DAYS, payDeadline } from "@/lib/order-terms";
 
 const BANK_ACCOUNT = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? "";
 
@@ -29,18 +30,32 @@ export async function clearBankOrder(): Promise<void> {
   await kvDel(STORE_KEY);
 }
 
-/** 저장된 주문의 입금 확인 여부를 물어본다. 네트워크 실패는 조용히 넘긴다. */
-export async function checkBankOrderPaid(order: BankOrder): Promise<boolean> {
+export type BankOrderStatus = "pending" | "paid" | "canceled" | "unknown";
+
+/** 저장된 주문의 상태를 물어본다. 네트워크 실패·없는 주문은 "unknown"(조용히 넘긴다). */
+export async function fetchBankOrderStatus(order: BankOrder): Promise<BankOrderStatus> {
   try {
     const res = await fetch(
       `/api/order/status?id=${encodeURIComponent(order.id)}&token=${encodeURIComponent(order.token)}`,
     );
-    if (!res.ok) return false;
+    if (!res.ok) return "unknown";
     const data = (await res.json()) as { status?: string };
-    return data.status === "paid";
+    return data.status === "paid" || data.status === "canceled" ? data.status : "pending";
   } catch {
-    return false;
+    return "unknown";
   }
+}
+
+/** 저장된 주문의 입금 확인 여부 */
+export async function checkBankOrderPaid(order: BankOrder): Promise<boolean> {
+  return (await fetchBankOrderStatus(order)) === "paid";
+}
+
+/** "9월 8일 오후 2시" */
+function deadlineText(createdAt: number): string {
+  const d = new Date(payDeadline(createdAt));
+  const h = d.getHours();
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${h < 12 ? "오전" : "오후"} ${h % 12 === 0 ? 12 : h % 12}시`;
 }
 
 export default function BankOrderBox({
@@ -64,6 +79,8 @@ export default function BankOrderBox({
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkedNote, setCheckedNote] = useState<string | null>(null);
+  // 입금 기한이 지나 서버가 취소한 주문 — 다시 주문하도록 안내한다
+  const [expired, setExpired] = useState(false);
   const [copied, setCopied] = useState(false);
   const [coupon, setCoupon] = useState(initialCoupon.toUpperCase());
   const [couponBusy, setCouponBusy] = useState(false);
@@ -84,12 +101,17 @@ export default function BankOrderBox({
         setChecking(true);
         setCheckedNote(null);
       }
-      const paid = await checkBankOrderPaid(o);
+      const status = await fetchBankOrderStatus(o);
       if (manual) setChecking(false);
-      if (paid) {
+      if (status === "paid") {
         if (paidNotifiedRef.current) return;
         paidNotifiedRef.current = true;
         onPaid(o);
+      } else if (status === "canceled") {
+        // 기한이 지나 취소된 주문은 잊는다 — 남겨두면 "대기 중"이 영원히 뜬다
+        setExpired(true);
+        await clearBankOrder();
+        if (timerRef.current) clearInterval(timerRef.current);
       } else if (manual) {
         setCheckedNote("아직 입금 확인 전이에요. 확인되면 이메일로 알려드릴게요.");
       }
@@ -289,6 +311,35 @@ export default function BankOrderBox({
               </button>
             </div>
           </>
+        ) : expired ? (
+          <>
+            <h3 style={{ marginTop: 0 }}>입금 기한이 지나 주문이 취소됐어요</h3>
+            <p>
+              주문번호 <b>{order.orderNo}</b>는 {PAY_DEADLINE_DAYS}일 안에 입금이 확인되지 않아
+              취소됐어요. 만들어 두신 동화는 그대로 있으니 다시 주문하시면 이어서 열 수 있어요.
+            </p>
+            <p className="hint">
+              이미 입금하셨다면 주문번호와 함께{" "}
+              <a href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(`[입금 확인 문의] ${order.orderNo}`)}`}>
+                {BUSINESS.email}
+              </a>
+              로 알려주세요. 바로 확인해서 열어드릴게요.
+            </p>
+            <div className="share-actions">
+              <button
+                className="btn"
+                onClick={() => {
+                  setExpired(false);
+                  setOrder(null);
+                }}
+              >
+                다시 주문하기
+              </button>
+              <button className="btn secondary" onClick={onClose}>
+                닫기
+              </button>
+            </div>
+          </>
         ) : (
           <>
             <h3 style={{ marginTop: 0 }}>주문이 접수됐어요</h3>
@@ -307,6 +358,11 @@ export default function BankOrderBox({
                 </div>
               </div>
             )}
+
+            <p className="hint" style={{ margin: "10px 0 0" }}>
+              입금 기한은 <b>{deadlineText(order.at)}까지</b>예요. 기한이 지나면 주문이 자동으로
+              취소돼요.
+            </p>
 
             <p style={{ margin: "12px 0" }}>
               이 창을 열어두시면 30초마다 자동으로 입금을 확인해요. 창을 닫으셨다면 확인

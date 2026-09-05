@@ -24,8 +24,8 @@ import { trackEvery, trackStep } from "@/lib/track";
 import { postLong, ramp } from "@/lib/long-fetch";
 import PhotoGuide from "./photo-guide";
 import BankOrderBox, {
-  checkBankOrderPaid,
   clearBankOrder,
+  fetchBankOrderStatus,
   loadBankOrder,
   type BankOrder,
 } from "./bank-order";
@@ -363,11 +363,14 @@ export default function Home() {
       // 표식을 옮긴 뒤 주문 기록은 지운다 — 남겨두면 다음에 만든 새 동화까지 열려버린다.
       if (!paidOrder) {
         const bank = await loadBankOrder();
-        if (bank && (await checkBankOrderPaid(bank))) {
+        const status = bank ? await fetchBankOrderStatus(bank) : "unknown";
+        if (bank && status === "paid") {
           // id+token을 그대로 옮겨야 /api/image가 "돈 낸 주문"으로 검증할 수 있다
           paidOrder = { id: bank.id, token: bank.token };
           await kvSet("paidOrder", paidOrder);
           await clearBankOrder();
+        } else if (status === "canceled") {
+          await clearBankOrder(); // 입금 기한이 지나 취소된 주문 — "대기 중" 경고가 계속 뜨지 않게
         }
       }
 

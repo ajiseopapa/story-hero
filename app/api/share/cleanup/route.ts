@@ -1,5 +1,7 @@
 // 보관 기간(1년)이 지난 공유 책을 지우는 정리 작업. vercel.json의 크론이 하루 한 번 부른다.
 // (일일 한도 마커는 2026-09-05부터 KV에 TTL로 두므로 여기서 지울 게 없다.)
+import { mailOrderExpired } from "@/lib/mail";
+import { cancelExpiredOrders, isStoreReady, shortId } from "@/lib/orders";
 import { SHARE_TTL_DAYS } from "@/lib/sharebook";
 import { deleteObjects, isStorageConfigured, listObjects } from "@/lib/storage";
 
@@ -15,7 +17,20 @@ function authorized(req: Request): boolean {
 
 export async function GET(req: Request): Promise<Response> {
   if (!authorized(req)) return new Response("Unauthorized", { status: 401 });
-  if (!isStorageConfigured()) return Response.json({ deleted: 0 });
+  // 입금 기한이 지난 계좌이체 주문은 취소로 — 책 정리와 별개로 먼저 돌린다(실패해도 서로 영향 없음)
+  let canceledOrders = 0;
+  if (isStoreReady()) {
+    try {
+      for (const o of await cancelExpiredOrders()) {
+        canceledOrders++;
+        await mailOrderExpired({ email: o.email, name: o.name, bookTitle: o.bookTitle, orderNo: shortId(o.id) });
+      }
+    } catch (err) {
+      console.error("expired order cancel failed:", err);
+    }
+  }
+
+  if (!isStorageConfigured()) return Response.json({ deleted: 0, canceledOrders });
 
   const cutoff = Date.now() - SHARE_TTL_DAYS * DAY_MS;
   let deleted = 0;
@@ -35,8 +50,8 @@ export async function GET(req: Request): Promise<Response> {
     }
   } catch (err) {
     console.error("share cleanup failed:", err);
-    return Response.json({ error: "cleanup failed", deleted }, { status: 500 });
+    return Response.json({ error: "cleanup failed", deleted, canceledOrders }, { status: 500 });
   }
 
-  return Response.json({ deleted });
+  return Response.json({ deleted, canceledOrders });
 }

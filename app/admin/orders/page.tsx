@@ -10,6 +10,7 @@ import {
   rememberAdminKey,
 } from "@/lib/admin-key";
 import { AdminKeyInput } from "@/app/admin/key-input";
+import { payDeadline } from "@/lib/order-terms";
 import { guessChildName } from "@/lib/review-mail";
 import { updateBadges } from "../shell";
 
@@ -330,6 +331,18 @@ export default function OrderAdminPage() {
             <span className="hint">
               {STATUS_LABEL[o.status]} · 주문 {when(o.createdAt)}
               {o.paidAt ? ` · 확인 ${when(o.paidAt)}` : ""}
+              {o.status === "pending" && (
+                <>
+                  {" · "}
+                  <b
+                    style={{
+                      color: payDeadline(o.createdAt) < Date.now() ? "var(--red)" : undefined,
+                    }}
+                  >
+                    입금 기한 {when(payDeadline(o.createdAt))}
+                  </b>
+                </>
+              )}
             </span>
           </div>
           <div className="hint" style={{ marginTop: 6 }}>

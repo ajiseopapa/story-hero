@@ -10,10 +10,13 @@
  */
 import { pipeline, restConfig, toRecord } from "@/lib/kv";
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { PAY_DEADLINE_DAYS, payDeadline } from "@/lib/order-terms";
 
 const KEY = (id: string) => `kidsbook:order:${id}`;
 const INDEX = "kidsbook:orders"; // 최신순 주문 id 목록
 const RETENTION_DAYS = 180;
+export const AUTO_CANCEL_MEMO = "입금 기한이 지나 자동 취소";
+export { PAY_DEADLINE_DAYS, payDeadline };
 const MAX_INDEX = 2000;
 
 export type OrderStatus = "pending" | "paid" | "canceled";
@@ -197,6 +200,18 @@ export async function deleteOrder(id: string): Promise<boolean> {
 }
 
 /** 관리자용 목록 — 최신순. 만료돼 사라진 id는 건너뛴다. */
+/** 입금 기한이 지난 대기 주문을 모두 취소로. 바꾼 주문을 돌려준다(안내 메일용). */
+export async function cancelExpiredOrders(now = Date.now()): Promise<Order[]> {
+  const orders = await listOrders(500);
+  const out: Order[] = [];
+  for (const o of orders) {
+    if (o.status !== "pending" || payDeadline(o.createdAt) > now) continue;
+    const next = await setOrderStatus(o.id, "canceled", o.memo ? `${o.memo} · ${AUTO_CANCEL_MEMO}` : AUTO_CANCEL_MEMO);
+    if (next) out.push(next);
+  }
+  return out;
+}
+
 export async function listOrders(limit = 200): Promise<Order[]> {
   const [ids] = await pipeline([["LRANGE", INDEX, 0, limit - 1]]);
   const raw = Array.isArray(ids) ? (ids as string[]) : [];
