@@ -212,24 +212,40 @@ export default function BankOrderBox({
   };
 
   const canSubmit = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  // 첫 화면에서 쿠폰을 적어 둔 손님 — 계좌 안내는 감추고 "쿠폰으로 열기"를 앞세운다
+  const [couponFirst, setCouponFirst] = useState(
+    initialCoupon.replace(/[^A-Za-z0-9]/g, "").length >= 4,
+  );
 
   return (
     <div className="modal-back" role="dialog" aria-modal="true">
       <div className="modal-card">
         {!order ? (
           <>
-            <h3 style={{ marginTop: 0 }}>계좌이체로 주문하기</h3>
+            <h3 style={{ marginTop: 0 }}>
+              {couponFirst ? "쿠폰으로 전체 열기" : "계좌이체로 주문하기"}
+            </h3>
             <p className="hint" style={{ marginTop: 4 }}>
-              카드 결제는 준비 중이라, 지금은 계좌이체로만 받고 있어요. 입금이 확인되면 나머지
-              장면과 PDF·소리책이 모두 열립니다.
+              {couponFirst
+                ? "입금 없이 쿠폰으로 열어드려요. 이름과 이메일만 적어주세요. 누가 열었는지 남기고 안내 메일을 보내기 위해서예요."
+                : "카드 결제는 준비 중이라, 지금은 계좌이체로만 받고 있어요. 입금이 확인되면 나머지 장면과 PDF·소리책이 모두 열립니다."}
             </p>
 
             <div className="order-amount">
               <span>《 {bookTitle} 》 전체 보기</span>
-              <b>{price.toLocaleString()}원</b>
+              {couponFirst ? (
+                <b>
+                  <s style={{ fontWeight: 400, opacity: 0.6, marginRight: 6 }}>
+                    {price.toLocaleString()}원
+                  </s>
+                  0원
+                </b>
+              ) : (
+                <b>{price.toLocaleString()}원</b>
+              )}
             </div>
 
-            {BANK_ACCOUNT ? (
+            {couponFirst ? null : BANK_ACCOUNT ? (
               <div className="order-bank">
                 <div className="hint">입금 계좌</div>
                 <div className="order-bank-row">
@@ -269,6 +285,41 @@ export default function BankOrderBox({
 
             {error && <div className="error">{error}</div>}
 
+            {couponFirst ? (
+              <>
+                <div className="field" style={{ marginBottom: 8 }}>
+                  <label>적용할 쿠폰</label>
+                  <input
+                    type="text"
+                    value={coupon}
+                    maxLength={20}
+                    autoCapitalize="characters"
+                    onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                  />
+                </div>
+                {couponError && <div className="error">{couponError}</div>}
+                <div className="share-actions">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={useCoupon}
+                    disabled={coupon.trim().length < 4 || !canSubmit || couponBusy}
+                  >
+                    {couponBusy ? "여는 중…" : "쿠폰으로 전체 열기 🎟️"}
+                  </button>
+                  <button className="btn secondary" onClick={onClose} disabled={couponBusy}>
+                    닫기
+                  </button>
+                </div>
+                <p className="hint" style={{ marginTop: 12 }}>
+                  쿠폰이 없다면{" "}
+                  <button type="button" className="link-btn" onClick={() => setCouponFirst(false)}>
+                    계좌이체로 주문하기
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
             <div className="share-actions">
               <button className="btn" onClick={submit} disabled={!canSubmit || busy}>
                 {busy ? "접수하는 중…" : "주문 접수하기"}
@@ -310,6 +361,8 @@ export default function BankOrderBox({
                 {couponBusy ? "확인하는 중…" : "쿠폰으로 열기"}
               </button>
             </div>
+              </>
+            )}
           </>
         ) : expired ? (
           <>

@@ -1192,6 +1192,7 @@ export default function Home() {
           onPay={pay}
           onReset={reset}
           error={error}
+          couponCode={couponCode}
           bookMeta={{
             kidsInfo: kids
               .filter((k) => k.name.trim())
@@ -1438,6 +1439,7 @@ function BookViewer({
   onReset,
   error,
   bookMeta,
+  couponCode = "",
 }: {
   title: string;
   pages: BookPage[];
@@ -1449,8 +1451,12 @@ function BookViewer({
   onReset: () => void;
   error: string | null;
   bookMeta: { kidsInfo: string; themeLabel: string; artLabel: string };
+  /** 첫 화면에서 적어 둔 무료 쿠폰 — 있으면 결제 대신 "쿠폰으로 열기"로 안내한다 */
+  couponCode?: string;
 }) {
   const total = pages.length;
+  // 쿠폰 손님에게 14,900원 잠금 화면을 보여주면 결제해야 하는 줄 안다(2026-09-05 실제로 그랬다)
+  const withCoupon = couponCode.length >= 4;
   const page = pages[current];
   const isCover = page.kind === "cover";
   const isLocked = !paid && current > FREE_SCENES; // 표지(0)+장면 1..FREE_SCENES 무료
@@ -1946,22 +1952,36 @@ function BookViewer({
               <div className="lock-emoji">🔒</div>
               <div className="lock-title">여기부터는 잠겨 있어요</div>
               <div className="lock-sub">
-                결제하면 남은 {total - 1 - FREE_SCENES}페이지(총 {total}페이지)와
+                {withCoupon ? "쿠폰으로 열면" : "결제하면"} 남은 {total - 1 - FREE_SCENES}페이지(총{" "}
+                {total}페이지)와
                 <br />
                 읽어주기, PDF 다운로드가 열립니다
               </div>
-              <div className="price-anchor">
-                <s>정가 {LIST_PRICE.toLocaleString()}원</s>
-                <b>출시 기념 {PRICE.toLocaleString()}원</b>
-              </div>
+              {withCoupon ? (
+                <div className="price-anchor">
+                  <s>{PRICE.toLocaleString()}원</s>
+                  <b>쿠폰 {couponCode} 적용 · 0원</b>
+                </div>
+              ) : (
+                <div className="price-anchor">
+                  <s>정가 {LIST_PRICE.toLocaleString()}원</s>
+                  <b>출시 기념 {PRICE.toLocaleString()}원</b>
+                </div>
+              )}
               <PayConsent checked={agreed} onChange={setAgreed} compact />
               <button className="btn lock-btn" onClick={onPay} disabled={!agreed}>
-                {PRICE.toLocaleString()}원으로 전체 열기 🔓
+                {withCoupon ? "쿠폰으로 전체 열기 🎟️" : `${PRICE.toLocaleString()}원으로 전체 열기 🔓`}
               </button>
-              {PAY_MODE === "bank" && (
+              {withCoupon ? (
                 <div className="hint" style={{ marginTop: 8 }}>
-                  지금은 계좌이체로 받고 있어요
+                  이름과 이메일만 적으면 바로 열려요
                 </div>
+              ) : (
+                PAY_MODE === "bank" && (
+                  <div className="hint" style={{ marginTop: 8 }}>
+                    지금은 계좌이체로 받고 있어요
+                  </div>
+                )
               )}
             </div>
           ) : page.image ? (
@@ -2103,17 +2123,28 @@ function BookViewer({
 
       {!paid && (
         <div className="price-anchor" style={{ marginTop: 18 }}>
-          <s>정가 {LIST_PRICE.toLocaleString()}원</s>
-          <b>출시 기념 {PRICE.toLocaleString()}원</b>
+          {withCoupon ? (
+            <>
+              <s>{PRICE.toLocaleString()}원</s>
+              <b>쿠폰 {couponCode} 적용 · 0원</b>
+            </>
+          ) : (
+            <>
+              <s>정가 {LIST_PRICE.toLocaleString()}원</s>
+              <b>출시 기념 {PRICE.toLocaleString()}원</b>
+            </>
+          )}
         </div>
       )}
       {!paid && <PayConsent checked={agreed} onChange={setAgreed} />}
       <div className="actions">
         {!paid ? (
           <button className="btn" onClick={onPay} disabled={!agreed}>
-            {PAY_MODE === "bank"
-              ? `${PRICE.toLocaleString()}원 계좌이체로 전체 보기 🔓`
-              : `${PRICE.toLocaleString()}원 결제하고 전체 보기 🔓`}
+            {withCoupon
+              ? "쿠폰으로 전체 보기 🎟️"
+              : PAY_MODE === "bank"
+                ? `${PRICE.toLocaleString()}원 계좌이체로 전체 보기 🔓`
+                : `${PRICE.toLocaleString()}원 결제하고 전체 보기 🔓`}
           </button>
         ) : (
           <>
