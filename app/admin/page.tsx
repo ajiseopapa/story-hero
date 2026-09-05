@@ -333,7 +333,8 @@ export default function AdminOverviewPage() {
             <label>관리자 키</label>
             <input
               type="password"
-              placeholder="관리자 키를 입력하세요"
+              inputMode="numeric"
+              placeholder="관리자 코드 4자리"
               onChange={(e) => setKey(e.target.value.trim())}
             />
           </div>
