@@ -15,7 +15,8 @@
  * 후기는 검수 대기 건수만 쓴다.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
+import { forgetAdminKey, recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
+import { AdminKeyInput } from "@/app/admin/key-input";
 import { saveBadges } from "./shell";
 
 interface Step {
@@ -121,7 +122,9 @@ export default function AdminOverviewPage() {
         fetch("/api/review/admin", { headers: h }),
       ]);
       if (!s.ok || !o.ok) {
-        setError("관리자 키가 올바르지 않아요.");
+        setError("관리자 코드가 올바르지 않아요.");
+        forgetAdminKey();
+        setKey("");
         setStats(null);
         setOrders(null);
         return;
@@ -330,13 +333,8 @@ export default function AdminOverviewPage() {
       {!key && (
         <section className="card">
           <div className="field">
-            <label>관리자 키</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              placeholder="관리자 코드 4자리"
-              onChange={(e) => setKey(e.target.value.trim())}
-            />
+            <label>관리자 코드</label>
+            <AdminKeyInput onSubmit={setKey} />
           </div>
           <p className="hint">
             한 번 넣으면 이 브라우저에 기억해두어, 다음부터는 주소에 키가 없어도 열립니다. 값은

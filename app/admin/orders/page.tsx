@@ -4,7 +4,8 @@
 // 여기서 "입금 확인"을 누르면 주문자 화면이 자동으로 열린다.
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/app/confirm-dialog";
-import { recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
+import { forgetAdminKey, recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
+import { AdminKeyInput } from "@/app/admin/key-input";
 import { guessChildName, type Honorific } from "@/lib/review-mail";
 import { updateBadges } from "../shell";
 
@@ -84,7 +85,9 @@ export default function OrderAdminPage() {
     try {
       const res = await fetch("/api/order/admin", { headers: { "x-admin-key": k } });
       if (!res.ok) {
-        setError("관리자 키가 올바르지 않아요.");
+        setError("관리자 코드가 올바르지 않아요.");
+        forgetAdminKey();
+        setKey("");
         setOrders([]);
         return;
       }
@@ -217,13 +220,8 @@ export default function OrderAdminPage() {
       {!key && (
         <section className="card">
           <div className="field">
-            <label>관리자 키</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              placeholder="관리자 코드 4자리"
-              onChange={(e) => setKey(e.target.value.trim())}
-            />
+            <label>관리자 코드</label>
+            <AdminKeyInput onSubmit={setKey} />
           </div>
         </section>
       )}

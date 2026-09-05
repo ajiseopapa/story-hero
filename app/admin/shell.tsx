@@ -86,7 +86,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             손님 화면 열기
           </a>
           <div className="adm-side-foot">
-            관리자 키는 이 브라우저에만 저장됩니다.
+            관리자 코드는 이 브라우저에만 저장됩니다.
             <br />
             주소에 <code>?key=</code>를 달지 마세요.
           </div>

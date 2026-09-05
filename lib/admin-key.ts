@@ -33,3 +33,12 @@ export function rememberAdminKey(key: string): void {
     /* 저장 못 해도 치명적이지 않다 */
   }
 }
+
+/** 서버가 거부한 키는 잊는다 — 코드를 바꾼 뒤 옛 키가 남아 있으면 입력란이 다시 떠야 한다 */
+export function forgetAdminKey(): void {
+  try {
+    localStorage.removeItem(STORE);
+  } catch {
+    /* 무시 */
+  }
+}

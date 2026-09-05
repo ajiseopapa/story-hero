@@ -3,7 +3,8 @@
 // 퍼널 대시보드 (후기 검수와 같은 키 — API엔 헤더로만 보낸다, lib/admin-key 참고).
 // 방문자용 화면은 몰라도 관리 화면은 한국어로 읽혀야 한다.
 import { useCallback, useEffect, useState } from "react";
-import { recallAdminKey } from "@/lib/admin-key";
+import { forgetAdminKey, recallAdminKey } from "@/lib/admin-key";
+import { AdminKeyInput } from "@/app/admin/key-input";
 import {
   type ExportOrder,
   downloadCsv,
@@ -177,7 +178,9 @@ export default function FunnelAdminPage() {
     try {
       const res = await fetch(`/api/stats/admin?days=${d}`, { headers: { "x-admin-key": k } });
       if (!res.ok) {
-        setError("관리자 키가 올바르지 않아요.");
+        setError("관리자 코드가 올바르지 않아요.");
+        forgetAdminKey();
+        setKey("");
         setData(null);
         return;
       }
@@ -245,13 +248,8 @@ export default function FunnelAdminPage() {
       {!key && (
         <section className="card">
           <div className="field">
-            <label>관리자 키</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              placeholder="관리자 코드 4자리"
-              onChange={(e) => setKey(e.target.value.trim())}
-            />
+            <label>관리자 코드</label>
+            <AdminKeyInput onSubmit={setKey} />
           </div>
         </section>
       )}

@@ -2,7 +2,8 @@
 
 // 무료 쿠폰 발급·관리. 쿠폰을 쓰면 0원짜리 '입금 확인된 주문'이 생긴다(lib/coupons.ts).
 import { useCallback, useEffect, useState } from "react";
-import { recallAdminKey } from "@/lib/admin-key";
+import { forgetAdminKey, recallAdminKey } from "@/lib/admin-key";
+import { AdminKeyInput } from "@/app/admin/key-input";
 import { useConfirm } from "@/app/confirm-dialog";
 
 interface Coupon {
@@ -49,7 +50,9 @@ export default function CouponAdminPage() {
     try {
       const res = await fetch("/api/coupon/admin", { headers: { "x-admin-key": k } });
       if (!res.ok) {
-        setError("관리자 키가 올바르지 않아요.");
+        setError("관리자 코드가 올바르지 않아요.");
+        forgetAdminKey();
+        setKey("");
         return;
       }
       const data = (await res.json()) as { coupons: Coupon[] };
@@ -170,12 +173,8 @@ export default function CouponAdminPage() {
       {!key && (
         <section className="card">
           <div className="field">
-            <label>관리자 키</label>
-            <input
-              type="password"
-              placeholder="관리자 키를 입력하세요"
-              onChange={(e) => setKey(e.target.value.trim())}
-            />
+            <label>관리자 코드</label>
+            <AdminKeyInput onSubmit={setKey} />
           </div>
         </section>
       )}

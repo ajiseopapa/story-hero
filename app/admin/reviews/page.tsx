@@ -2,7 +2,8 @@
 
 // 후기 검수 화면 (키는 API에 헤더로만 보낸다 — lib/admin-key 참고. 키 없이는 아무것도 안 보임).
 import { useCallback, useEffect, useState } from "react";
-import { recallAdminKey } from "@/lib/admin-key";
+import { forgetAdminKey, recallAdminKey } from "@/lib/admin-key";
+import { AdminKeyInput } from "@/app/admin/key-input";
 import { formatDate, type Review } from "@/lib/reviews";
 import { updateBadges } from "../shell";
 
@@ -21,7 +22,9 @@ export default function ReviewAdminPage() {
     setError(null);
     const res = await fetch("/api/review/admin", { headers: { "x-admin-key": k } });
     if (!res.ok) {
-      setError("관리자 키가 올바르지 않아요.");
+      setError("관리자 코드가 올바르지 않아요.");
+      forgetAdminKey();
+      setKey("");
       setReviews([]);
       return;
     }
@@ -61,13 +64,8 @@ export default function ReviewAdminPage() {
       {!key && (
         <section className="card">
           <div className="field">
-            <label>관리자 키</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              placeholder="관리자 코드 4자리"
-              onChange={(e) => setKey(e.target.value.trim())}
-            />
+            <label>관리자 코드</label>
+            <AdminKeyInput onSubmit={setKey} />
           </div>
         </section>
       )}
