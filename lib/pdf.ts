@@ -61,6 +61,25 @@ const INK_SOFT = "#7a6a58";
 // 고운바탕은 400/700 두 굵기뿐 — 800을 주면 브라우저가 가짜 굵게를 만들어 뭉개진다
 const FONT = "'Gowun Batang', 'Nanum Myeongjo', serif";
 
+/**
+ * 브라우저에 한 프레임 양보. 캔버스·pica·jsPDF 작업이 await로 이어져도 전부 마이크로태스크와
+ * 워커 응답으로 붙어 돌아서, 책 한 권 만드는 동안 화면이 한 번도 안 그려졌다(프레임 0 실측,
+ * 2026-09-05). 그래서 버튼의 "3/12" 진행 표시가 안 보였다. rAF 뒤 setTimeout이어야 실제로 칠한다.
+ */
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        resolve();
+      }
+    };
+    requestAnimationFrame(() => setTimeout(finish, 0));
+    setTimeout(finish, 60); // 탭이 뒤로 가 있으면 rAF가 멈춘다 — 그래도 PDF는 계속 만들어져야 한다
+  });
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -285,6 +304,8 @@ export async function downloadStoryPdf(
   });
 
   const total = pages.length + 1; // 판권 페이지까지
+  onProgress?.(0, total);
+  await nextFrame();
   for (let i = 0; i < pages.length; i++) {
     if (i > 0) doc.addPage([W * MM, PAGE_H * MM], "portrait");
     const page = pages[i];
@@ -311,6 +332,7 @@ export async function downloadStoryPdf(
       CAP_H * MM,
     );
     onProgress?.(i + 1, total);
+    await nextFrame();
   }
 
   // 판권 페이지
@@ -326,6 +348,7 @@ export async function downloadStoryPdf(
     COLOPHON_H * MM,
   );
   onProgress?.(total, total);
+  await nextFrame();
 
   const safe = title.replace(/[\\/:*?"<>|]/g, "").trim() || "동화책";
   doc.save(`${safe}.pdf`);
