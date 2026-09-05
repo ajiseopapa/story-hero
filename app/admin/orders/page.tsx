@@ -4,7 +4,11 @@
 // 여기서 "입금 확인"을 누르면 주문자 화면이 자동으로 열린다.
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/app/confirm-dialog";
-import { forgetAdminKey, recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
+import {
+  forgetAdminKey,
+  recallAdminKey,
+  rememberAdminKey,
+} from "@/lib/admin-key";
 import { AdminKeyInput } from "@/app/admin/key-input";
 import { guessChildName } from "@/lib/review-mail";
 import { updateBadges } from "../shell";
@@ -35,10 +39,25 @@ interface ReviewMail {
 
 /** 유입 한 줄 — 꼬리표(?s=)와 유입 링크 호스트 중 있는 것만 보여준다. */
 function entry(o: Order): string {
-  const parts = [o.source && `꼬리표 ${o.source}`, o.referrer && `링크 ${o.referrer}`].filter(
-    Boolean,
-  );
+  const parts = [
+    o.source && `꼬리표 ${o.source}`,
+    o.referrer && `링크 ${o.referrer}`,
+  ].filter(Boolean);
   return parts.length ? parts.join(" · ") : "직접 방문 (기록 없음)";
+}
+
+/** 목록 탭 — 쿠폰으로 열린 0원 주문은 매출과 따로 본다 */
+type Tab = "paid" | "pending" | "coupon" | "canceled";
+const TAB_LABEL: Record<Tab, string> = {
+  paid: "입금 확인",
+  pending: "입금 대기",
+  coupon: "쿠폰",
+  canceled: "취소",
+};
+function tabOf(o: Order): Tab {
+  if (o.status === "canceled") return "canceled";
+  if (o.status === "pending") return "pending";
+  return o.amount > 0 ? "paid" : "coupon";
 }
 
 const STATUS_LABEL: Record<Order["status"], string> = {
@@ -58,6 +77,8 @@ function when(ms: number): string {
 export default function OrderAdminPage() {
   const [key, setKey] = useState("");
   const [orders, setOrders] = useState<Order[] | null>(null);
+  /** 고른 탭. 없으면 입금 대기가 있을 때 대기, 아니면 입금 확인 */
+  const [tabPick, setTabPick] = useState<Tab | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   // 주문별 메모 입력값. 유입이 저장되기 전 주문의 출처를 손으로 적어두는 칸이라
@@ -72,7 +93,9 @@ export default function OrderAdminPage() {
   const [rvBusy, setRvBusy] = useState(false);
   const [rvError, setRvError] = useState<string | null>(null);
   const [rvMail, setRvMail] = useState<ReviewMail | null>(null);
-  const [rvCopied, setRvCopied] = useState<"subject" | "body" | "code" | null>(null);
+  const [rvCopied, setRvCopied] = useState<"subject" | "body" | "code" | null>(
+    null,
+  );
 
   useEffect(() => {
     setKey(recallAdminKey());
@@ -82,7 +105,9 @@ export default function OrderAdminPage() {
     if (!k) return;
     setError(null);
     try {
-      const res = await fetch("/api/order/admin", { headers: { "x-admin-key": k } });
+      const res = await fetch("/api/order/admin", {
+        headers: { "x-admin-key": k },
+      });
       if (!res.ok) {
         setError("관리자 코드가 올바르지 않아요.");
         forgetAdminKey();
@@ -95,7 +120,9 @@ export default function OrderAdminPage() {
       setOrders(data.orders);
       // 사이드바 뱃지는 여기서 다시 센다 — 개요 화면이 세어둔 값만 믿으면,
       // 이 화면에서 입금 확인·취소를 해도 뱃지에 옛 건수가 남는다.
-      updateBadges({ orders: data.orders.filter((o) => o.status === "pending").length });
+      updateBadges({
+        orders: data.orders.filter((o) => o.status === "pending").length,
+      });
     } catch {
       setError("불러오지 못했어요.");
     }
@@ -144,7 +171,11 @@ export default function OrderAdminPage() {
       await fetch("/api/order/admin", {
         method: "POST",
         headers: { "content-type": "application/json", "x-admin-key": key },
-        body: JSON.stringify({ id: o.id, action: o.status, memo: memoDraft[o.id] ?? "" }),
+        body: JSON.stringify({
+          id: o.id,
+          action: o.status,
+          memo: memoDraft[o.id] ?? "",
+        }),
       });
       await load(key);
       setMemoSaved(o.id);
@@ -192,7 +223,11 @@ export default function OrderAdminPage() {
   const copyReview = (what: "subject" | "body" | "code") => {
     if (!rvMail) return;
     const text =
-      what === "subject" ? rvMail.subject : what === "body" ? rvMail.body : rvMail.coupon.code;
+      what === "subject"
+        ? rvMail.subject
+        : what === "body"
+          ? rvMail.body
+          : rvMail.coupon.code;
     void navigator.clipboard?.writeText(text);
     setRvCopied(what);
     setTimeout(() => setRvCopied((v) => (v === what ? null : v)), 2000);
@@ -201,17 +236,33 @@ export default function OrderAdminPage() {
   const mailtoHref = (m: ReviewMail) =>
     `mailto:${m.to}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
 
-  const pending = orders?.filter((o) => o.status === "pending") ?? [];
   const paidTotal = (orders ?? [])
     .filter((o) => o.status === "paid")
     .reduce((a, o) => a + o.amount, 0);
+  const counts: Record<Tab, number> = {
+    paid: 0,
+    pending: 0,
+    coupon: 0,
+    canceled: 0,
+  };
+  for (const o of orders ?? []) counts[tabOf(o)]++;
+  const tab: Tab = tabPick ?? (counts.pending > 0 ? "pending" : "paid");
+  const tabs: Tab[] = [
+    "paid",
+    "pending",
+    "coupon",
+    ...(counts.canceled ? (["canceled"] as Tab[]) : []),
+  ];
+  const shown = (orders ?? []).filter((o) => tabOf(o) === tab);
 
   return (
     <main className="wrap">
       <header className="hero">
         <span className="badge">주문 관리 🔒</span>
         <h1>계좌이체 주문</h1>
-        <p>입금을 확인하고 [입금 확인]을 누르면 주문자 화면이 자동으로 열립니다.</p>
+        <p>
+          입금을 확인하고 [입금 확인]을 누르면 주문자 화면이 자동으로 열립니다.
+        </p>
       </header>
 
       {!key && (
@@ -227,32 +278,39 @@ export default function OrderAdminPage() {
 
       {orders && (
         <section className="card">
-          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-            <div>
-              <div className="hint">입금 대기</div>
-              <b style={{ fontSize: "1.4rem" }}>{pending.length}건</b>
+          <div
+            className="adm-toolbar"
+            style={{ justifyContent: "space-between" }}
+          >
+            <div className="adm-seg">
+              {tabs.map((t) => (
+                <button
+                  key={t}
+                  className={tab === t ? "on" : ""}
+                  onClick={() => setTabPick(t)}
+                >
+                  {TAB_LABEL[t]} {counts[t]}
+                </button>
+              ))}
             </div>
-            <div>
-              <div className="hint">입금 확인됨</div>
-              <b style={{ fontSize: "1.4rem" }}>
-                {orders.filter((o) => o.status === "paid").length}건
-              </b>
-            </div>
-            <div>
-              <div className="hint">확인된 매출</div>
-              <b style={{ fontSize: "1.4rem" }}>{paidTotal.toLocaleString()}원</b>
-            </div>
+            <span className="hint">
+              확인된 매출 <b>{paidTotal.toLocaleString()}원</b>
+            </span>
           </div>
         </section>
       )}
 
-      {orders && orders.length === 0 && !error && (
+      {orders && shown.length === 0 && !error && (
         <section className="card">
-          <div className="hint">아직 주문이 없어요.</div>
+          <div className="hint">
+            {orders.length === 0
+              ? "아직 주문이 없어요."
+              : `${TAB_LABEL[tab]} 주문이 없어요.`}
+          </div>
         </section>
       )}
 
-      {orders?.map((o) => (
+      {shown.map((o) => (
         <section className="card" key={o.id}>
           <div
             style={{
@@ -291,16 +349,28 @@ export default function OrderAdminPage() {
             )}
           </div>
 
-          <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              marginTop: 8,
+              alignItems: "center",
+            }}
+          >
             <input
               style={{ flex: 1, minWidth: 0 }}
               placeholder="메모 (예: 인스타 릴스 추정, 지인 소개)"
               value={memoDraft[o.id] ?? o.memo ?? ""}
-              onChange={(e) => setMemoDraft((m) => ({ ...m, [o.id]: e.target.value }))}
+              onChange={(e) =>
+                setMemoDraft((m) => ({ ...m, [o.id]: e.target.value }))
+              }
             />
             <button
               className="btn secondary"
-              disabled={busy === o.id || (memoDraft[o.id] ?? o.memo ?? "") === (o.memo ?? "")}
+              disabled={
+                busy === o.id ||
+                (memoDraft[o.id] ?? o.memo ?? "") === (o.memo ?? "")
+              }
               onClick={() => saveMemo(o)}
             >
               {memoSaved === o.id ? "저장됨" : "메모 저장"}
@@ -309,12 +379,20 @@ export default function OrderAdminPage() {
 
           <div className="share-actions" style={{ marginTop: 12 }}>
             {o.status === "paid" && (
-              <button className="btn" disabled={busy === o.id} onClick={() => openReview(o)}>
+              <button
+                className="btn"
+                disabled={busy === o.id}
+                onClick={() => openReview(o)}
+              >
                 {o.reviewCoupon ? "후기 요청 메일 다시 보기" : "후기 요청 메일"}
               </button>
             )}
             {o.status !== "paid" && (
-              <button className="btn" disabled={busy === o.id} onClick={() => act(o.id, "paid")}>
+              <button
+                className="btn"
+                disabled={busy === o.id}
+                onClick={() => act(o.id, "paid")}
+              >
                 입금 확인
               </button>
             )}
@@ -379,19 +457,30 @@ export default function OrderAdminPage() {
                 <p className="hint">
                   {rv.reviewCoupon ? (
                     <>
-                      이 주문에 묶인 답례 쿠폰 <b className="mono">{rv.reviewCoupon}</b>을 그대로
-                      씁니다.
+                      이 주문에 묶인 답례 쿠폰{" "}
+                      <b className="mono">{rv.reviewCoupon}</b>을 그대로 씁니다.
                     </>
                   ) : (
-                    <>누르면 답례 쿠폰(1회 · 30일)이 새로 발급되고 메일 본문에 들어갑니다.</>
+                    <>
+                      누르면 답례 쿠폰(1회 · 30일)이 새로 발급되고 메일 본문에
+                      들어갑니다.
+                    </>
                   )}
                 </p>
                 {rvError && <div className="error">{rvError}</div>}
                 <div className="share-actions">
-                  <button className="btn" onClick={makeReview} disabled={rvBusy || !rvChild.trim()}>
+                  <button
+                    className="btn"
+                    onClick={makeReview}
+                    disabled={rvBusy || !rvChild.trim()}
+                  >
                     {rvBusy ? "만드는 중…" : "쿠폰 만들고 메일 완성"}
                   </button>
-                  <button className="btn secondary" onClick={() => setRv(null)} disabled={rvBusy}>
+                  <button
+                    className="btn secondary"
+                    onClick={() => setRv(null)}
+                    disabled={rvBusy}
+                  >
                     닫기
                   </button>
                 </div>
@@ -399,17 +488,30 @@ export default function OrderAdminPage() {
             ) : (
               <>
                 <div className="rv-coupon">
-                  <span className="hint">답례 쿠폰{rvMail.reused ? " (기존)" : " 발급됨"}</span>
+                  <span className="hint">
+                    답례 쿠폰{rvMail.reused ? " (기존)" : " 발급됨"}
+                  </span>
                   <b className="mono">{rvMail.coupon.code}</b>
-                  <button className="btn secondary small" onClick={() => copyReview("code")}>
+                  <button
+                    className="btn secondary small"
+                    onClick={() => copyReview("code")}
+                  >
                     {rvCopied === "code" ? "복사됨 ✓" : "복사"}
                   </button>
                 </div>
                 <div className="field">
                   <label>제목</label>
                   <div className="rv-row">
-                    <input type="text" readOnly value={rvMail.subject} onFocus={(e) => e.target.select()} />
-                    <button className="btn secondary small" onClick={() => copyReview("subject")}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={rvMail.subject}
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <button
+                      className="btn secondary small"
+                      onClick={() => copyReview("subject")}
+                    >
                       {rvCopied === "subject" ? "복사됨 ✓" : "복사"}
                     </button>
                   </div>
@@ -437,10 +539,14 @@ export default function OrderAdminPage() {
                 <p className="hint" style={{ marginBottom: 0 }}>
                   {rvMail.to ? (
                     <>
-                      보내는 주소는 <b>{rvMail.to}</b> · 발신은 support@kidstel.co.kr 로 맞춰주세요.
+                      보내는 주소는 <b>{rvMail.to}</b> · 발신은
+                      support@kidstel.co.kr 로 맞춰주세요.
                     </>
                   ) : (
-                    <>이 주문엔 이메일이 없어요. 발신은 support@kidstel.co.kr 로 맞춰주세요.</>
+                    <>
+                      이 주문엔 이메일이 없어요. 발신은 support@kidstel.co.kr 로
+                      맞춰주세요.
+                    </>
                   )}
                 </p>
               </>
