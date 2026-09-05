@@ -25,6 +25,10 @@ const IMG_H = 1536; // 삽화 원본 높이 (1024x1536)
 const CAP_H = 320; // 텍스트 영역 높이
 const PAGE_H = IMG_H + CAP_H;
 const TEXT_SCALE = 3; // 글 영역 해상도 배율 — 인쇄해도 획이 뭉개지지 않게
+// 종이 크기: 폭 140mm(높이는 같은 비율로 254mm). px 그대로 두면 27×49cm 페이지가 되어
+// 인쇄 대화상자에서 "용지보다 큰 페이지"로 뜬다. A4에 맞춤 인쇄하면 164×297mm.
+const PAGE_W_MM = 140;
+const MM = PAGE_W_MM / W; // px → mm
 const IMAGE_QUALITY = 0.95;
 const PAPER = "#fbf6ec";
 const INK = "#4a3f35";
@@ -201,10 +205,9 @@ export async function downloadStoryPdf(
   if (document.fonts?.ready) await document.fonts.ready;
 
   const doc = new jsPDF({
-    unit: "px",
-    format: [W, PAGE_H],
+    unit: "mm",
+    format: [W * MM, PAGE_H * MM],
     orientation: "portrait",
-    hotfixes: ["px_scaling"],
     compress: true,
   });
   doc.setProperties({
@@ -216,30 +219,44 @@ export async function downloadStoryPdf(
 
   const total = pages.length + 1; // 판권 페이지까지
   for (let i = 0; i < pages.length; i++) {
-    if (i > 0) doc.addPage([W, PAGE_H], "portrait");
+    if (i > 0) doc.addPage([W * MM, PAGE_H * MM], "portrait");
     const page = pages[i];
     if (page.image) {
-      doc.addImage(await renderImage(page.image), "JPEG", 0, 0, W, IMG_H);
+      doc.addImage(
+        await renderImage(page.image),
+        "JPEG",
+        0,
+        0,
+        W * MM,
+        IMG_H * MM,
+      );
     } else {
       doc.setFillColor(PAPER);
-      doc.rect(0, 0, W, IMG_H, "F");
+      doc.rect(0, 0, W * MM, IMG_H * MM, "F");
     }
-    // 표지=0, 장면은 1부터. 고해상도 PNG를 원래 크기로 넣으면 PDF 안에서 그 해상도로 남는다
-    doc.addImage(renderCaption(page, i), "PNG", 0, IMG_H, W, CAP_H);
+    // 표지=0, 장면은 1부터. 고해상도 PNG를 종이 크기로 넣으면 PDF 안에서 그 해상도로 남는다
+    doc.addImage(
+      renderCaption(page, i),
+      "PNG",
+      0,
+      IMG_H * MM,
+      W * MM,
+      CAP_H * MM,
+    );
     onProgress?.(i + 1, total);
   }
 
   // 판권 페이지
-  doc.addPage([W, PAGE_H], "portrait");
+  doc.addPage([W * MM, PAGE_H * MM], "portrait");
   doc.setFillColor(PAPER);
-  doc.rect(0, 0, W, PAGE_H, "F");
+  doc.rect(0, 0, W * MM, PAGE_H * MM, "F");
   doc.addImage(
     renderColophon(title, meta),
     "PNG",
     0,
-    (PAGE_H - COLOPHON_H) / 2,
-    W,
-    COLOPHON_H,
+    ((PAGE_H - COLOPHON_H) / 2) * MM,
+    W * MM,
+    COLOPHON_H * MM,
   );
   onProgress?.(total, total);
 
