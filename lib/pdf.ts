@@ -158,13 +158,21 @@ async function renderImage(src: string): Promise<Uint8Array> {
   to.width = W * IMAGE_SCALE;
   to.height = IMG_H * IMAGE_SCALE;
   try {
-    pica ??= new Pica();
+    // ⚠️ 웹워커("ww")는 끈다. pica가 워커를 함수 소스 문자열로 만들어 띄우는데, 프로덕션
+    // 빌드의 압축이 그 소스를 깨서 워커 안에서 ReferenceError가 나고 resize가 영원히
+    // 안 끝났다(2026-09-05, 0/13에서 멈춤). WASM은 메인 스레드에서도 충분히 빠르다.
+    pica ??= new Pica({ features: ["js", "wasm", "cib"] });
+    // 어떤 이유로든 15초 안에 안 끝나면 포기하고 아래 캔버스 확대로 — 다시는 멈추지 않게
+    const cancelToken = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("upscale timeout")), 15_000),
+    );
     // Lanczos3로 키우고 살짝 선명하게 — 그냥 키우면 물에 번진 듯 흐려진다
     await pica.resize(from, to, {
       filter: "lanczos3",
       unsharpAmount: 60,
       unsharpRadius: 0.6,
       unsharpThreshold: 2,
+      cancelToken,
     });
   } catch {
     // pica가 못 도는 환경(아주 옛 브라우저)에서는 캔버스 보간으로라도 키운다
