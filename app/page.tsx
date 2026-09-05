@@ -1932,7 +1932,7 @@ function BookViewer({
     setSaving(true);
     setSaveError(null);
     try {
-      await downloadStoryPdf(title, pages);
+      await downloadStoryPdf(title, pages, { kidsInfo: bookMeta.kidsInfo });
     } catch {
       setSaveError("PDF 저장에 실패했어요. 다시 시도해주세요.");
     } finally {
