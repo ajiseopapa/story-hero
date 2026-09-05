@@ -14,7 +14,11 @@ function valid(m: ShareManifest | null): m is ShareManifest {
 export async function readManifestLegacy(id: string): Promise<ShareManifest | null> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
-    const res = await blobGet(manifestPath(id), { access: "private", useCache: false });
+    const res = await blobGet(manifestPath(id), {
+      access: "private",
+      useCache: false,
+      abortSignal: AbortSignal.timeout(5_000),
+    });
     if (!res || res.statusCode !== 200 || !res.stream) return null;
     const m = (await new Response(res.stream).json()) as ShareManifest;
     return valid(m) ? m : null;

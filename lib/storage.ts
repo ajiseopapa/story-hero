@@ -49,6 +49,7 @@ export async function putObject(
     method: "POST",
     headers: headers(key, { "content-type": contentType, "x-upsert": "true" }),
     body: body as BodyInit,
+    signal: AbortSignal.timeout(25_000),
   });
   if (!res.ok) throw new Error(`storage put ${res.status}: ${(await res.text()).slice(0, 200)}`);
 }
@@ -68,12 +69,17 @@ export async function getObject(path: string): Promise<StoredObject | null> {
   const res = await fetch(`${base}/object/${BUCKET}/${enc(path)}?nocache=${nocache}`, {
     headers: headers(key, { "cache-control": "no-cache" }),
     cache: "no-store",
+    signal: AbortSignal.timeout(25_000),
   });
   if (res.status === 404 || res.status === 400) {
-    await res.body?.cancel();
+    // body.cancel()은 Vercel 런타임에서 매달렸다(함수 300초 타임아웃, 2026-09-05) — 작은 오류 본문은 읽어서 버린다
+    await res.text().catch(() => undefined);
     return null;
   }
-  if (!res.ok || !res.body) throw new Error(`storage get ${res.status}`);
+  if (!res.ok || !res.body) {
+    await res.text().catch(() => undefined);
+    throw new Error(`storage get ${res.status}`);
+  }
   const lm = res.headers.get("last-modified");
   const size = Number(res.headers.get("content-length"));
   return {

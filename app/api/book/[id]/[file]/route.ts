@@ -11,7 +11,12 @@ const CACHE = "private, max-age=600";
 async function legacy(path: string): Promise<Response | null> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
-    const res = await blobGet(path, { access: "private", useCache: false });
+    // 정지된 스토어가 응답을 안 주면 손님 요청이 통째로 매달린다 — 5초만 기다린다
+    const res = await blobGet(path, {
+      access: "private",
+      useCache: false,
+      abortSignal: AbortSignal.timeout(5_000),
+    });
     if (!res || res.statusCode !== 200 || !res.stream) return null;
     if (isExpired(res.blob.uploadedAt.getTime())) return new Response("Gone", { status: 410 });
     return new Response(res.stream, {
@@ -41,7 +46,6 @@ export async function GET(
       const obj = await getObject(path);
       if (obj) {
         if (obj.modifiedAt && isExpired(obj.modifiedAt)) {
-          await obj.stream.cancel();
           return new Response("Gone", { status: 410 });
         }
         const headers: Record<string, string> = {
