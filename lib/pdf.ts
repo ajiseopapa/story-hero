@@ -136,6 +136,30 @@ async function renderImage(src: string): Promise<string> {
   return to.toDataURL("image/jpeg", IMAGE_QUALITY);
 }
 
+/**
+ * 《 제목 》 줄바꿈. 괄호까지 한 문자열로 줄바꿈하면 닫는 괄호만 다음 줄로 떨어진다(실제로 그랬다).
+ * 제목만 줄바꿈한 뒤 첫 줄 앞·마지막 줄 뒤에 괄호를 붙인다. 폭 계산에도 괄호 폭을 넣는다.
+ */
+function wrapTitle(
+  ctx: CanvasRenderingContext2D,
+  title: string,
+  maxWidth: number,
+): string[] {
+  const open = "《 ";
+  const close = " 》";
+  const whole = `${open}${title}${close}`;
+  if (ctx.measureText(whole).width <= maxWidth) return [whole];
+  const bracket = Math.max(
+    ctx.measureText(open).width,
+    ctx.measureText(close).width,
+  );
+  const lines = wrapText(ctx, title, maxWidth - bracket);
+  if (lines.length === 0) return [whole];
+  lines[0] = open + lines[0];
+  lines[lines.length - 1] = lines[lines.length - 1] + close;
+  return lines;
+}
+
 // 삽화 아래 글 영역 → 고해상도 PNG
 function renderCaption(page: PdfPage, pageNum: number): string {
   const { canvas, ctx } = textCanvas(W, CAP_H);
@@ -145,12 +169,12 @@ function renderCaption(page: PdfPage, pageNum: number): string {
     // 표지 제목도 줄바꿈 — 형제 이름이 여럿 붙으면 한 줄에 안 들어가 잘린다
     let lineHeight = 78;
     ctx.font = `700 56px ${FONT}`;
-    let lines = wrapText(ctx, `《 ${page.text} 》`, W - 140);
+    let lines = wrapTitle(ctx, page.text, W - 140);
     // 넘치면 폰트 축소
     if (lines.length * lineHeight > CAP_H - 40) {
       lineHeight = 62;
       ctx.font = `700 44px ${FONT}`;
-      lines = wrapText(ctx, `《 ${page.text} 》`, W - 120);
+      lines = wrapTitle(ctx, page.text, W - 120);
     }
     const startY = (CAP_H - (lines.length - 1) * lineHeight) / 2;
     lines.forEach((line, i) =>
@@ -197,7 +221,7 @@ function renderColophon(title: string, meta: PdfMeta): string {
   y += 70;
   ctx.fillStyle = INK;
   ctx.font = `700 40px ${FONT}`;
-  const titleLines = wrapText(ctx, `《 ${title} 》`, W - 200);
+  const titleLines = wrapTitle(ctx, title, W - 200);
   titleLines.forEach((line, i) => ctx.fillText(line, W / 2, y + i * 56));
   y += titleLines.length * 56 + 30;
 
@@ -211,12 +235,6 @@ function renderColophon(title: string, meta: PdfMeta): string {
   y += 90;
   ctx.fillStyle = INK_SOFT;
   ctx.font = `22px ${FONT}`;
-  ctx.fillText(
-    "삽화는 아이의 사진을 참고해 AI가 새로 그린 그림입니다.",
-    W / 2,
-    y,
-  );
-  y += 36;
   ctx.fillText("키즈북 · story.kidstel.co.kr", W / 2, y);
 
   return canvas.toDataURL("image/png");
