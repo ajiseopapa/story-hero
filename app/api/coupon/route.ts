@@ -1,5 +1,5 @@
 import { consumeQuota, ipBucket } from "@/lib/limits";
-import { CODE_RE, normalizeCode, redeemCoupon } from "@/lib/coupons";
+import { CODE_RE, couponFailMessage, normalizeCode, redeemCoupon } from "@/lib/coupons";
 import { mailAdminCouponUsed, mailCouponUsed } from "@/lib/mail";
 import { isStoreReady, newOrderId, newOrderToken, saveOrder, shortId } from "@/lib/orders";
 import type { Order } from "@/lib/orders";
@@ -64,13 +64,7 @@ export async function POST(req: Request): Promise<Response> {
   const result = await redeemCoupon(code);
   if (!result.ok) {
     // 없는 코드와 다 쓴 코드를 구별해 알려준다 — 손님이 뭘 해야 할지 달라진다
-    const message =
-      result.reason === "expired"
-        ? "기간이 지난 쿠폰이에요."
-        : result.reason === "used"
-          ? "이미 모두 사용된 쿠폰이에요."
-          : "그런 쿠폰이 없어요. 코드를 다시 확인해주세요.";
-    return Response.json({ error: message }, { status: 404 });
+    return Response.json({ error: couponFailMessage(result.reason) }, { status: 404 });
   }
 
   const bookTitle = typeof body.bookTitle === "string" ? body.bookTitle.trim().slice(0, 120) : "";

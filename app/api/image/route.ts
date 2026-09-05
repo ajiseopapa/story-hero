@@ -3,6 +3,7 @@ import OpenAI, { toFile } from "openai";
 import { getOpenAI } from "@/lib/openai";
 import { MAX_CHILDREN, buildCoverPrompt, buildScenePrompt, type ChildSpec } from "@/lib/prompts";
 import {
+  COUPON_IMAGE_DAILY_LIMIT,
   IMAGE_DAILY_LIMIT,
   IMAGE_FREE_IP_DAILY_LIMIT,
   ORDER_IMAGE_LIMIT,
@@ -12,6 +13,7 @@ import {
 import { ID_RE, consumeOrderImage, getOrder, tokenMatches } from "@/lib/orders";
 import { alertAdmin } from "@/lib/alerts";
 import { hasTestPass } from "@/lib/test-pass";
+import { checkCoupon, normalizeCode } from "@/lib/coupons";
 import { adminAlert, classifyOpenAIError, userMessage } from "@/lib/openai-error";
 
 export const runtime = "nodejs";
@@ -30,7 +32,7 @@ function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null 
 
 export async function POST(req: NextRequest) {
   try {
-    const { photo, photos, imagePrompt, kind, age, gender, children, art, order } =
+    const { photo, photos, imagePrompt, kind, age, gender, children, art, order, coupon } =
       (await req.json()) as {
         photo?: string; // 구버전 단일 사진 (결제 복원 초안 호환)
         photos?: string[]; // 신버전: 아이별 사진 1~3장 (children과 같은 순서)
@@ -42,6 +44,8 @@ export async function POST(req: NextRequest) {
         art?: string; // 그림체 (없으면 예전 초안 → 수채화)
         // 결제한 주문의 자격 증명 — 있으면 IP 한도 대신 주문별 한도를 쓴다
         order?: { id?: string; token?: string };
+        // 무료 샘플 단계의 쿠폰 코드 — 유효하면 IP 한도 대신 쿠폰별 한도를 쓴다(/api/story와 짝)
+        coupon?: string;
       };
 
     const photoList = (
@@ -97,15 +101,25 @@ export async function POST(req: NextRequest) {
         );
       }
       paidOrder = true;
-    } else if (
-      // 테스트 통행증은 IP 한도를 건너뛴다 (전체 한도는 아래에서 따로 센다)
-      !testing &&
-      !(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))
-    ) {
-      return NextResponse.json(
-        { error: "오늘 무료로 그릴 수 있는 양을 다 쓰셨어요. 내일 다시 시도해주세요." },
-        { status: 429 },
-      );
+    } else if (!testing) {
+      // 쿠폰 손님은 IP 한도 대신 쿠폰별 한도 — 이야기가 쿠폰으로 통과했는데 삽화가 IP에 막히면
+      // 같은 문제가 한 칸 뒤에서 되풀이된다. 유효하지 않은 쿠폰은 그냥 무시하고 IP 한도로 센다.
+      const couponCode = normalizeCode(coupon);
+      const check = couponCode ? await checkCoupon(couponCode) : null;
+      if (check?.ok) {
+        if (!(await consumeQuota(`coupon-image/${couponCode}`, COUPON_IMAGE_DAILY_LIMIT))) {
+          return NextResponse.json(
+            { error: "이 쿠폰으로 오늘 그릴 수 있는 샘플 삽화를 다 썼어요. 마음에 드는 샘플을 열어주세요." },
+            { status: 429 },
+          );
+        }
+      } else if (!(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))) {
+        // 테스트 통행증은 IP 한도를 건너뛴다 (전체 한도는 아래에서 따로 센다)
+        return NextResponse.json(
+          { error: "오늘 무료로 그릴 수 있는 양을 다 쓰셨어요. 내일 다시 시도해주세요." },
+          { status: 429 },
+        );
+      }
     }
 
     // 일일 삽화 생성 백스톱 (직접 호출 남용·폭주 방지, 정상 사용량보다 넉넉하게).

@@ -46,11 +46,14 @@ export async function checkBankOrderPaid(order: BankOrder): Promise<boolean> {
 export default function BankOrderBox({
   bookTitle,
   price,
+  initialCoupon = "",
   onPaid,
   onClose,
 }: {
   bookTitle: string;
   price: number;
+  /** 샘플 단계에서 미리 적어둔 쿠폰 코드 — 여기서 다시 적지 않게 채워 둔다 */
+  initialCoupon?: string;
   onPaid: (order: BankOrder) => void; // 주문 id+token을 넘겨야 서버가 "돈 낸 주문"으로 검증한다
   onClose: () => void;
 }) {
@@ -62,7 +65,7 @@ export default function BankOrderBox({
   const [checking, setChecking] = useState(false);
   const [checkedNote, setCheckedNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [coupon, setCoupon] = useState("");
+  const [coupon, setCoupon] = useState(initialCoupon.toUpperCase());
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);

@@ -163,6 +163,30 @@ export type RedeemResult =
   | { ok: true; coupon: Coupon }
   | { ok: false; reason: "notfound" | "expired" | "used" };
 
+/** 쿠폰이 막힌 이유를 손님 말로. /api/coupon과 /api/story가 같은 문장을 쓴다. */
+export function couponFailMessage(reason: "notfound" | "expired" | "used"): string {
+  return reason === "expired"
+    ? "기간이 지난 쿠폰이에요."
+    : reason === "used"
+      ? "이미 모두 사용된 쿠폰이에요."
+      : "그런 쿠폰이 없어요. 코드를 다시 확인해주세요.";
+}
+
+/**
+ * 쓰지 않고 확인만 — "지금 이 쿠폰으로 책을 열 수 있는가".
+ *
+ * 무료 샘플 단계에서 쓴다. 쿠폰이 있는 손님이 기기당 하루 3회 샘플 한도에 걸려
+ * 쿠폰을 넣을 화면(결제 창)까지 가지도 못했다(2026-09-05). 샘플 단계에서는 깎지 않고
+ * 확인만 하고, 실제 차감은 책을 열 때(/api/coupon) 그대로 한다.
+ */
+export async function checkCoupon(code: string): Promise<RedeemResult> {
+  const coupon = await getCoupon(code);
+  if (!coupon) return { ok: false, reason: "notfound" };
+  if (coupon.expiresAt && Date.now() > coupon.expiresAt) return { ok: false, reason: "expired" };
+  if (coupon.used >= coupon.maxUses) return { ok: false, reason: "used" };
+  return { ok: true, coupon };
+}
+
 /**
  * 쿠폰 한 장 쓰기.
  *

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
 import { alertAdmin } from "@/lib/alerts";
 import { hasTestPass } from "@/lib/test-pass";
+import { checkCoupon, couponFailMessage, normalizeCode } from "@/lib/coupons";
 import { adminAlert, classifyOpenAIError, userMessage } from "@/lib/openai-error";
 import {
+  COUPON_STORY_DAILY_LIMIT,
   DEVICE_COOKIE,
   FREE_DAILY_LIMIT,
   FREE_DEVICE_DAILY_LIMIT,
@@ -80,12 +82,13 @@ export async function POST(req: NextRequest) {
 
 async function generateStory(req: NextRequest, deviceId: string): Promise<NextResponse> {
   try {
-    const { name, gender, age, theme, children } = (await req.json()) as {
+    const { name, gender, age, theme, children, coupon } = (await req.json()) as {
       name?: string;
       gender?: Gender;
       age?: number;
       theme?: string;
       children?: { name?: string; gender?: Gender; age?: number }[];
+      coupon?: string; // 무료 쿠폰 코드 — 있으면 기기·IP 한도 대신 쿠폰별 한도를 쓴다
     };
 
     // 신버전은 children 배열(1~3명), 구버전 단일 필드도 그대로 수용
@@ -118,15 +121,56 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
     // 일일 무료 샘플 한도 (기기 → IP 백스톱 → 전체 순서로 소진).
     // 테스트 통행증이 있으면 기기·IP 한도만 건너뛴다 — 전체 한도는 비용 상한이라 그대로 지킨다.
     const testing = hasTestPass(req);
-    if (!testing && !(await consumeQuota(`device/${deviceId}`, FREE_DEVICE_DAILY_LIMIT))) {
+
+    // 아직 쓰지 않은 유효한 쿠폰을 들고 왔으면 기기·IP 한도 대신 쿠폰별 한도로 센다.
+    // 쿠폰 손님이 기기당 3회에 걸려 쿠폰을 넣는 화면까지 못 갔던 문제(2026-09-05).
+    // 여기서는 깎지 않고 확인만 — 실제 차감은 책을 열 때(/api/coupon).
+    // 쿠폰이 틀렸으면 샘플을 소진하기 전에 알려준다(오타로 한 번을 날리면 안 된다).
+    const couponCode = normalizeCode(coupon);
+    let withCoupon = false;
+    if (couponCode) {
+      const check = await checkCoupon(couponCode);
+      if (!check.ok) {
+        return NextResponse.json(
+          {
+            error: `${couponFailMessage(check.reason)} 쿠폰 칸을 비우면 무료 샘플로 계속할 수 있어요.`,
+            coupon: check.reason,
+          },
+          { status: 400 },
+        );
+      }
+      if (!(await consumeQuota(`coupon-story/${couponCode}`, COUPON_STORY_DAILY_LIMIT))) {
+        return NextResponse.json(
+          { error: "이 쿠폰으로 오늘 만들 수 있는 샘플을 다 썼어요. 마음에 드는 샘플을 열어주세요 🌙" },
+          { status: 429 },
+        );
+      }
+      withCoupon = true;
+    }
+
+    if (
+      !testing &&
+      !withCoupon &&
+      !(await consumeQuota(`device/${deviceId}`, FREE_DEVICE_DAILY_LIMIT))
+    ) {
       return NextResponse.json(
-        { error: "오늘 이 기기에서 만들 수 있는 무료 샘플을 모두 사용했어요. 내일 다시 만나요 🌙" },
+        {
+          error: "오늘 이 기기에서 만들 수 있는 무료 샘플을 모두 사용했어요. 내일 다시 만나요 🌙",
+          limit: "device", // 화면이 이걸 보고 쿠폰 입력 칸을 열어준다
+        },
         { status: 429 },
       );
     }
-    if (!testing && !(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))) {
+    if (
+      !testing &&
+      !withCoupon &&
+      !(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))
+    ) {
       return NextResponse.json(
-        { error: "지금 같은 네트워크에서 만든 샘플이 많아 잠시 쉬어갈게요. 내일 다시 만나요 🌙" },
+        {
+          error: "지금 같은 네트워크에서 만든 샘플이 많아 잠시 쉬어갈게요. 내일 다시 만나요 🌙",
+          limit: "ip",
+        },
         { status: 429 },
       );
     }

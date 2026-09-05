@@ -215,6 +215,7 @@ async function fetchImage(
   children: { age: number; gender: Gender }[],
   art: string,
   order?: { id: string; token: string }, // 결제한 주문이면 서버가 IP 한도 대신 주문 한도를 쓴다
+  coupon?: string, // 무료 샘플 단계의 쿠폰 코드 — 서버가 IP 한도 대신 쿠폰 한도를 쓴다
 ): Promise<string> {
   const res = await postLong(
     "/api/image",
@@ -225,6 +226,7 @@ async function fetchImage(
       children,
       art,
       order,
+      coupon,
     },
     150_000,
   );
@@ -260,6 +262,27 @@ export default function Home() {
   const [dragOver, setDragOver] = useState<number | null>(null); // 드래그 중인 아이 카드 index
   const [cropping, setCropping] = useState<{ idx: number; src: string } | null>(null);
   const [showBank, setShowBank] = useState(false); // 계좌이체 주문 창
+
+  // 무료 쿠폰 코드. 샘플 단계에서 미리 받는다 — 쿠폰 손님이 기기당 하루 3회 샘플 한도에 걸려
+  // 쿠폰을 넣는 결제 창까지 못 갔다(2026-09-05). 서버는 확인만 하고, 실제 차감은 책을 열 때.
+  // 이 브라우저에 기억해 두어 새로고침·결제 창에서도 다시 적지 않게 한다.
+  const [coupon, setCoupon] = useState("");
+  const [couponOpen, setCouponOpen] = useState(false);
+  useEffect(() => {
+    kvGet<string>("coupon").then((saved) => {
+      if (saved) {
+        setCoupon(saved);
+        setCouponOpen(true);
+      }
+    });
+  }, []);
+  const changeCoupon = (raw: string) => {
+    const code = raw.toUpperCase().replace(/[^A-Z0-9-\s]/g, "").slice(0, 24);
+    setCoupon(code);
+    const compact = code.replace(/[^A-Z0-9]/g, "");
+    void (compact ? kvSet("coupon", code) : kvDel("coupon"));
+  };
+  const couponCode = coupon.replace(/[^A-Z0-9]/g, "");
 
   // 법정 동의 (아동·민감정보·국외이전). 한 번 동의하면 이 브라우저에 기록해 다시 묻지 않는다.
   const [consents, setConsents] = useState<string[]>([]);
@@ -491,9 +514,20 @@ export default function Home() {
     let stopRamp = ramp(setProgressPct, 4, 45, 80);
 
     try {
-      const storyRes = await postLong("/api/story", { children, theme }, 180_000);
-      const story = (await safeJson(storyRes)) as unknown as StoryData & { error?: string };
-      if (!storyRes.ok) throw new Error(story.error || "이야기 생성 실패");
+      const storyRes = await postLong(
+        "/api/story",
+        { children, theme, coupon: couponCode || undefined },
+        180_000,
+      );
+      const story = (await safeJson(storyRes)) as unknown as StoryData & {
+        error?: string;
+        limit?: string;
+      };
+      if (!storyRes.ok) {
+        // 기기·IP 한도에 막혔으면 쿠폰 칸을 펼쳐 준다 — 쿠폰이 있는 손님이 갈 길을 보이게
+        if (story.limit) setCouponOpen(true);
+        throw new Error(story.error || "이야기 생성 실패");
+      }
 
       const skeleton: BookPage[] = [
         {
@@ -524,7 +558,15 @@ export default function Home() {
         const base = 45 + (i * 55) / freeCount;
         const next = 45 + ((i + 1) * 55) / freeCount;
         stopRamp = ramp(setProgressPct, base, next, 55);
-        const img = await fetchImage(photos, cur[i].imagePrompt, cur[i].kind, children, art);
+        const img = await fetchImage(
+          photos,
+          cur[i].imagePrompt,
+          cur[i].kind,
+          children,
+          art,
+          undefined,
+          couponCode || undefined,
+        );
         stopRamp();
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
         setPages(cur);
@@ -555,7 +597,7 @@ export default function Home() {
     } finally {
       stopRamp(); // 성공·실패 어느 쪽이든 타이머가 남으면 안 된다
     }
-  }, [canSubmit, kids, theme, art, saved, ask]);
+  }, [canSubmit, kids, theme, art, saved, ask, couponCode]);
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
@@ -617,6 +659,11 @@ export default function Home() {
     async (bank: BankOrder) => {
       setShowBank(false);
       setPaid(true);
+      // 책이 열렸으면 적어둔 쿠폰은 할 일을 다했다 — 남겨두면 다음 샘플에서 "이미 사용된
+      // 쿠폰" 오류로 손님을 막는다
+      setCoupon("");
+      setCouponOpen(false);
+      await kvDel("coupon");
       const draft: Draft = {
         title,
         pages,
@@ -1046,6 +1093,33 @@ export default function Home() {
           <button className="btn" disabled={!canSubmit} onClick={start}>
             무료 샘플 만들기 🪄
           </button>
+
+          <div className="coupon-entry">
+            {couponOpen ? (
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="coupon-code">무료 쿠폰 코드</label>
+                <input
+                  id="coupon-code"
+                  type="text"
+                  value={coupon}
+                  maxLength={24}
+                  placeholder="예) KIDS-ABCDE"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  onChange={(e) => changeCoupon(e.target.value)}
+                />
+                <div className="hint">
+                  {couponCode.length >= 4
+                    ? "쿠폰이 있으면 하루 샘플 횟수에 걸리지 않아요. 샘플이 마음에 들면 결제 창에서 이 쿠폰으로 책 전체를 열 수 있어요."
+                    : "쿠폰 코드를 적어두면 하루 무료 샘플 횟수에 걸리지 않아요. 쿠폰은 책을 열 때 한 번만 쓰여요."}
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="link-btn" onClick={() => setCouponOpen(true)}>
+                무료 쿠폰이 있으세요?
+              </button>
+            )}
+          </div>
           <div className="hint" style={{ textAlign: "center", marginTop: 12, fontSize: 16 }}>
             표지 + {FREE_SCENES}장면을 <b>무료로 먼저</b> 보여드려요.
             <br />
@@ -1165,6 +1239,7 @@ export default function Home() {
         <BankOrderBox
           bookTitle={title}
           price={PRICE}
+          initialCoupon={coupon}
           onPaid={unlockAfterBankPay}
           onClose={() => setShowBank(false)}
         />

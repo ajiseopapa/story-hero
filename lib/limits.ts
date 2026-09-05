@@ -58,6 +58,12 @@ export function readDeviceId(req: Request): { id: string; isNew: boolean } {
 export const FREE_DAILY_LIMIT = Number(process.env.FREE_DAILY_LIMIT ?? "100"); // 전체 무료 샘플/일
 export const FREE_DEVICE_DAILY_LIMIT = Number(process.env.FREE_DEVICE_DAILY_LIMIT ?? "3"); // 기기(쿠키)당 무료 샘플/일
 export const FREE_IP_DAILY_LIMIT = Number(process.env.FREE_IP_DAILY_LIMIT ?? "20"); // IP당 백스톱 (쿠키 삭제 우회 방지)
+// 아직 쓰지 않은 유효한 쿠폰을 들고 온 손님은 기기·IP 한도를 건너뛴다 — 대신 쿠폰 코드당으로
+// 센다(2026-09-05). 쿠폰 손님은 마음에 드는 샘플이 나올 때까지 몇 번 더 만들어 보고 열어야
+// 하는데, 기기당 3회에 걸려 쿠폰을 넣는 화면까지 못 갔다. 코드당 하루 5권 샘플(삽화 10장 +
+// 재시도 여유)이면 넉넉하고, 코드 하나가 새도 하루 손실은 정해져 있다.
+export const COUPON_STORY_DAILY_LIMIT = Number(process.env.COUPON_STORY_DAILY_LIMIT ?? "5");
+export const COUPON_IMAGE_DAILY_LIMIT = Number(process.env.COUPON_IMAGE_DAILY_LIMIT ?? "15");
 // 삽화 생성/일 (유료 이어그리기 포함 백스톱).
 // 1장당 약 156원(2026-08-13 실측)이라 한도가 곧 사고 시 최대 손실액이다.
 // 1500이면 하루 23만원이 걸리는데, 정상 사용으로 그 수치가 나오려면 하루 136권(매출 200만원)이

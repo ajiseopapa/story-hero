@@ -2104,6 +2104,33 @@ a.btn {
   border-top: 1px dashed #e0d3bd;
 }
 
+/* 무료 샘플 버튼 아래 쿠폰 칸 — 평소엔 글자 링크 하나, 누르거나 한도에 막히면 입력 칸이 펼쳐진다 */
+.coupon-entry {
+  margin-top: 12px;
+  text-align: center;
+}
+.coupon-entry .field {
+  text-align: left;
+}
+.coupon-entry input {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  font-family: var(--text);
+  font-size: 15px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link-btn:hover {
+  color: var(--ink);
+}
+
 /* ---------- PC: 책 펼침면 ----------
    본문 폭이 760px이라 세로 2:3 그림 한 장이 1,140px까지 커진다. 노트북 화면보다 커서
    그림을 보면 글이 화면 밖으로 밀렸다 (2026-09-01). PC에서는 그림과 글을 좌우로 편다.
