@@ -1098,10 +1098,11 @@ export default function Home() {
                 autoComplete="off"
                 onChange={(e) => changeCoupon(e.target.value)}
               />
+              {/* "하루 5회"는 서버의 COUPON_STORY_DAILY_LIMIT 기본값(lib/limits.ts) — env로 바꾸면 여기도 맞출 것 */}
               <div className="hint">
                 {couponCode.length >= 4
-                  ? "쿠폰이 있으면 하루 샘플 횟수에 걸리지 않아요. 샘플이 마음에 들면 결제 창에서 이 쿠폰으로 책 전체를 열 수 있어요."
-                  : "쿠폰 코드를 적어두면 하루 무료 샘플 횟수에 걸리지 않아요. 쿠폰은 책을 열 때 한 번만 쓰여요."}
+                  ? "쿠폰이 있으면 기기 샘플 횟수 대신 쿠폰으로 하루 5회까지 샘플을 만들 수 있어요. 샘플이 마음에 들면 결제 창에서 이 쿠폰으로 책 전체를 열 수 있어요."
+                  : "쿠폰 코드를 적어두면 하루 무료 샘플 횟수에 걸리지 않고 쿠폰으로 하루 5회까지 만들 수 있어요. 쿠폰은 책을 열 때 한 번만 쓰여요."}
               </div>
             </div>
           </div>
