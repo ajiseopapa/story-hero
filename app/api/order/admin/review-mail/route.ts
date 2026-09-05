@@ -20,7 +20,7 @@ function authorized(req: Request): boolean {
 export async function POST(req: Request): Promise<Response> {
   if (!authorized(req)) return new Response("Unauthorized", { status: 401 });
 
-  let body: { id?: unknown; childName?: unknown; honorific?: unknown; firstCustomer?: unknown };
+  let body: { id?: unknown; childName?: unknown; honorific?: unknown };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -36,7 +36,6 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "아이 이름을 적어주세요." }, { status: 400 });
   }
   const honorific: Honorific = body.honorific === "아버님" ? "아버님" : "어머님";
-  const firstCustomer = body.firstCustomer === true;
 
   const order = await getOrder(id);
   if (!order) return Response.json({ error: "주문을 찾을 수 없어요." }, { status: 404 });
@@ -61,7 +60,6 @@ export async function POST(req: Request): Promise<Response> {
   const mail = reviewRequestMail({
     childName,
     honorific,
-    firstCustomer,
     code: coupon.code,
     expiresAt: coupon.expiresAt,
   });

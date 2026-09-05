@@ -69,7 +69,6 @@ export default function OrderAdminPage() {
   const [rv, setRv] = useState<Order | null>(null);
   const [rvChild, setRvChild] = useState("");
   const [rvHonorific, setRvHonorific] = useState<Honorific>("어머님");
-  const [rvFirst, setRvFirst] = useState(false);
   const [rvBusy, setRvBusy] = useState(false);
   const [rvError, setRvError] = useState<string | null>(null);
   const [rvMail, setRvMail] = useState<ReviewMail | null>(null);
@@ -157,9 +156,6 @@ export default function OrderAdminPage() {
     setRv(o);
     setRvChild(guessChildName(o.bookTitle));
     setRvHonorific("어머님");
-    // 첫 손님 문장은 실제로 첫 결제 주문일 때만 기본 켜짐 — 두 번째부터는 빼야 한다
-    const paid = (orders ?? []).filter((x) => x.status === "paid" && x.amount > 0);
-    setRvFirst(paid.length > 0 && paid[paid.length - 1].id === o.id);
     setRvError(null);
     setRvMail(null);
     setRvCopied(null);
@@ -177,7 +173,6 @@ export default function OrderAdminPage() {
           id: rv.id,
           childName: rvChild,
           honorific: rvHonorific,
-          firstCustomer: rvFirst,
         }),
       });
       const data = (await res.json()) as ReviewMail & { error?: string };
@@ -395,19 +390,6 @@ export default function OrderAdminPage() {
                     </select>
                   </div>
                 </div>
-                <label className="rv-check">
-                  <input
-                    type="checkbox"
-                    checked={rvFirst}
-                    onChange={(e) => setRvFirst(e.target.checked)}
-                  />
-                  <span>
-                    첫 손님 문장 넣기
-                    <span className="hint">
-                      &ldquo;저희 첫 손님이셔서…&rdquo; — 두 번째 손님부터는 꺼야 해요.
-                    </span>
-                  </span>
-                </label>
                 <p className="hint">
                   {rv.reviewCoupon ? (
                     <>
