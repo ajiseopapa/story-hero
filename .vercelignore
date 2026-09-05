@@ -8,3 +8,6 @@ scripts/.out
 scripts/.out.bak
 scripts/.out.bak2
 voice-samples
+.env
+.env.*
+.vercel
