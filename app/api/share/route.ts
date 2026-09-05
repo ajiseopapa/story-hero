@@ -1,5 +1,5 @@
 // 공유 링크 만들기 — 올라간 삽화·음성을 묶는 명세(book.json)를 저장한다.
-import { put } from "@vercel/blob";
+import { putObject } from "@/lib/storage";
 import {
   consumeQuota,
   ipBucket,
@@ -87,12 +87,7 @@ export async function POST(req: Request): Promise<Response> {
   };
 
   try {
-    await put(manifestPath(id), JSON.stringify(manifest), {
-      access: "private",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-    });
+    await putObject(manifestPath(id), JSON.stringify(manifest), "application/json");
   } catch (err) {
     console.error("share manifest save failed:", err);
     return Response.json({ error: "공유 링크를 만들지 못했어요." }, { status: 500 });

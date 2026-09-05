@@ -1,8 +1,25 @@
 // 공유 링크 만들기 — 브라우저에서만 도는 부분.
-// 삽화 data URL(PNG)을 폰에서 빨리 열리도록 JPEG로 줄여서 Blob에 직접 올린다.
+// 삽화 data URL(PNG)을 폰에서 빨리 열리도록 JPEG로 줄여서 저장소에 직접 올린다.
 // (Vercel 함수 요청 본문 제한 4.5MB를 피하려고 서버 경유 없이 클라이언트 업로드를 쓴다.)
-import { upload } from "@vercel/blob/client";
+// 2026-09-05 Vercel Blob → Supabase Storage: /api/share/upload이 1회용 서명 URL을 주고,
+// 브라우저가 거기로 PUT 한다.
 import { audioPath, imagePath, type SharePage } from "@/lib/sharebook";
+
+async function upload(pathname: string, body: Blob, contentType: string): Promise<void> {
+  const res = await fetch("/api/share/upload", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pathname, contentType }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { uploadUrl?: string; error?: string };
+  if (!res.ok || !data.uploadUrl) throw new Error(data.error || "업로드 준비에 실패했어요.");
+  const put = await fetch(data.uploadUrl, {
+    method: "PUT",
+    headers: { "content-type": contentType, "x-upsert": "true" },
+    body,
+  });
+  if (!put.ok) throw new Error("파일을 올리지 못했어요. 잠시 후 다시 시도해주세요.");
+}
 
 const SHARE_IMAGE_WIDTH = 1024; // 삽화 원본이 1024x1536이라 사실상 원본 유지, 포맷만 JPEG로
 const SHARE_IMAGE_QUALITY = 0.86;
@@ -58,19 +75,11 @@ export async function createShareLink({
     const p = pages[i];
     if (p.image) {
       const jpeg = await dataUrlToJpeg(p.image);
-      await upload(imagePath(id, i), jpeg, {
-        access: "private",
-        contentType: "image/jpeg",
-        handleUploadUrl: "/api/share/upload",
-      });
+      await upload(imagePath(id, i), jpeg, "image/jpeg");
       bump();
     }
     if (p.audio) {
-      await upload(audioPath(id, i), p.audio, {
-        access: "private",
-        contentType: p.audio.type || "audio/mpeg",
-        handleUploadUrl: "/api/share/upload",
-      });
+      await upload(audioPath(id, i), p.audio, p.audio.type || "audio/mpeg");
       bump();
     }
     manifestPages.push({
