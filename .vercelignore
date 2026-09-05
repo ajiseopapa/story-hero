@@ -1,0 +1,10 @@
+.next
+.next-alt
+.next-alt2
+.next-build
+node_modules
+.git
+scripts/.out
+scripts/.out.bak
+scripts/.out.bak2
+voice-samples
