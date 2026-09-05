@@ -273,6 +273,7 @@ export default function Home() {
   const changeCoupon = (raw: string) => {
     const code = raw.toUpperCase().replace(/[^A-Z0-9-\s]/g, "").slice(0, 24);
     setCoupon(code);
+    setError(null); // 한도 안내가 남아 있으면 쿠폰을 넣어도 막힌 줄 안다
     const compact = code.replace(/[^A-Z0-9]/g, "");
     void (compact ? kvSet("coupon", code) : kvDel("coupon"));
   };
@@ -450,47 +451,9 @@ export default function Home() {
   }, []);
 
   // ----- 샘플 생성 (표지 + FREE_SCENES 장면) -----
-  // 모바일 더블탭으로 두 번 실행되면 이야기·삽화를 두 벌 생성한다(비용·쿼터 2배) — ref로 막는다
-  const startingRef = useRef(false);
-  const start = useCallback(async () => {
-    if (!canSubmit || startingRef.current) return;
-    startingRef.current = true;
-    try {
-      // 기기에는 한 권만 저장된다 — 새 책을 만들면 지난 책이 지워지므로,
-      // 실수로 (특히 결제한) 책을 날리지 않게 한 번 확인한다. 공유 링크가 보관 수단이다.
-      if (saved) {
-        const ok = await ask({
-          title: "지난 동화가 지워져요 📖",
-          message: saved.paid
-            ? `《 ${saved.draft.title} 》는 결제하신 책이에요!\n지우기 전에 '이어서 보기'로 열어 공유 링크를 만들어두면 1년간 보관됩니다.`
-            : `《 ${saved.draft.title} 》를 보관하고 싶다면\n'이어서 보기'로 열어 공유 링크를 만들어두세요.`,
-          confirmLabel: "새로 만들기",
-          cancelLabel: "취소",
-        });
-        if (!ok) return;
-      }
-      // 입금 확인을 기다리는 계좌이체 주문이 있으면 경고한다 — 새 샘플이 기존 초안을
-      // 덮어써서, 입금해도 엉뚱한 책이 열리거나 주문한 책이 사라지는 사고를 막는다.
-      const pendingBank = await loadBankOrder();
-      if (pendingBank) {
-        const ok = await ask({
-          title: "입금 확인을 기다리는 주문이 있어요",
-          message:
-            `주문번호 ${pendingBank.orderNo} — 새 동화를 만들면 주문하신 동화가 지워지고,\n` +
-            "입금하셔도 열 수 없게 돼요.",
-          confirmLabel: "새로 만들기",
-          cancelLabel: "취소",
-        });
-        if (!ok) return;
-        await clearBankOrder();
-      }
-      await startInner();
-    } finally {
-      startingRef.current = false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canSubmit, saved, ask, kids, theme, art]);
-
+  // startInner가 start보다 앞에 있어야 한다 — start의 의존성에 넣어야 쿠폰 코드가 바뀐 뒤에도
+  // 새 startInner(새 couponCode)를 부른다. 뒤에 두고 의존성에서 빼면 폼을 채운 뒤 적은 쿠폰이
+  // 서버로 안 가서 기기 한도에 그대로 걸렸다(2026-09-05).
   const startInner = useCallback(async () => {
     const children = kids.map((k) => ({
       name: k.name.trim(),
@@ -585,6 +548,47 @@ export default function Home() {
       stopRamp(); // 성공·실패 어느 쪽이든 타이머가 남으면 안 된다
     }
   }, [canSubmit, kids, theme, art, saved, ask, couponCode]);
+
+  // 모바일 더블탭으로 두 번 실행되면 이야기·삽화를 두 벌 생성한다(비용·쿼터 2배) — ref로 막는다
+  const startingRef = useRef(false);
+  const start = useCallback(async () => {
+    if (!canSubmit || startingRef.current) return;
+    startingRef.current = true;
+    try {
+      // 기기에는 한 권만 저장된다 — 새 책을 만들면 지난 책이 지워지므로,
+      // 실수로 (특히 결제한) 책을 날리지 않게 한 번 확인한다. 공유 링크가 보관 수단이다.
+      if (saved) {
+        const ok = await ask({
+          title: "지난 동화가 지워져요 📖",
+          message: saved.paid
+            ? `《 ${saved.draft.title} 》는 결제하신 책이에요!\n지우기 전에 '이어서 보기'로 열어 공유 링크를 만들어두면 1년간 보관됩니다.`
+            : `《 ${saved.draft.title} 》를 보관하고 싶다면\n'이어서 보기'로 열어 공유 링크를 만들어두세요.`,
+          confirmLabel: "새로 만들기",
+          cancelLabel: "취소",
+        });
+        if (!ok) return;
+      }
+      // 입금 확인을 기다리는 계좌이체 주문이 있으면 경고한다 — 새 샘플이 기존 초안을
+      // 덮어써서, 입금해도 엉뚱한 책이 열리거나 주문한 책이 사라지는 사고를 막는다.
+      const pendingBank = await loadBankOrder();
+      if (pendingBank) {
+        const ok = await ask({
+          title: "입금 확인을 기다리는 주문이 있어요",
+          message:
+            `주문번호 ${pendingBank.orderNo} — 새 동화를 만들면 주문하신 동화가 지워지고,\n` +
+            "입금하셔도 열 수 없게 돼요.",
+          confirmLabel: "새로 만들기",
+          cancelLabel: "취소",
+        });
+        if (!ok) return;
+        await clearBankOrder();
+      }
+      await startInner();
+    } finally {
+      startingRef.current = false;
+    }
+  }, [canSubmit, saved, ask, startInner]);
+
 
   // ----- 결제 -----
   const pay = useCallback(async () => {
