@@ -1,6 +1,6 @@
 import { createCoupon, getCoupon, randomCode } from "@/lib/coupons";
 import { ID_RE, getOrder, setOrderReviewCoupon } from "@/lib/orders";
-import { reviewRequestMail, type Honorific } from "@/lib/review-mail";
+import { reviewRequestMail } from "@/lib/review-mail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ function authorized(req: Request): boolean {
 export async function POST(req: Request): Promise<Response> {
   if (!authorized(req)) return new Response("Unauthorized", { status: 401 });
 
-  let body: { id?: unknown; childName?: unknown; honorific?: unknown };
+  let body: { id?: unknown; childName?: unknown };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -35,7 +35,6 @@ export async function POST(req: Request): Promise<Response> {
   if (!childName) {
     return Response.json({ error: "아이 이름을 적어주세요." }, { status: 400 });
   }
-  const honorific: Honorific = body.honorific === "아버님" ? "아버님" : "어머님";
 
   const order = await getOrder(id);
   if (!order) return Response.json({ error: "주문을 찾을 수 없어요." }, { status: 404 });
@@ -59,7 +58,6 @@ export async function POST(req: Request): Promise<Response> {
 
   const mail = reviewRequestMail({
     childName,
-    honorific,
     code: coupon.code,
     expiresAt: coupon.expiresAt,
   });

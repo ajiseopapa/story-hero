@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/app/confirm-dialog";
 import { forgetAdminKey, recallAdminKey, rememberAdminKey } from "@/lib/admin-key";
 import { AdminKeyInput } from "@/app/admin/key-input";
-import { guessChildName, type Honorific } from "@/lib/review-mail";
+import { guessChildName } from "@/lib/review-mail";
 import { updateBadges } from "../shell";
 
 interface Order {
@@ -69,7 +69,6 @@ export default function OrderAdminPage() {
   // 후기 요청 메일 창 — 아이 이름·호칭을 채우고 누르면 답례 쿠폰이 생기고 본문이 완성된다.
   const [rv, setRv] = useState<Order | null>(null);
   const [rvChild, setRvChild] = useState("");
-  const [rvHonorific, setRvHonorific] = useState<Honorific>("어머님");
   const [rvBusy, setRvBusy] = useState(false);
   const [rvError, setRvError] = useState<string | null>(null);
   const [rvMail, setRvMail] = useState<ReviewMail | null>(null);
@@ -158,7 +157,6 @@ export default function OrderAdminPage() {
   const openReview = (o: Order) => {
     setRv(o);
     setRvChild(guessChildName(o.bookTitle));
-    setRvHonorific("어머님");
     setRvError(null);
     setRvMail(null);
     setRvCopied(null);
@@ -175,7 +173,6 @@ export default function OrderAdminPage() {
         body: JSON.stringify({
           id: rv.id,
           childName: rvChild,
-          honorific: rvHonorific,
         }),
       });
       const data = (await res.json()) as ReviewMail & { error?: string };
@@ -377,16 +374,6 @@ export default function OrderAdminPage() {
                       placeholder="책 제목에서 짐작한 이름 · 틀리면 고쳐주세요"
                       onChange={(e) => setRvChild(e.target.value)}
                     />
-                  </div>
-                  <div className="field">
-                    <label>호칭</label>
-                    <select
-                      value={rvHonorific}
-                      onChange={(e) => setRvHonorific(e.target.value as Honorific)}
-                    >
-                      <option value="어머님">어머님</option>
-                      <option value="아버님">아버님</option>
-                    </select>
                   </div>
                 </div>
                 <p className="hint">

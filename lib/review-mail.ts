@@ -8,12 +8,9 @@
 import { BUSINESS } from "@/lib/business";
 import { koreanCallName } from "@/lib/prompts";
 
-export type Honorific = "어머님" | "아버님";
-
 export interface ReviewMailInput {
   /** 아이 이름 (호칭 없이). 형제 책이면 "은율, 지아"처럼 쉼표로 */
   childName: string;
-  honorific: Honorific;
   /** 답례 쿠폰 */
   code: string;
   /** 쿠폰 만료 시각(ms). 없으면 "한 달" */
@@ -74,7 +71,7 @@ export function reviewRequestMail(input: ReviewMailInput): { subject: string; bo
   const names = splitNames(input.childName);
   // 부르는 꼴은 늘 모음으로 끝나므로(지훈→지훈이, 하나→하나) 뒤에 '는'·'의'·'가'를 그대로 붙여도 된다.
   const call = callNames(names); // 지훈 → 지훈이, 하나 → 하나, 은율·지아 → 은율이와 지아
-  const parent = `${names.join("·")} ${input.honorific}`; // 은율·지아 어머님
+  const parent = `${names.join("·")} 부모님`; // 은율·지아 부모님
   const until = input.expiresAt ? `${koreanDate(input.expiresAt)}까지` : "한 달";
 
   const subject = `${call} 동화책, 잘 보고 계신가요?`;
