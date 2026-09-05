@@ -3,8 +3,12 @@
 // 이미지로 넣는 방식으로 한글을 처리한다.
 //
 // ⭐ 14,900원짜리 결과물이다(2026-09-05 TK님). 그래서
-//  - 글 영역은 3배 해상도(인쇄 기준 약 370dpi)로 그려 무손실 PNG로 넣는다. 전에는 페이지
-//    전체를 캔버스 한 장에 그려 JPEG로 넣었더니 글자에 압축 번짐이 들어가 흐릿했다.
+//  - 글 영역은 3배 해상도(인쇄 기준 약 370dpi)로 그려 고화질 JPEG(0.95)로 넣는다. 전에는
+//    페이지 전체를 1배 캔버스에 그려 JPEG 0.88로 넣었더니 글자에 압축 번짐이 보였다. 3배면
+//    같은 압축 흔적이 1/3 크기로 줄어 보이지 않는다. (PNG는 jsPDF가 JS로 다시 풀고 압축해서
+//    쪽당 1초 넘게 걸렸다 — 11쪽이면 30초. JPEG는 그대로 넣어서 빠르다.)
+//  - 이미지는 base64 문자열이 아니라 바이너리(Uint8Array)로 넘긴다 — 문자열 변환이 또 한 번의
+//    병목이었다.
 //  - 삽화는 브라우저에서 2배(2048×3072)로 업스케일해 넣는다 — 원본 1024×1536은 140mm 폭에서
 //    약 185dpi라 인쇄엔 모자란다. pica(Lanczos3 + 언샤프)로 키우면 약 370dpi. API 비용 0원.
 //  - 파일 정보(제목·제작자)를 넣고, 맨 뒤에 "누구를 위해 언제 만든 책인지" 판권 페이지를 붙인다.
@@ -33,6 +37,24 @@ const PAGE_W_MM = 140;
 const MM = PAGE_W_MM / W; // px → mm
 const IMAGE_SCALE = 2; // 삽화 업스케일 배율 (2048×3072)
 const IMAGE_QUALITY = 0.92; // 2배 크기라 0.95면 장당 1.5MB를 넘긴다 — 0.92면 화질 차이 없이 절반
+const TEXT_QUALITY = 0.95;
+
+/** 캔버스 → JPEG 바이너리. toDataURL+base64 해독보다 빠르고 메모리도 덜 쓴다. */
+function toJpeg(
+  canvas: HTMLCanvasElement,
+  quality: number,
+): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return reject(new Error("이미지를 변환하지 못했어요."));
+        blob.arrayBuffer().then((buf) => resolve(new Uint8Array(buf)), reject);
+      },
+      "image/jpeg",
+      quality,
+    );
+  });
+}
 const PAPER = "#fbf6ec";
 const INK = "#4a3f35";
 const INK_SOFT = "#7a6a58";
@@ -102,7 +124,7 @@ function textCanvas(
 let pica: Pica.Pica | null = null;
 
 // 삽화 → 2배 업스케일 JPEG. 손님 브라우저에서 돈다(서버·API 비용 없음).
-async function renderImage(src: string): Promise<string> {
+async function renderImage(src: string): Promise<Uint8Array> {
   const img = await loadImage(src);
   const from = document.createElement("canvas");
   from.width = W;
@@ -133,7 +155,7 @@ async function renderImage(src: string): Promise<string> {
     tctx.imageSmoothingQuality = "high";
     tctx.drawImage(from, 0, 0, to.width, to.height);
   }
-  return to.toDataURL("image/jpeg", IMAGE_QUALITY);
+  return toJpeg(to, IMAGE_QUALITY);
 }
 
 /**
@@ -161,7 +183,7 @@ function wrapTitle(
 }
 
 // 삽화 아래 글 영역 → 고해상도 PNG
-function renderCaption(page: PdfPage, pageNum: number): string {
+function renderCaption(page: PdfPage, pageNum: number): Promise<Uint8Array> {
   const { canvas, ctx } = textCanvas(W, CAP_H);
   ctx.fillStyle = INK;
 
@@ -201,13 +223,13 @@ function renderCaption(page: PdfPage, pageNum: number): string {
     ctx.fillText(`— ${pageNum} —`, W / 2, CAP_H - 32);
   }
 
-  return canvas.toDataURL("image/png");
+  return toJpeg(canvas, TEXT_QUALITY);
 }
 
 const COLOPHON_H = 640;
 
 // 맨 뒤 판권 페이지의 글 — 페이지 가운데 띠 하나만 고해상도로 그린다(전면을 3배로 그리면 폰 메모리가 위험)
-function renderColophon(title: string, meta: PdfMeta): string {
+function renderColophon(title: string, meta: PdfMeta): Promise<Uint8Array> {
   const { canvas, ctx } = textCanvas(W, COLOPHON_H);
   const d = new Date();
   const date = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
@@ -237,7 +259,7 @@ function renderColophon(title: string, meta: PdfMeta): string {
   ctx.font = `22px ${FONT}`;
   ctx.fillText("키즈북 · story.kidstel.co.kr", W / 2, y);
 
-  return canvas.toDataURL("image/png");
+  return toJpeg(canvas, TEXT_QUALITY);
 }
 
 export async function downloadStoryPdf(
@@ -279,10 +301,10 @@ export async function downloadStoryPdf(
       doc.setFillColor(PAPER);
       doc.rect(0, 0, W * MM, IMG_H * MM, "F");
     }
-    // 표지=0, 장면은 1부터. 고해상도 PNG를 종이 크기로 넣으면 PDF 안에서 그 해상도로 남는다
+    // 표지=0, 장면은 1부터. 고해상도 이미지를 종이 크기로 넣으면 PDF 안에서 그 해상도로 남는다
     doc.addImage(
-      renderCaption(page, i),
-      "PNG",
+      await renderCaption(page, i),
+      "JPEG",
       0,
       IMG_H * MM,
       W * MM,
@@ -296,8 +318,8 @@ export async function downloadStoryPdf(
   doc.setFillColor(PAPER);
   doc.rect(0, 0, W * MM, PAGE_H * MM, "F");
   doc.addImage(
-    renderColophon(title, meta),
-    "PNG",
+    await renderColophon(title, meta),
+    "JPEG",
     0,
     ((PAGE_H - COLOPHON_H) / 2) * MM,
     W * MM,

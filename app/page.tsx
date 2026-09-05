@@ -1463,6 +1463,7 @@ function BookViewer({
   const allDone = pages.every((p) => p.image !== null);
 
   const [saving, setSaving] = useState(false);
+  const [saveStep, setSaveStep] = useState<[number, number] | null>(null); // PDF 진행 (done, total)
   const [saveError, setSaveError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false); // 결제 전 청약철회 제한 동의
   const [reviewed, setReviewed] = useState(true); // 로드 전에는 후기 폼을 숨긴다
@@ -1932,11 +1933,14 @@ function BookViewer({
     setSaving(true);
     setSaveError(null);
     try {
-      await downloadStoryPdf(title, pages, { kidsInfo: bookMeta.kidsInfo });
+      await downloadStoryPdf(title, pages, { kidsInfo: bookMeta.kidsInfo }, (done, total) =>
+        setSaveStep([done, total]),
+      );
     } catch {
       setSaveError("PDF 저장에 실패했어요. 다시 시도해주세요.");
     } finally {
       setSaving(false);
+      setSaveStep(null);
     }
   };
 
@@ -2150,7 +2154,7 @@ function BookViewer({
           <>
             <button className="btn" onClick={savePdf} disabled={saving || !allDone}>
               {saving
-                ? "PDF 만드는 중… 📄"
+                ? `PDF 만드는 중… ${saveStep ? `${saveStep[0]}/${saveStep[1]}` : ""} 📄`
                 : !allDone
                   ? "삽화 완성 중… 잠시만요"
                   : "PDF로 저장 📄"}
