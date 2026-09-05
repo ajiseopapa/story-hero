@@ -131,22 +131,33 @@ export function entrySource(): { source: string; referrer: string } {
 }
 
 /**
- * 이 브라우저의 이벤트를 집계에서 뺀다.
+ * 이 브라우저가 테스트 통행증을 받은 브라우저인지.
  *
- * 테스트 통행증 링크(/api/test-pass)로 들어오면 홈 주소에 ?test=1이 붙는다. 그 표식을
- * 이 브라우저에 남겨, 내가 인앱 브라우저를 확인하며 만든 방문·클릭이 운영 퍼널에 섞이지
- * 않게 한다 — 숫자를 근거로 판단하려면 내 테스트가 들어가면 안 된다(2026-09-01).
- * ?test=0 으로 다시 켠다.
+ * 판단 근거는 /api/test-pass 가 직접 심은 화면용 쿠키(kb_test_ui) 하나다. 예전엔 홈 주소의
+ * ?test=1 을 보고 localStorage에 표식을 남겼는데, 그 주소가 그대로 공유되면 받은 손님
+ * 브라우저에도 표식이 남아 경고 배지가 뜨고 집계에서 빠졌다(2026-09-05). 쿠키는 이
+ * 서버가 심은 브라우저에만 있으니 주소를 아무리 퍼뜨려도 손님에게 옮겨가지 않는다.
+ * 끄는 길은 /api/test-pass?off=1 하나다.
+ */
+export function isTestBrowser(): boolean {
+  if (typeof document === "undefined") return false;
+  return /(?:^|;\s*)kb_test_ui=1(?:;|$)/.test(document.cookie);
+}
+
+/**
+ * 이 브라우저의 이벤트를 집계에서 뺀다 — 내 테스트가 운영 퍼널에 섞이면 숫자로 판단할 수
+ * 없기 때문이다(2026-09-01).
+ *
+ * 예전 방식이 남긴 localStorage 표식은 만나는 즉시 지운다. ?test=1 주소를 받아 열었던
+ * 손님 브라우저가 이 표식 때문에 계속 집계에서 빠지고 배지를 보던 것을 여기서 되돌린다.
  */
 function muted(): boolean {
   try {
-    const flag = new URLSearchParams(window.location.search).get("test");
-    if (flag === "1") localStorage.setItem(MUTE_KEY, "1");
-    if (flag === "0") localStorage.removeItem(MUTE_KEY);
-    return localStorage.getItem(MUTE_KEY) === "1";
+    localStorage.removeItem(MUTE_KEY);
   } catch {
-    return false; // 저장소가 막힌 브라우저는 평소대로 집계한다
+    /* 저장소가 막힌 브라우저 — 지울 것도 없다 */
   }
+  return isTestBrowser();
 }
 
 let queue: string[] = [];
