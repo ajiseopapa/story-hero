@@ -7,9 +7,11 @@ import { MAX_NICKNAME, MAX_TEXT } from "@/lib/reviews";
 type Props = {
   bookTitle: string;
   onDone: () => void;
+  /** 후기 전용 주소(/review)로 열렸을 때의 주문번호·토큰 — 있으면 서버가 주문을 확인한다 */
+  order?: { o: string; t: string };
 };
 
-export default function ReviewForm({ bookTitle, onDone }: Props) {
+export default function ReviewForm({ bookTitle, onDone, order }: Props) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [text, setText] = useState("");
@@ -26,7 +28,7 @@ export default function ReviewForm({ bookTitle, onDone }: Props) {
       const res = await fetch("/api/review", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ rating, text, nickname, bookTitle }),
+        body: JSON.stringify({ rating, text, nickname, bookTitle, ...order }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error || "후기를 남기지 못했어요.");

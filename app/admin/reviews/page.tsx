@@ -93,6 +93,7 @@ export default function ReviewAdminPage() {
           <p style={{ whiteSpace: "pre-wrap", margin: "10px 0" }}>{r.text}</p>
           <div className="hint">
             {formatDate(r.createdAt)} · {r.approved ? "공개 중" : "비공개(검수 대기)"}
+            {r.orderId && " · 구매 확인됨"}
           </div>
           <div className="share-actions" style={{ marginTop: 12 }}>
             {r.approved ? (

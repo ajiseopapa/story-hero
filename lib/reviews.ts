@@ -12,6 +12,7 @@ export type Review = {
   bookTitle: string; // 어떤 동화를 만들었는지
   createdAt: number;
   approved: boolean;
+  orderId?: string; // 후기 전용 주소(/review?o=..&t=..)로 들어온 후기 — 실제 주문이 확인된 것
 };
 
 /** 공개용으로 내보낼 때 쓰는 형태 (승인 여부·내부 정보 제외) */
