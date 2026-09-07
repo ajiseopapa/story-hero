@@ -86,7 +86,7 @@ export async function mailOrderReceived(o: {
     ? `<p><b>입금 기한은 ${koreanDateTime(o.deadline)}까지</b>예요. 기한이 지나면 주문이 자동으로 취소되니, 그 뒤에는 다시 주문해주세요.</p>`
     : "";
   const bank = BANK_ACCOUNT
-    ? `<p style="background:#f7efe2;padding:14px 16px;border-radius:10px">아래 계좌로 <b>${o.amount.toLocaleString()}원</b>을 보내주세요.<br/><b style="font-size:16px">${esc(BANK_ACCOUNT)}</b></p>`
+    ? `<p style="background:#f7efe2;padding:14px 16px;border-radius:10px">아래 계좌로 <b>${o.amount.toLocaleString()}원</b>을 보내주세요.<br/><b style="font-size:16px">${esc(BANK_ACCOUNT)}</b><br/>입금자명 <b>${esc(o.name)}</b></p>`
     : `<p>입금 계좌를 곧 이 주소로 안내드릴게요.</p>`;
   await send(
     o.email,
@@ -95,6 +95,7 @@ export async function mailOrderReceived(o: {
 <p>${esc(o.name)}님, 《 ${esc(o.bookTitle)} 》 주문이 접수됐습니다.<br/>주문번호는 <b>${o.orderNo}</b>예요.</p>
 ${bank}
 ${until}
+<p>입금은 <b>입금자명</b>으로 찾습니다. 가족 계좌처럼 다른 이름으로 보내셨다면 주문번호 <b>${o.orderNo}</b>와 함께 이 메일에 답장해 주세요 — 바로 찾아드릴게요.</p>
 <p>입금이 확인되면 이 주소로 다시 알려드릴게요. 보통 몇 시간 안에 확인됩니다.</p>`),
   );
 }
@@ -131,7 +132,7 @@ export async function mailPaymentReminder(o: {
   deadline: number;
 }): Promise<void> {
   const bank = BANK_ACCOUNT
-    ? `<p style="background:#f7efe2;padding:14px 16px;border-radius:10px">아래 계좌로 <b>${o.amount.toLocaleString()}원</b>을 보내주세요.<br/><b style="font-size:16px">${esc(BANK_ACCOUNT)}</b></p>`
+    ? `<p style="background:#f7efe2;padding:14px 16px;border-radius:10px">아래 계좌로 <b>${o.amount.toLocaleString()}원</b>을 보내주세요.<br/><b style="font-size:16px">${esc(BANK_ACCOUNT)}</b><br/>입금자명 <b>${esc(o.name)}</b></p>`
     : "";
   await send(
     o.email,
@@ -141,7 +142,7 @@ export async function mailPaymentReminder(o: {
 <p>입금 기한은 <b>${koreanDateTime(o.deadline)}까지</b>예요. 그때까지 확인되지 않으면 주문이 자동으로 취소됩니다.</p>
 ${bank}
 <p>입금해 주시면 나머지 장면과 PDF·소리책이 모두 열립니다. 만들어 두신 동화는 <b>주문하신 그 기기의 브라우저</b>에 그대로 남아 있어요 — <a href="${SITE}">키즈북</a>에 다시 들어가시면 이어서 보실 수 있습니다.</p>
-<p>이미 입금하셨다면 이 메일에 답장으로 알려주세요. 바로 확인해서 열어드릴게요. 마음이 바뀌셨다면 그냥 두셔도 괜찮습니다.</p>`),
+<p>이미 입금하셨는데 아직 안 열렸다면, 다른 이름으로 보내셔서 못 찾고 있는 걸 수도 있어요. 이 메일에 답장으로 보내신 이름만 알려주시면 바로 확인해 드릴게요. 마음이 바뀌셨다면 그냥 두셔도 괜찮습니다.</p>`),
   );
 }
 

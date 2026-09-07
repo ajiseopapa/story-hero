@@ -20,7 +20,14 @@ import { parseBankAccount, platformOf, tossSendUrl } from "@/lib/transfer-link";
 const BANK_ACCOUNT = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? "";
 const ACCOUNT = parseBankAccount(BANK_ACCOUNT);
 
-export type BankOrder = { id: string; token: string; orderNo: string; at: number };
+export type BankOrder = {
+  id: string;
+  token: string;
+  orderNo: string;
+  at: number;
+  /** 입금자명 — 새로고침해서 돌아와도 "이 이름으로 보내세요"를 다시 보여주려고 함께 저장한다 */
+  name?: string;
+};
 
 const STORE_KEY = "bankOrder";
 
@@ -156,6 +163,7 @@ export default function BankOrderBox({
         token: data.token,
         orderNo: data.orderNo,
         at: Date.now(),
+        name: name.trim(),
       };
       await kvSet(STORE_KEY, saved);
       setOrder(saved);
@@ -272,14 +280,19 @@ export default function BankOrderBox({
             )}
 
             <div className="field">
-              <label>이름</label>
+              <label>{couponFirst ? "이름" : "입금자명"}</label>
               <input
                 type="text"
                 value={name}
                 maxLength={40}
-                placeholder="입금하실 때는 통장에 찍히는 이름으로"
+                placeholder={couponFirst ? "이름을 적어주세요" : "통장에 찍히는 이름 그대로"}
                 onChange={(e) => setName(e.target.value)}
               />
+              {!couponFirst && (
+                <div className="hint" style={{ marginTop: 6 }}>
+                  이 이름으로 입금을 찾아요. 통장에 찍히는 이름과 다르면 확인이 늦어져요.
+                </div>
+              )}
             </div>
             <div className="field">
               <label>이메일</label>
@@ -431,6 +444,15 @@ export default function BankOrderBox({
               <p className="hint" style={{ margin: "8px 0 0" }}>
                 토스 앱이 열리면 금액까지 채워져 있어요. 다른 은행 앱을 쓰시면 위 계좌번호를
                 복사해서 보내주세요.
+              </p>
+            )}
+
+            {/* 입금은 입금자명으로 찾는다 — 여기서 한 번 더 못 박아야 확인이 안 밀린다 */}
+            {(order.name || name.trim()) && (
+              <p className="hint" style={{ margin: "8px 0 0" }}>
+                입금자명은 <b>{order.name || name.trim()}</b>으로 보내주세요. 가족 계좌처럼 다른
+                이름으로 보내셨다면 주문번호 <b>{order.orderNo}</b>와 함께 아래 주소로 알려주시면
+                바로 찾아드릴게요.
               </p>
             )}
 
