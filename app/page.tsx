@@ -268,6 +268,27 @@ export default function Home() {
   // 이 브라우저에 기억해 두어 새로고침·결제 창에서도 다시 적지 않게 한다.
   const [coupon, setCoupon] = useState("");
   useEffect(() => {
+    // DM 링크로 받은 쿠폰(?c=KIDSXXXXX)을 입력칸에 미리 채운다 — 인스타 인앱 브라우저에서
+    // DM과 사이트를 오가며 아홉 글자를 손으로 옮겨 적게 하면 거기서 사람이 샌다(2026-09-07).
+    // 주소에서는 지운다: 새로고침·공유로 남의 코드가 따라다니면 안 된다.
+    // ?s=(유입 출처)는 남겨둔다 — lib/track.ts가 읽기 전에 지우면 퍼널 꼬리표가 사라진다.
+    let fromUrl = "";
+    try {
+      const q = new URLSearchParams(window.location.search);
+      fromUrl = (q.get("c") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20);
+      if (fromUrl) {
+        q.delete("c");
+        const rest = q.toString();
+        window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+      }
+    } catch {
+      /* 주소를 못 읽으면 평소대로 입력칸으로 받는다 */
+    }
+    if (fromUrl) {
+      setCoupon(fromUrl);
+      void kvSet("coupon", fromUrl);
+      return;
+    }
     kvGet<string>("coupon").then((saved) => saved && setCoupon(saved));
   }, []);
   const changeCoupon = (raw: string) => {
