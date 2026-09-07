@@ -59,6 +59,15 @@ body {
   padding: 4px 16px;
   margin-bottom: 14px;
 }
+/* 로고가 <a>일 때 — 링크 기본 밑줄·색을 지우고 누를 수 있다는 것만 커서로 알린다 */
+a.badge {
+  text-decoration: none;
+  cursor: pointer;
+}
+a.badge:hover {
+  background: var(--accent);
+  color: #fff;
+}
 .hero h1 {
   font-size: clamp(26px, 5.6vw, 37px);
   font-weight: 700;

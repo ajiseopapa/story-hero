@@ -771,7 +771,15 @@ export default function Home() {
         }}
       />
       <header className="hero">
-        <span className="badge">키즈북 ✨</span>
+        {/* 로고를 누르면 첫 화면으로. 삽화를 그리는 중에는 링크를 걸지 않는다 —
+            잘못 눌러 페이지가 새로 뜨면 그리던 그림이 버려지고 그 비용도 날아간다. */}
+        {phase === "generating" ? (
+          <span className="badge">키즈북 ✨</span>
+        ) : (
+          <a className="badge" href="/" aria-label="키즈북 첫 화면으로">
+            키즈북 ✨
+          </a>
+        )}
         <h1>
           우리 아이가
           <br />
