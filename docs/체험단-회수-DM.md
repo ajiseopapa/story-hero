@@ -1,4 +1,4 @@
-# 체험단 회수 DM — 미사용 쿠폰 27장
+# 체험단 회수 DM — 미사용 쿠폰 25장
 
 링크를 누르면 쿠폰이 **자동으로 입력**됩니다. 코드를 따로 불러줄 필요 없습니다.
 (`?c=` 자동 입력은 배포 후부터 동작합니다.)
@@ -31,8 +31,6 @@
 | 08 | @parksina_arin | `https://story.kidstel.co.kr/?s=re0907&c=KIDSVJ226` | 2026-10-04 |
 | 09 | @chaerin__daily | `https://story.kidstel.co.kr/?s=re0907&c=KIDSWQ2AU` | 2026-10-04 |
 | 10 | @hanggu_b | `https://story.kidstel.co.kr/?s=re0907&c=KIDSTVVDN` | 2026-10-04 |
-| 12 | **계정 확인 필요** | `https://story.kidstel.co.kr/?s=re0907&c=KIDSAH45K` | 2026-10-04 |
-| 13 | **계정 확인 필요** | `https://story.kidstel.co.kr/?s=re0907&c=KIDSZEKTJ` | 2026-10-04 |
 | 14 | @normaltaste_ | `https://story.kidstel.co.kr/?s=re0907&c=KIDSZ6TTU` | 2026-10-04 |
 | 15 | @mjrachel_kim | `https://story.kidstel.co.kr/?s=re0907&c=KIDSX45JS` | 2026-10-04 |
 | 16 | @ha_______yd | `https://story.kidstel.co.kr/?s=re0907&c=KIDSXHPHK` | 2026-10-04 |
@@ -53,5 +51,8 @@
 ## 먼저 볼 것
 
 - **@eunnnah_** — 만료 2026-09-14, 남은 기간 짧음
-- **체험단 12** — 메모에 계정이 없어 누구인지 확인 필요
-- **체험단 13** — 메모에 계정이 없어 누구인지 확인 필요
+
+## 안 나간 재고 2장
+
+체험단 12(`KIDSAH45K`)·13(`KIDSZEKTJ`)은 계정을 안 붙였습니다 — 실제로 아무에게도 안 보냈습니다.
+만료 2026-10-04까지 살아 있으니 새로 섭외하는 분께 그대로 쓰시면 됩니다.
