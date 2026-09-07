@@ -237,7 +237,7 @@ export default function BankOrderBox({
             <p className="hint" style={{ marginTop: 4 }}>
               {couponFirst
                 ? "입금 없이 쿠폰으로 열어드려요. 이름과 이메일만 적어주세요. 누가 열었는지 남기고 안내 메일을 보내기 위해서예요."
-                : "카드 결제는 준비 중이라, 지금은 계좌이체로만 받고 있어요. 입금이 확인되면 나머지 장면과 PDF·소리책이 모두 열립니다."}
+                : "계좌이체로 받고 있어요. 이름과 이메일을 남기고 아래 계좌로 입금해 주시면, 확인되는 대로 나머지 장면과 PDF·소리책이 모두 열립니다. 확인은 보통 몇 시간 안에 끝나요."}
             </p>
 
             <div className="order-amount">

@@ -2001,7 +2001,7 @@ function BookViewer({
               ) : (
                 PAY_MODE === "bank" && (
                   <div className="hint" style={{ marginTop: 8 }}>
-                    지금은 계좌이체로 받고 있어요
+                    계좌이체로 받고 있어요 · 입금이 확인되면 바로 열려요
                   </div>
                 )
               )}
