@@ -13,10 +13,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 import { BUSINESS } from "@/lib/business";
 import { metaTrack, META_PRICE } from "@/lib/meta-pixel";
-import { entrySource } from "@/lib/track";
+import { deviceBucket, entrySource } from "@/lib/track";
 import { PAY_DEADLINE_DAYS, payDeadline } from "@/lib/order-terms";
+import { parseBankAccount, platformOf, tossSendUrl } from "@/lib/transfer-link";
 
 const BANK_ACCOUNT = process.env.NEXT_PUBLIC_BANK_ACCOUNT ?? "";
+const ACCOUNT = parseBankAccount(BANK_ACCOUNT);
 
 export type BankOrder = { id: string; token: string; orderNo: string; at: number };
 
@@ -210,6 +212,13 @@ export default function BankOrderBox({
       // 클립보드가 막힌 브라우저에서는 그냥 눈으로 보고 옮겨 적으면 된다
     }
   };
+
+  // 토스 송금 링크는 휴대폰에서만 열린다 — 서버 렌더와 어긋나지 않게 마운트 뒤에 정한다.
+  const [tossUrl, setTossUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ACCOUNT) return;
+    setTossUrl(tossSendUrl(ACCOUNT, price, platformOf(deviceBucket(navigator.userAgent || ""))));
+  }, [price]);
 
   const canSubmit = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   // 첫 화면에서 쿠폰을 적어 둔 손님 — 계좌 안내는 감추고 "쿠폰으로 열기"를 앞세운다
@@ -409,7 +418,20 @@ export default function BankOrderBox({
                     {copied ? "복사됨 ✓" : "복사"}
                   </button>
                 </div>
+                {/* 계좌번호를 옮겨 적는 사이에 손님이 사라진다 — 은행·계좌·금액을 채운 채로
+                    토스 송금 화면을 연다. 토스가 없거나 PC면 위 계좌번호를 그대로 쓰면 된다. */}
+                {tossUrl && (
+                  <a className="btn toss-send" href={tossUrl}>
+                    토스로 송금하기
+                  </a>
+                )}
               </div>
+            )}
+            {tossUrl && (
+              <p className="hint" style={{ margin: "8px 0 0" }}>
+                토스 앱이 열리면 금액까지 채워져 있어요. 다른 은행 앱을 쓰시면 위 계좌번호를
+                복사해서 보내주세요.
+              </p>
             )}
 
             <p className="hint" style={{ margin: "10px 0 0" }}>
