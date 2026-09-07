@@ -11,6 +11,8 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
 export const TEST_COOKIE = "kb_test";
+/** 화면용 표식. 값에 의미가 없고 한도를 건너뛰지도 못한다 — 배지·집계 제외 판단에만 쓴다. */
+export const TEST_UI_COOKIE = "kb_test_ui";
 
 /** 관리자 키가 없으면 통행증 자체가 존재하지 않는다(= 아무도 못 건너뛴다). */
 export function testToken(): string | null {

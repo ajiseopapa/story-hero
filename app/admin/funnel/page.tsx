@@ -288,6 +288,7 @@ export default function FunnelAdminPage() {
                 이 링크로 연 브라우저는 <b>하루 3회 한도를 건너뛰고</b>, 그 브라우저에서 만든
                 방문·클릭은 <b>퍼널 집계에서 빠집니다</b>. 인앱 브라우저를 확인할 때 이 링크를
                 나에게 DM으로 보내 앱 안에서 열면 됩니다. 한 번 열면 30일간 유지돼요.
+                <b>링크를 연 그 브라우저에만</b> 붙습니다 — 다른 브라우저에서는 다시 열어야 해요.
                 <br />
                 남에게 주지 마세요 — 무료 샘플 한도를 건너뛰는 링크입니다.
               </div>
@@ -302,8 +303,8 @@ export default function FunnelAdminPage() {
                 >
                   {copied ? "복사했어요 ✓" : "링크 복사"}
                 </button>
-                <a className="btn secondary" href={`${origin}/?test=0`}>
-                  집계 다시 켜기
+                <a className="btn secondary" href={`${origin}/api/test-pass?off=1`}>
+                  통행증 끄기 · 집계 다시 켜기
                 </a>
               </div>
               <div

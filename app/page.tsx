@@ -20,7 +20,7 @@ import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
-import { trackEvery, trackStep } from "@/lib/track";
+import { isTestBrowser, trackEvery, trackStep } from "@/lib/track";
 import { postLong, ramp } from "@/lib/long-fetch";
 import PhotoGuide from "./photo-guide";
 import BankOrderBox, {
@@ -299,17 +299,14 @@ export default function Home() {
    *
    * 통행증은 쿠키라 브라우저마다 따로다. 링크를 크롬에서 열고 인스타 인앱에서 확인하면
    * 조용히 평소 한도에 걸린다 — 왜 막혔는지 알 수 없었다(2026-09-01).
+   *
+   * 물어보는 조건은 /api/test-pass 가 심은 화면용 쿠키 하나다. 주소의 ?test 는 보지 않는다 —
+   * 주소는 공유되어 손님 브라우저에 닿을 수 있지만 쿠키는 그럴 수 없다(2026-09-05).
+   * 손님에게는 요청도, 배지도 없다.
    */
   const [testPass, setTestPass] = useState<"on" | "off" | null>(null);
   useEffect(() => {
-    const asked = new URLSearchParams(window.location.search).has("test");
-    let muted = false;
-    try {
-      muted = localStorage.getItem("kidsbook:notrack") === "1";
-    } catch {
-      /* 저장소가 막혔으면 주소로 들어온 경우만 확인한다 */
-    }
-    if (!asked && !muted) return; // 손님에게는 아무것도 묻지 않는다
+    if (!isTestBrowser()) return;
     fetch("/api/test-pass?check=1")
       .then((r) => r.json())
       .then((d: { active?: boolean }) => setTestPass(d.active ? "on" : "off"))
@@ -1220,7 +1217,7 @@ export default function Home() {
         <div className={`test-badge ${testPass === "off" ? "bad" : ""}`}>
           {testPass === "on"
             ? "테스트 모드 · 한도 없음 · 집계 제외"
-            : "이 브라우저엔 통행증이 없어요 — 테스트 링크를 여기서 열어주세요"}
+            : "통행증이 만료됐어요 — 테스트 링크를 다시 열어주세요"}
         </div>
       )}
 
