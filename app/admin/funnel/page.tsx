@@ -31,6 +31,8 @@ interface Data {
   breakdown: Record<string, Record<string, number>>;
   sources: Record<string, Record<string, number>>;
   devices: Record<string, Record<string, number>>;
+  /** 출처 × 기기 — 꼬리표가 붙은 방문만. `sourceDevices[출처][기기][단계]` */
+  sourceDevices?: Record<string, Record<string, Record<string, number>>>;
   testUrl: string | null;
   daily: { date: string; counts: Record<string, number> }[];
   leakExclude: string[];
@@ -149,6 +151,11 @@ const CROSS_STEPS = [
   { key: "sample:done", label: "샘플 완성" },
   { key: "visit", label: "방문" },
 ] as const;
+
+/** 한 출처의 기기별 방문을 모두 더한다 — 출처 표의 방문 수와 같아야 정상이다. */
+function srcVisits(devs: Record<string, Record<string, number>>, visitKey: string): number {
+  return Object.values(devs).reduce((sum, counts) => sum + (counts[visitKey] ?? 0), 0);
+}
 
 function pct(v: number | null): string {
   return v === null ? "—" : `${Math.round(v * 100)}%`;
@@ -464,6 +471,42 @@ export default function FunnelAdminPage() {
                 );
               }
               return <StepTable head="기기" rows={rows} steps={data.steps} label={deviceLabel} />;
+            })()}
+          </section>
+
+          <section className="card">
+            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>출처 × 기기</h2>
+            <div className="hint" style={{ marginBottom: 10 }}>
+              어느 링크로 온 사람이 어떤 브라우저로 열었는지. 꼬리표(<code>?s=</code>)가 붙은
+              방문만 잡힙니다. 인스타에 올린 링크인데 <b>인스타 인앱</b>이 아니라 PC·일반
+              브라우저로만 들어온다면, 링크가 앱 안에서 눌리는 자리에 있지 않다는 뜻이에요.
+            </div>
+            {(() => {
+              const visitKey = data.steps[0]?.key ?? "visit";
+              const entries = Object.entries(data.sourceDevices ?? {}).sort(
+                (a, b) => srcVisits(b[1], visitKey) - srcVisits(a[1], visitKey),
+              );
+              if (entries.length === 0) {
+                return (
+                  <div className="hint">
+                    아직 기록이 없어요. 이 표는 배포한 뒤 꼬리표를 달고 들어온 방문부터 쌓입니다.
+                  </div>
+                );
+              }
+              return entries.map(([src, devs]) => {
+                const rows = Object.entries(devs).sort(
+                  (a, b) => (b[1][visitKey] ?? 0) - (a[1][visitKey] ?? 0),
+                );
+                return (
+                  <div key={src} style={{ marginTop: 14 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <b>{src}</b>{" "}
+                      <span className="hint">방문 {srcVisits(devs, visitKey)}</span>
+                    </div>
+                    <StepTable head="기기" rows={rows} steps={data.steps} label={deviceLabel} />
+                  </div>
+                );
+              });
             })()}
           </section>
 

@@ -59,6 +59,21 @@ export async function GET(req: Request): Promise<Response> {
   const sources = cross("src:");
   const devices = cross("dev:");
 
+  // `sd:<출처>:<기기>:<단계>` — 출처와 기기를 따로 쌓으면 "이 링크로 온 사람이 인스타
+  // 인앱이었나 PC였나"를 산수로 맞춰야 한다(2026-09-07). 꼬리표가 붙은 방문만 쌓인다.
+  const sourceDevices: Record<string, Record<string, Record<string, number>>> = {};
+  for (const [k, v] of Object.entries(totals)) {
+    if (!k.startsWith("sd:")) continue;
+    const rest = k.slice(3);
+    const c1 = rest.indexOf(":");
+    if (c1 <= 0) continue;
+    const c2 = rest.indexOf(":", c1 + 1);
+    if (c2 <= c1 + 1) continue;
+    const src = rest.slice(0, c1);
+    const dev = rest.slice(c1 + 1, c2);
+    ((sourceDevices[src] ??= {})[dev] ??= {})[rest.slice(c2 + 1)] = v;
+  }
+
   return Response.json(
     {
       days,
@@ -68,6 +83,7 @@ export async function GET(req: Request): Promise<Response> {
       breakdown,
       sources,
       devices,
+      sourceDevices,
       // 한도에 걸리지 않고 인앱 브라우저를 확인할 때 쓰는 링크 (lib/test-pass.ts)
       testUrl: (() => {
         const token = testToken();

@@ -45,10 +45,23 @@ export function unitOf(step: string): "session" | "server" | "action" {
 
 /**
  * 교차 집계 키를 컬럼으로 쪼갠다. 단계 이름에도 콜론이 있어(sample:done) 첫 콜론에서만 자른다.
- *  `src:reel1:sample:done` → source=reel1
- *  `dev:ios-insta:photo`   → device=ios-insta
+ *  `src:reel1:sample:done`   → source=reel1
+ *  `dev:ios-insta:photo`     → device=ios-insta
+ *  `sd:reel1:ios-insta:photo`→ source=reel1, device=ios-insta (출처 × 기기)
  */
 export function splitEvent(key: string): { source: string; device: string; step: string } {
+  if (key.startsWith("sd:")) {
+    const rest = key.slice(3);
+    const c1 = rest.indexOf(":");
+    if (c1 <= 0) return { source: "", device: "", step: key };
+    const c2 = rest.indexOf(":", c1 + 1);
+    if (c2 <= c1 + 1) return { source: "", device: "", step: key };
+    return {
+      source: rest.slice(0, c1),
+      device: rest.slice(c1 + 1, c2),
+      step: rest.slice(c2 + 1),
+    };
+  }
   const prefix = key.startsWith("src:") ? "src" : key.startsWith("dev:") ? "dev" : "";
   if (!prefix) return { source: "", device: "", step: key };
   const rest = key.slice(4);

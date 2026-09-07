@@ -234,6 +234,10 @@ export function trackStep(...names: string[]): void {
   // 기기별로도 같은 단계를 쌓는다. 전체 퍼널은 그대로 두고 곁에 하나 더 남기는 것이라 숫자가 어긋나지 않는다.
   const dev = device();
   if (dev) queue.push(...fresh.map((n) => `dev:${dev}:${n}`));
+  // 출처 × 기기 교차. "re0907로 들어온 21명이 인스타 인앱이었나 PC였나"를 산수로 맞춰보지
+  // 않고 바로 읽으려고 둔다(2026-09-07). 꼬리표가 있을 때만 쌓는다 — 꼬리표 없는 방문의
+  // 교차는 위 dev: 줄과 같은 값이라 키만 두 배로 늘어난다.
+  if (src && dev) queue.push(...fresh.map((n) => `sd:${src}:${dev}:${n}`));
   if (!timer) timer = setTimeout(flush, FLUSH_MS);
 }
 
