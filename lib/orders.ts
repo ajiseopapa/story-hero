@@ -35,6 +35,7 @@ export interface Order {
   source?: string; // 유입 꼬리표 (?s=...) — 없으면 꼬리표 없이 들어온 것
   referrer?: string; // 유입 링크 호스트 (예: instagram.com)
   reviewCoupon?: string; // 후기 요청 메일과 함께 발급한 답례 쿠폰 코드 (한 주문에 한 장)
+  remindedAt?: number; // 입금 리마인더 메일을 보낸 시각 (주문당 한 번만 보내려고)
 }
 
 export const ID_RE = /^[a-f0-9]{16}$/;
@@ -137,6 +138,7 @@ function parse(raw: unknown): Order | null {
     source: r.source || undefined,
     referrer: r.referrer || undefined,
     reviewCoupon: r.reviewCoupon || undefined,
+    remindedAt: r.remindedAt ? Number(r.remindedAt) : undefined,
   };
 }
 
@@ -170,6 +172,12 @@ export async function setOrderStatus(
 export async function setOrderReviewCoupon(id: string, code: string): Promise<void> {
   if (!ID_RE.test(id)) return;
   await pipeline([["HSET", KEY(id), "reviewCoupon", code]]);
+}
+
+/** 입금 리마인더를 보낸 표시. 필드 하나만 얹는다(setOrderReviewCoupon과 같은 이유). */
+export async function setOrderReminded(id: string, at = Date.now()): Promise<void> {
+  if (!ID_RE.test(id)) return;
+  await pipeline([["HSET", KEY(id), "remindedAt", String(at)]]);
 }
 
 /**
@@ -210,6 +218,24 @@ export async function cancelExpiredOrders(now = Date.now()): Promise<Order[]> {
     if (next) out.push(next);
   }
   return out;
+}
+
+/**
+ * 입금 리마인더를 보낼 대기 주문. 기한이 `REMIND_WINDOW_MS` 안으로 들어왔고 아직 안 보낸 것.
+ *
+ * 창이 30시간인 이유: 크론이 하루 한 번(19:00 KST) 도는데 24시간으로 잡으면 주문 시각에 따라
+ * 기한 1시간 전에야 걸리거나 아예 안 걸리는 주문이 생긴다. 30시간이면 어떤 주문이든
+ * 기한 18~30시간 전에 정확히 한 번 걸린다. `remindedAt` 표시가 중복 발송을 막는다.
+ */
+export const REMIND_WINDOW_MS = 30 * 60 * 60 * 1000;
+
+export async function ordersNeedingPayReminder(now = Date.now()): Promise<Order[]> {
+  const orders = await listOrders(500);
+  return orders.filter((o) => {
+    if (o.status !== "pending" || o.remindedAt || !o.email) return false;
+    const deadline = payDeadline(o.createdAt);
+    return deadline > now && deadline - now <= REMIND_WINDOW_MS;
+  });
 }
 
 export async function listOrders(limit = 200): Promise<Order[]> {

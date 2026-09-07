@@ -116,6 +116,35 @@ export async function mailOrderExpired(o: {
   );
 }
 
+/**
+ * 입금 기한이 하루쯤 남았을 때 보내는 재촉 메일 — 하루 한 번 도는 크론이 주문당 한 번만 보낸다.
+ *
+ * 왜: 주문한 3건 중 2건이 입금 없이 기한이 지나 자동 취소됐다(2026-09-07 퍼널). 지금까지는
+ * 취소된 뒤에야 메일이 나가서, 손님이 "아 맞다" 할 기회가 없었다.
+ */
+export async function mailPaymentReminder(o: {
+  email: string;
+  name: string;
+  bookTitle: string;
+  orderNo: string;
+  amount: number;
+  deadline: number;
+}): Promise<void> {
+  const bank = BANK_ACCOUNT
+    ? `<p style="background:#f7efe2;padding:14px 16px;border-radius:10px">아래 계좌로 <b>${o.amount.toLocaleString()}원</b>을 보내주세요.<br/><b style="font-size:16px">${esc(BANK_ACCOUNT)}</b></p>`
+    : "";
+  await send(
+    o.email,
+    `[키즈북] 《 ${o.bookTitle} 》 입금 기한이 곧 끝나요 (주문번호 ${o.orderNo})`,
+    WRAP(`<h2 style="font-size:18px">입금 기한이 얼마 남지 않았어요</h2>
+<p>${esc(o.name)}님, 《 ${esc(o.bookTitle)} 》 주문(주문번호 <b>${o.orderNo}</b>)이 아직 입금 확인 전이에요.</p>
+<p>입금 기한은 <b>${koreanDateTime(o.deadline)}까지</b>예요. 그때까지 확인되지 않으면 주문이 자동으로 취소됩니다.</p>
+${bank}
+<p>입금해 주시면 나머지 장면과 PDF·소리책이 모두 열립니다. 만들어 두신 동화는 <b>주문하신 그 기기의 브라우저</b>에 그대로 남아 있어요 — <a href="${SITE}">키즈북</a>에 다시 들어가시면 이어서 보실 수 있습니다.</p>
+<p>이미 입금하셨다면 이 메일에 답장으로 알려주세요. 바로 확인해서 열어드릴게요. 마음이 바뀌셨다면 그냥 두셔도 괜찮습니다.</p>`),
+  );
+}
+
 /** "9월 8일 오후 2시" — 한국 시간 */
 function koreanDateTime(ms: number): string {
   const d = new Date(ms + 9 * 60 * 60 * 1000);

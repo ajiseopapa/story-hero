@@ -1,7 +1,14 @@
 // 보관 기간(1년)이 지난 공유 책을 지우는 정리 작업. vercel.json의 크론이 하루 한 번 부른다.
 // (일일 한도 마커는 2026-09-05부터 KV에 TTL로 두므로 여기서 지울 게 없다.)
-import { mailOrderExpired } from "@/lib/mail";
-import { cancelExpiredOrders, isStoreReady, shortId } from "@/lib/orders";
+import { mailOrderExpired, mailPaymentReminder } from "@/lib/mail";
+import {
+  cancelExpiredOrders,
+  isStoreReady,
+  ordersNeedingPayReminder,
+  setOrderReminded,
+  shortId,
+} from "@/lib/orders";
+import { payDeadline } from "@/lib/order-terms";
 import { SHARE_TTL_DAYS } from "@/lib/sharebook";
 import { deleteObjects, isStorageConfigured, listObjects } from "@/lib/storage";
 
@@ -30,7 +37,33 @@ export async function GET(req: Request): Promise<Response> {
     }
   }
 
-  if (!isStorageConfigured()) return Response.json({ deleted: 0, canceledOrders });
+  // 기한이 하루쯤 남은 대기 주문에 재촉 메일 — 취소한 뒤에 돌려야 방금 취소된 건이 안 섞인다.
+  // 주문당 한 번만 보내고(remindedAt), 메일이 실패하면 표시를 남기지 않아 내일 다시 시도한다.
+  let remindedOrders = 0;
+  if (isStoreReady()) {
+    try {
+      for (const o of await ordersNeedingPayReminder()) {
+        try {
+          await mailPaymentReminder({
+            email: o.email,
+            name: o.name,
+            bookTitle: o.bookTitle,
+            orderNo: shortId(o.id),
+            amount: o.amount,
+            deadline: payDeadline(o.createdAt),
+          });
+          await setOrderReminded(o.id);
+          remindedOrders++;
+        } catch (err) {
+          console.error("pay reminder failed:", o.id, err);
+        }
+      }
+    } catch (err) {
+      console.error("pay reminder scan failed:", err);
+    }
+  }
+
+  if (!isStorageConfigured()) return Response.json({ deleted: 0, canceledOrders, remindedOrders });
 
   const cutoff = Date.now() - SHARE_TTL_DAYS * DAY_MS;
   let deleted = 0;
@@ -50,8 +83,11 @@ export async function GET(req: Request): Promise<Response> {
     }
   } catch (err) {
     console.error("share cleanup failed:", err);
-    return Response.json({ error: "cleanup failed", deleted, canceledOrders }, { status: 500 });
+    return Response.json(
+      { error: "cleanup failed", deleted, canceledOrders, remindedOrders },
+      { status: 500 },
+    );
   }
 
-  return Response.json({ deleted, canceledOrders });
+  return Response.json({ deleted, canceledOrders, remindedOrders });
 }
