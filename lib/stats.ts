@@ -64,6 +64,14 @@ export const EXTRA: { key: string; label: string }[] = [
   // 직전 단계(샘플 완성) 대비 전환율에 섞이면 200% 같은 숫자가 나온다.
   { key: "pay:click:resume", label: "구매 의사(이어보기·복귀)" },
   { key: "sample:fail", label: "샘플 생성 실패" },
+  // 실패를 두 축으로 가른다 — 단계별 합도, 원인별 합도 sample:fail과 같다.
+  { key: "sample:fail:story", label: "└ 단계: 이야기" },
+  { key: "sample:fail:image", label: "└ 단계: 삽화" },
+  { key: "sample:fail:quota", label: "└ 원인: 한도에 막힘(429)" },
+  { key: "sample:fail:server", label: "└ 원인: 서버 오류(5xx)" },
+  { key: "sample:fail:network", label: "└ 원인: 연결 끊김" },
+  { key: "sample:fail:input", label: "└ 원인: 입력·쿠폰(4xx)" },
+  { key: "sample:fail:other", label: "└ 원인: 그 밖" },
   { key: "share:create", label: "공유 링크 생성" },
   // 공유 책(/book/…)이 바이럴 루프로 얼마나 일하는지 — 열람 → 재공유·카드 → 새 방문(src:book:visit)
   { key: "book:view", label: "공유 책 열람" },

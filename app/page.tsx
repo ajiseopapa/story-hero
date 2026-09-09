@@ -21,7 +21,7 @@ import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import { isTestBrowser, trackEvery, trackStep } from "@/lib/track";
-import { postLong, ramp } from "@/lib/long-fetch";
+import { ConnectionError, postLong, ramp } from "@/lib/long-fetch";
 import PhotoGuide from "./photo-guide";
 import BankOrderBox, {
   clearBankOrder,
@@ -196,14 +196,48 @@ async function fitPhotosToBudget(photos: string[]): Promise<string[]> {
 
 // Vercel 타임아웃/오류 시 JSON이 아닌 텍스트("An error occurred...")가 오므로
 // 그대로 res.json() 하면 파싱 에러가 사용자에게 노출됨 — 안전하게 감싼다.
+/**
+ * 샘플 생성 실패의 원인.
+ *
+ * 2026-09-05까지 실패는 `sample:fail` 하나로만 셌다. 며칠 뒤 "실패 36건"을 놓고도 이야기가
+ * 죽었는지, 삽화가 죽었는지, 한도에 막혔는지 알 수 없어 커밋 기록을 뒤져 역추적해야 했다
+ * (Vercel 런타임 로그는 몇 시간치만 남는다). 이제 단계와 원인을 함께 센다.
+ */
+type FailReason = "quota" | "network" | "server" | "input" | "other";
+
+class SampleError extends Error {
+  readonly reason: FailReason;
+  constructor(message: string, reason: FailReason) {
+    super(message);
+    this.name = "SampleError";
+    this.reason = reason;
+  }
+}
+
+/** 서버 응답 코드를 원인으로 옮긴다 — 429는 한도, 5xx는 서버, 나머지 4xx는 입력·쿠폰 문제다. */
+function reasonFromStatus(status: number): FailReason {
+  if (status === 429) return "quota";
+  if (status >= 500) return "server";
+  if (status >= 400) return "input";
+  return "other";
+}
+
+/** 던져진 오류에서 원인 꼬리표를 읽는다. */
+function reasonOf(err: unknown): FailReason {
+  if (err instanceof SampleError) return err.reason;
+  if (err instanceof ConnectionError) return "network";
+  return "other";
+}
+
 async function safeJson(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text();
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(
+    throw new SampleError(
       "서버 응답이 지연됐어요. 잠시 후 다시 시도해주세요." +
         (res.status ? ` (오류 코드 ${res.status})` : ""),
+      reasonFromStatus(res.status),
     );
   }
 }
@@ -231,7 +265,9 @@ async function fetchImage(
     150_000,
   );
   const json = await safeJson(res);
-  if (!res.ok) throw new Error((json.error as string) || "삽화 생성 실패");
+  if (!res.ok) {
+    throw new SampleError((json.error as string) || "삽화 생성 실패", reasonFromStatus(res.status));
+  }
   return json.image as string;
 }
 
@@ -490,6 +526,8 @@ export default function Home() {
     setProgressStep("이야기를 짓고 있어요… 1분쯤 걸려요");
     // 이야기 구간은 서버가 진행을 알려주지 않는다 — 시간으로 채운다(4 → 45%)
     let stopRamp = ramp(setProgressPct, 4, 45, 80);
+    // 실패가 어느 단계에서 났는지 — 이야기에서 시작해 삽화로 넘어간다
+    let stage: "story" | "image" = "story";
 
     try {
       const storyRes = await postLong(
@@ -498,7 +536,9 @@ export default function Home() {
         180_000,
       );
       const story = (await safeJson(storyRes)) as unknown as StoryData & { error?: string };
-      if (!storyRes.ok) throw new Error(story.error || "이야기 생성 실패");
+      if (!storyRes.ok) {
+        throw new SampleError(story.error || "이야기 생성 실패", reasonFromStatus(storyRes.status));
+      }
 
       const skeleton: BookPage[] = [
         {
@@ -521,6 +561,7 @@ export default function Home() {
       const freeCount = FREE_SCENES + 1;
       let cur = skeleton;
       stopRamp();
+      stage = "image";
       for (let i = 0; i < freeCount; i++) {
         setProgressStep(
           i === 0 ? "표지 삽화를 그리고 있어요…" : `샘플 ${i} / ${FREE_SCENES} 장면을 그리고 있어요…`,
@@ -564,7 +605,9 @@ export default function Home() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "문제가 발생했어요. 다시 시도해주세요.");
       setPhase("form");
-      trackEvery("sample:fail"); // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다
+      // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다.
+      // 총계·단계·원인 세 벌로 남긴다: 단계별 합도 원인별 합도 sample:fail과 같아야 한다.
+      trackEvery("sample:fail", `sample:fail:${stage}`, `sample:fail:${reasonOf(err)}`);
     } finally {
       stopRamp(); // 성공·실패 어느 쪽이든 타이머가 남으면 안 된다
     }

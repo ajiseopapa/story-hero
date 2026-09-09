@@ -40,6 +40,17 @@ export function ramp(
  * 그렇게 긴 요청을 그냥 끊는다(2026-09-01 실제로 "커넥션 에러"로 이탈). 끊긴 경우에만 한 번
  * 더 시도한다 — 4xx·429는 다시 해도 결과가 같으므로 그대로 돌려준다.
  */
+/**
+ * 요청이 서버에 닿지도 못하고 끊긴 경우. 화면이 이걸 보고 실패 원인을 "연결 끊김"으로 센다
+ * — 우리 서버가 뱉은 오류와 섞이면 인앱 브라우저 문제인지 우리 문제인지 구분할 수 없다.
+ */
+export class ConnectionError extends Error {
+  constructor() {
+    super("연결이 끊겼어요. 신호가 안정된 곳에서 다시 시도해주세요.");
+    this.name = "ConnectionError";
+  }
+}
+
 export async function postLong(url: string, body: unknown, timeoutMs: number): Promise<Response> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const ctrl = new AbortController();
@@ -60,5 +71,5 @@ export async function postLong(url: string, body: unknown, timeoutMs: number): P
       clearTimeout(timer);
     }
   }
-  throw new Error("연결이 끊겼어요. 신호가 안정된 곳에서 다시 시도해주세요.");
+  throw new ConnectionError();
 }
