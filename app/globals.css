@@ -2124,6 +2124,35 @@ a.btn {
   border-top: 1px dashed #e0d3bd;
 }
 
+/* 현금영수증 칸 — 필요한 사람만 펼친다. 쿠폰 칸과 달리 접어두는 게 맞다:
+   쿠폰은 못 찾으면 손님이 손해지만, 영수증 칸은 안 쓰는 손님에게 그냥 늘어난 칸이다. */
+.receipt-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e0d3bd;
+  border-radius: 10px;
+}
+.receipt-toggle,
+.receipt-kinds label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.receipt-toggle input,
+.receipt-kinds input {
+  width: 18px;
+  height: 18px;
+  accent-color: #3182f6;
+  margin: 0;
+  flex: none;
+}
+.receipt-kinds {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+}
+
 /* 무료 샘플 버튼 아래 쿠폰 칸 — 항상 펼쳐 둔다(접어두면 쿠폰 손님이 못 찾는다) */
 .coupon-entry {
   margin-top: 16px;

@@ -44,6 +44,8 @@ export async function POST(req: Request): Promise<Response> {
     bookTitle?: unknown;
     source?: unknown;
     referrer?: unknown;
+    receiptKind?: unknown;
+    receiptNo?: unknown;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -53,6 +55,11 @@ export async function POST(req: Request): Promise<Response> {
 
   const name = clean(body.name, 40);
   const email = clean(body.email, 120);
+  // 현금영수증은 선택 입력이다. 신청했을 때만 용도·번호를 받고, 번호는 숫자만 남긴다.
+  const receiptKind =
+    body.receiptKind === "personal" || body.receiptKind === "business" ? body.receiptKind : "";
+  const receiptNo =
+    typeof body.receiptNo === "string" ? body.receiptNo.replace(/[^0-9]/g, "").slice(0, 11) : "";
   const bookTitle = clean(body.bookTitle, 120);
   // 유입 정보는 클라이언트가 보내는 값이라 서버에서 다시 깎는다(퍼널 꼬리표 규칙과 같은 모양).
   const source = tag(body.source, /[^a-z0-9-]/g, 16);
@@ -63,6 +70,19 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (!EMAIL_RE.test(email)) {
     return Response.json({ error: "이메일 주소를 다시 확인해주세요." }, { status: 400 });
+  }
+  // 용도만 고르고 번호를 비워두면 발급을 못 한다 — 접수 전에 잡아준다.
+  if (receiptKind === "personal" && !/^01[0-9]{8,9}$/.test(receiptNo)) {
+    return Response.json(
+      { error: "현금영수증(소득공제)은 휴대폰 번호로 발급해요. 번호를 다시 확인해주세요." },
+      { status: 400 },
+    );
+  }
+  if (receiptKind === "business" && receiptNo.length !== 10) {
+    return Response.json(
+      { error: "사업자등록번호 10자리를 확인해주세요." },
+      { status: 400 },
+    );
   }
 
   // 장난 주문으로 목록이 묻히지 않게 (전체 한도는 청구서가 아니라 관리 부담 상한)
@@ -90,6 +110,7 @@ export async function POST(req: Request): Promise<Response> {
     createdAt: Date.now(),
     ...(source ? { source } : {}),
     ...(referrer ? { referrer } : {}),
+    ...(receiptKind ? { receiptKind, receiptNo } : {}),
   };
 
   await saveOrder(order);
@@ -117,6 +138,8 @@ export async function POST(req: Request): Promise<Response> {
     bookTitle: order.bookTitle,
     amount: order.amount,
     orderNo,
+    receiptKind: order.receiptKind,
+    receiptNo: order.receiptNo,
   });
 
   return Response.json({

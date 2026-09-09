@@ -57,7 +57,14 @@ export const LEAK_EXCLUDE = new Set(["pay:done"]);
 
 /** 퍼널 밖 참고 지표 — 이탈 원인·비용 추적용 */
 export const EXTRA: { key: string; label: string }[] = [
+  // 주문 창 안쪽 — 구매 의사(18)와 주문 접수(3) 사이가 어디서 끊기는지 (2026-09-09)
+  { key: "order:open", label: "주문 창 열림" },
+  { key: "order:name", label: "└ 이름 적음" },
+  { key: "order:email", label: "└ 이메일 적음" },
+  { key: "order:ready", label: "└ 접수 버튼 열림" },
+  { key: "order:try", label: "└ 접수 눌러봄" },
   { key: "order:submit", label: "계좌이체 주문 접수" },
+  { key: "order:receipt", label: "└ 현금영수증 신청" },
   { key: "coupon:use", label: "무료 쿠폰 사용" },
   // 지난 동화 '이어서 보기'·결제 복귀로 책을 연 사람의 구매 클릭.
   // 퍼널에 넣지 않는다 — 이 사람들은 이번 세션에 샘플을 만들지 않았으므로

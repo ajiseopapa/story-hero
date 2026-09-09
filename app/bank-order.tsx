@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { kvDel, kvGet, kvSet } from "@/lib/store";
 import { BUSINESS } from "@/lib/business";
 import { metaTrack, META_PRICE } from "@/lib/meta-pixel";
-import { deviceBucket, entrySource } from "@/lib/track";
+import { deviceBucket, entrySource, trackEvery, trackStep } from "@/lib/track";
 import { PAY_DEADLINE_DAYS, payDeadline } from "@/lib/order-terms";
 import { parseBankAccount, platformOf, tossSendUrl } from "@/lib/transfer-link";
 
@@ -30,6 +30,7 @@ export type BankOrder = {
 };
 
 const STORE_KEY = "bankOrder";
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function loadBankOrder(): Promise<BankOrder | null> {
   return (await kvGet<BankOrder>(STORE_KEY)) ?? null;
@@ -92,6 +93,10 @@ export default function BankOrderBox({
   const [expired, setExpired] = useState(false);
   const [copied, setCopied] = useState(false);
   const [coupon, setCoupon] = useState(initialCoupon.toUpperCase());
+  // 현금영수증 — 필요한 사람만 펼친다. 기본은 접힘이라 안 쓰는 손님에게는 칸이 늘지 않는다.
+  const [wantReceipt, setWantReceipt] = useState(false);
+  const [receiptKind, setReceiptKind] = useState<"personal" | "business">("personal");
+  const [receiptNo, setReceiptNo] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -101,7 +106,11 @@ export default function BankOrderBox({
 
   // 이미 접수한 주문이 있으면 그 화면부터 보여준다
   useEffect(() => {
-    loadBankOrder().then((saved) => saved && setOrder(saved));
+    loadBankOrder().then((saved) => {
+      if (saved) setOrder(saved);
+      // 주문 폼이 실제로 뜬 사람. pay:click과 이 숫자의 차이가 곧 창이 안 뜬 사고다.
+      else trackStep("order:open");
+    });
   }, []);
 
   const verify = useCallback(
@@ -139,6 +148,21 @@ export default function BankOrderBox({
   }, [order, verify]);
 
   const submit = async () => {
+    // 버튼을 죽여두지 않는다 — 왜 안 눌리는지 모른 채 나가는 사람이 있었다.
+    // 누르면 어디가 비었는지 말해주고, 눌렀다는 사실 자체도 지표로 남긴다.
+    trackStep("order:try");
+    if (!name.trim()) {
+      setError("입금하실 분 이름을 적어주세요.");
+      return;
+    }
+    if (!EMAIL_OK.test(email.trim())) {
+      setError("이메일 주소를 다시 확인해주세요.");
+      return;
+    }
+    if (wantReceipt && !receiptNo.replace(/[^0-9]/g, "")) {
+      setError("현금영수증 번호를 적어주세요. 필요 없으시면 체크를 풀어주세요.");
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
@@ -146,7 +170,13 @@ export default function BankOrderBox({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // 유입 정보(꼬리표·유입 호스트)도 함께 — 어느 링크가 실제 주문까지 왔는지 보려고
-        body: JSON.stringify({ name, email, bookTitle, ...entrySource() }),
+        body: JSON.stringify({
+          name,
+          email,
+          bookTitle,
+          ...entrySource(),
+          ...(wantReceipt ? { receiptKind, receiptNo } : {}),
+        }),
       });
       const data = (await res.json()) as {
         id?: string;
@@ -228,7 +258,21 @@ export default function BankOrderBox({
     setTossUrl(tossSendUrl(ACCOUNT, price, platformOf(deviceBucket(navigator.userAgent || ""))));
   }, [price]);
 
-  const canSubmit = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canSubmit = name.trim().length > 0 && EMAIL_OK.test(email.trim());
+
+  // 주문 창 안에서 어디까지 왔는지 남긴다. 구매 의사 18 → 주문 접수 3인데(2026-09-09),
+  // 창을 보고 그냥 닫았는지 쓰다 말았는지 다 쓰고도 안 눌렀는지 구분할 길이 없었다.
+  const onName = (v: string) => {
+    setName(v);
+    if (v.trim()) trackStep("order:name");
+  };
+  const onEmail = (v: string) => {
+    setEmail(v);
+    if (EMAIL_OK.test(v.trim())) trackStep("order:email");
+  };
+  useEffect(() => {
+    if (canSubmit) trackStep("order:ready");
+  }, [canSubmit]);
   // 첫 화면에서 쿠폰을 적어 둔 손님 — 계좌 안내는 감추고 "쿠폰으로 열기"를 앞세운다
   const [couponFirst, setCouponFirst] = useState(
     initialCoupon.replace(/[^A-Za-z0-9]/g, "").length >= 4,
@@ -280,17 +324,18 @@ export default function BankOrderBox({
             )}
 
             <div className="field">
-              <label>{couponFirst ? "이름" : "입금자명"}</label>
+              <label>{couponFirst ? "이름" : "입금하실 분 이름"}</label>
               <input
                 type="text"
                 value={name}
                 maxLength={40}
-                placeholder={couponFirst ? "이름을 적어주세요" : "통장에 찍히는 이름 그대로"}
-                onChange={(e) => setName(e.target.value)}
+                placeholder="이름을 적어주세요"
+                onChange={(e) => onName(e.target.value)}
               />
               {!couponFirst && (
                 <div className="hint" style={{ marginTop: 6 }}>
-                  이 이름으로 입금을 찾아요. 통장에 찍히는 이름과 다르면 확인이 늦어져요.
+                  입금하실 때 이 이름으로 보내주시면 가장 빨리 찾아요. 가족 계좌처럼 다른
+                  이름으로 보내셔도 주문번호로 찾아드리니 괜찮아요.
                 </div>
               )}
             </div>
@@ -301,7 +346,7 @@ export default function BankOrderBox({
                 value={email}
                 maxLength={120}
                 placeholder="안내를 받으실 이메일 주소"
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => onEmail(e.target.value)}
               />
             </div>
 
@@ -342,8 +387,65 @@ export default function BankOrderBox({
               </>
             ) : (
               <>
+            {/* 현금영수증 — 계좌이체로 현금을 받으니 발급 경로가 있어야 한다.
+                필요한 사람만 펼치게 접어 둔다: 안 쓰는 손님에게 칸을 늘리면
+                지금 고치려는 그 마찰이 도로 늘어난다. 여기서 받는 건 번호뿐이고
+                실제 발급은 입금 확인 뒤 홈택스에서 한다. */}
+            <div className="receipt-box">
+              <label className="receipt-toggle">
+                <input
+                  type="checkbox"
+                  checked={wantReceipt}
+                  onChange={(e) => {
+                    setWantReceipt(e.target.checked);
+                    if (e.target.checked) trackEvery("order:receipt");
+                  }}
+                />
+                <span>현금영수증이 필요해요</span>
+              </label>
+              {wantReceipt && (
+                <>
+                  <div className="receipt-kinds">
+                    <label>
+                      <input
+                        type="radio"
+                        name="receiptKind"
+                        checked={receiptKind === "personal"}
+                        onChange={() => setReceiptKind("personal")}
+                      />
+                      <span>소득공제용</span>
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="receiptKind"
+                        checked={receiptKind === "business"}
+                        onChange={() => setReceiptKind("business")}
+                      />
+                      <span>지출증빙용</span>
+                    </label>
+                  </div>
+                  <div className="field" style={{ marginTop: 8 }}>
+                    <label>{receiptKind === "business" ? "사업자등록번호" : "휴대폰 번호"}</label>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={receiptNo}
+                      maxLength={14}
+                      placeholder={receiptKind === "business" ? "10자리 숫자" : "010으로 시작하는 번호"}
+                      onChange={(e) => setReceiptNo(e.target.value)}
+                    />
+                  </div>
+                  <div className="hint" style={{ marginTop: 6 }}>
+                    입금이 확인되면 발급해 드려요. 회사 경비로 처리하시면 지출증빙용을
+                    골라주세요.
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="share-actions">
-              <button className="btn" onClick={submit} disabled={!canSubmit || busy}>
+              <button className="btn" onClick={submit} disabled={busy}>
                 {busy ? "접수하는 중…" : "주문 접수하기"}
               </button>
               <button className="btn secondary" onClick={onClose} disabled={busy}>

@@ -36,6 +36,13 @@ export interface Order {
   referrer?: string; // 유입 링크 호스트 (예: instagram.com)
   reviewCoupon?: string; // 후기 요청 메일과 함께 발급한 답례 쿠폰 코드 (한 주문에 한 장)
   remindedAt?: number; // 입금 리마인더 메일을 보낸 시각 (주문당 한 번만 보내려고)
+  /**
+   * 현금영수증 발급 용도 — 신청하지 않았으면 없다.
+   * personal: 소득공제용(휴대폰번호) · business: 지출증빙용(사업자등록번호)
+   */
+  receiptKind?: "personal" | "business";
+  /** 현금영수증 번호 — 숫자만 저장한다. 발급은 홈택스에서 사람이 한다. */
+  receiptNo?: string;
 }
 
 export const ID_RE = /^[a-f0-9]{16}$/;
@@ -99,6 +106,8 @@ async function writeOrder(order: Order, addToIndex: boolean): Promise<void> {
       ...(order.source ? ["source", order.source] : []),
       ...(order.referrer ? ["referrer", order.referrer] : []),
       ...(order.reviewCoupon ? ["reviewCoupon", order.reviewCoupon] : []),
+      ...(order.receiptKind ? ["receiptKind", order.receiptKind] : []),
+      ...(order.receiptNo ? ["receiptNo", order.receiptNo] : []),
     ],
     // HSET은 기존 필드를 지우지 않는다 — paid를 pending/canceled로 되돌릴 때
     // 이전 paidAt·memo가 남아 관리 화면에 유령 "확인 시각"이 보이지 않게 지운다.
@@ -139,6 +148,9 @@ function parse(raw: unknown): Order | null {
     referrer: r.referrer || undefined,
     reviewCoupon: r.reviewCoupon || undefined,
     remindedAt: r.remindedAt ? Number(r.remindedAt) : undefined,
+    receiptKind:
+      r.receiptKind === "personal" || r.receiptKind === "business" ? r.receiptKind : undefined,
+    receiptNo: r.receiptNo || undefined,
   };
 }
 

@@ -162,13 +162,20 @@ export async function mailAdminNewOrder(o: {
   bookTitle: string;
   amount: number;
   orderNo: string;
+  receiptKind?: "personal" | "business";
+  receiptNo?: string;
 }): Promise<void> {
   if (!ADMIN) return;
+  // 현금영수증은 홈택스에서 사람이 발급한다 — 메일에 번호를 실어야 관리 화면을 안 열고도 뗀다.
+  const receipt = o.receiptKind
+    ? `<p>현금영수증 <b>${o.receiptKind === "business" ? "지출증빙용(사업자등록번호)" : "소득공제용(휴대폰번호)"}</b><br/>번호 <b>${esc(o.receiptNo ?? "")}</b><br/>입금 확인 뒤 홈택스에서 발급해주세요.</p>`
+    : "";
   await send(
     ADMIN,
-    `[키즈북] 새 주문 ${o.orderNo} · ${o.name} · ${o.amount.toLocaleString()}원`,
+    `[키즈북] 새 주문 ${o.orderNo} · ${o.name} · ${o.amount.toLocaleString()}원${o.receiptKind ? " · 현금영수증" : ""}`,
     WRAP(`<h2 style="font-size:18px">새 계좌이체 주문</h2>
 <p>주문번호 <b>${o.orderNo}</b><br/>입금자명 <b>${esc(o.name)}</b><br/>이메일 ${esc(o.email)}<br/>책 제목 《 ${esc(o.bookTitle)} 》<br/>금액 <b>${o.amount.toLocaleString()}원</b></p>
+${receipt}
 <p>입금을 확인했으면 <a href="${SITE}/admin/orders">관리자 화면</a>에서 "입금 확인"을 눌러주세요.</p>`),
   );
 }

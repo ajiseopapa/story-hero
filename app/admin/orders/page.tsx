@@ -27,6 +27,8 @@ interface Order {
   referrer?: string;
   memo?: string;
   reviewCoupon?: string;
+  receiptKind?: "personal" | "business";
+  receiptNo?: string;
 }
 
 /** 후기 요청 메일 만들기 결과 (app/api/order/admin/review-mail) */
@@ -367,6 +369,13 @@ export default function OrderAdminPage() {
               </>
             )}
           </div>
+          {/* 발급은 홈택스에서 사람이 한다 — 번호를 바로 집어갈 수 있게 눈에 띄게 둔다 */}
+          {o.receiptKind && (
+            <div className="hint" style={{ marginTop: 4 }}>
+              현금영수증 {o.receiptKind === "business" ? "지출증빙용" : "소득공제용"}{" "}
+              <b className="mono">{o.receiptNo}</b>
+            </div>
+          )}
 
           <div
             style={{
