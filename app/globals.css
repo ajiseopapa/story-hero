@@ -2143,7 +2143,7 @@ a.btn {
 .receipt-kinds input {
   width: 18px;
   height: 18px;
-  accent-color: #3182f6;
+  accent-color: var(--accent);
   margin: 0;
   flex: none;
 }
