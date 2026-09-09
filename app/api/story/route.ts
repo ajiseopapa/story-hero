@@ -10,9 +10,9 @@ import {
   FREE_DAILY_LIMIT,
   FREE_DEVICE_DAILY_LIMIT,
   FREE_IP_DAILY_LIMIT,
-  consumeQuota,
   couponDailyLimit,
   ipBucket,
+  quotaLedger,
   readDeviceId,
 } from "@/lib/limits";
 import {
@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
 }
 
 async function generateStory(req: NextRequest, deviceId: string): Promise<NextResponse> {
+  // 이 요청이 깎은 한도를 모아둔다 — 생성이 실패하면 돌려준다(lib/limits.ts)
+  const quota = quotaLedger();
   try {
     const { name, gender, age, theme, children, coupon } = (await req.json()) as {
       name?: string;
@@ -141,7 +143,7 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
         );
       }
       const perDay = couponDailyLimit(check.coupon.maxUses, COUPON_STORY_DAILY_LIMIT);
-      if (!(await consumeQuota(`coupon-story/${couponCode}`, perDay))) {
+      if (!(await quota.take(`coupon-story/${couponCode}`, perDay))) {
         return NextResponse.json(
           { error: "이 쿠폰으로 오늘 만들 수 있는 샘플을 다 썼어요. 마음에 드는 샘플을 열어주세요 🌙" },
           { status: 429 },
@@ -153,7 +155,7 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
     if (
       !testing &&
       !withCoupon &&
-      !(await consumeQuota(`device/${deviceId}`, FREE_DEVICE_DAILY_LIMIT))
+      !(await quota.take(`device/${deviceId}`, FREE_DEVICE_DAILY_LIMIT))
     ) {
       return NextResponse.json(
         {
@@ -166,7 +168,7 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
     if (
       !testing &&
       !withCoupon &&
-      !(await consumeQuota(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))
+      !(await quota.take(`ip/${ipBucket(req)}`, FREE_IP_DAILY_LIMIT))
     ) {
       return NextResponse.json(
         {
@@ -179,13 +181,13 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
     // 통행증은 전체 한도와 따로 센다. 같이 세면 하루 종일 확인하다가 손님 몫을 깎아먹고,
     // 반대로 손님이 많은 날엔 정작 내가 확인을 못 한다. 대신 테스트도 상한은 있다.
     if (testing) {
-      if (!(await consumeQuota("story-test", TEST_STORY_DAILY_LIMIT))) {
+      if (!(await quota.take("story-test", TEST_STORY_DAILY_LIMIT))) {
         return NextResponse.json(
           { error: "오늘 테스트로 만들 수 있는 샘플을 다 썼어요(관리자용 한도)." },
           { status: 429 },
         );
       }
-    } else if (!(await consumeQuota("story", FREE_DAILY_LIMIT))) {
+    } else if (!(await quota.take("story", FREE_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "오늘 준비된 무료 샘플이 모두 소진됐어요. 내일 다시 찾아와주세요 🌙" },
         { status: 429 },
@@ -210,6 +212,7 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
     try {
       parsed = JSON.parse(raw) as StoryResult;
     } catch {
+      await quota.refund(); // 모델이 뱉은 형식이 깨진 것 — 손님 몫을 깎을 일이 아니다
       return NextResponse.json(
         { error: "이야기 생성 결과를 해석하지 못했어요. 다시 시도해주세요." },
         { status: 502 },
@@ -219,6 +222,7 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
     // 최소한의 정합성 보정
     const scenes = Array.isArray(parsed.scenes) ? parsed.scenes.slice(0, SCENE_COUNT) : [];
     if (!parsed.title || scenes.length === 0 || !parsed.cover?.imagePrompt) {
+      await quota.refund();
       return NextResponse.json(
         { error: "이야기 형식이 올바르지 않아요. 다시 시도해주세요." },
         { status: 502 },
@@ -246,6 +250,7 @@ async function generateStory(req: NextRequest, deviceId: string): Promise<NextRe
   } catch (err) {
     // 원문은 서버 로그에만 남긴다 — 손님 화면에 영어 오류가 그대로 뜨면 안 된다
     console.error("story failed:", err instanceof Error ? err.message : err);
+    await quota.refund(); // 크레딧·타임아웃 등 우리 쪽 사고 — 손님의 오늘 몫을 돌려준다
     const kind = classifyOpenAIError(err);
     const alert = adminAlert(kind, "이야기 생성");
     if (alert) await alertAdmin(kind, alert.subject, alert.body);

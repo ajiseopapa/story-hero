@@ -196,6 +196,22 @@ export async function consumeOrderImage(id: string, limit: number): Promise<bool
   return Number(count) <= limit;
 }
 
+/**
+ * 삽화 생성이 실패했을 때 깎은 장수를 되돌린다.
+ * 우리 잘못으로 실패한 장이 결제한 손님 몫에서 빠지면 안 된다.
+ */
+export async function refundOrderImage(id: string): Promise<void> {
+  const key = `${KEY(id)}:img`;
+  try {
+    await pipeline([
+      ["DECR", key],
+      ["EXPIRE", key, RETENTION_DAYS * 24 * 60 * 60],
+    ]);
+  } catch (err) {
+    console.warn("order image refund failed:", err);
+  }
+}
+
 /** 주문 완전 삭제 — 테스트 주문 정리용. 기록과 목록에서 모두 지운다. */
 export async function deleteOrder(id: string): Promise<boolean> {
   const order = await getOrder(id);

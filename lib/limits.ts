@@ -15,14 +15,20 @@ function todayKST(): string {
 // bucket의 오늘 사용량이 limit 미만이면 1 소진하고 true, 초과면 false.
 // KV가 없으면(로컬 개발) 통과시키되, 검사 자체가 오류를 내면 막는다(fail-closed) —
 // 장애 순간에 한도가 통째로 풀리면 그 시간 동안 OpenAI 비용 상한이 사라진다.
+const QUOTA_TTL_SEC = 2 * 24 * 60 * 60;
+
+function quotaKey(bucket: string): string {
+  return `limits:${todayKST()}:${bucket}`;
+}
+
 export async function consumeQuota(bucket: string, limit: number): Promise<boolean> {
   if (isStoreConfigured()) {
-    const key = `limits:${todayKST()}:${bucket}`;
+    const key = quotaKey(bucket);
     try {
       // 먼저 올리고 넘치면 되돌린다 — 읽고-비교하고-쓰면 마지막 한 칸을 둘이 나눠 쓴다
       const [n] = await pipeline([
         ["INCR", key],
-        ["EXPIRE", key, 2 * 24 * 60 * 60],
+        ["EXPIRE", key, QUOTA_TTL_SEC],
       ]);
       if (Number(n) > limit) {
         await pipeline([["DECR", key]]);
@@ -35,6 +41,46 @@ export async function consumeQuota(bucket: string, limit: number): Promise<boole
     }
   }
   return true; // 저장소가 없는 로컬 개발은 통과
+}
+
+/**
+ * 한 요청이 소진한 한도를 모아두고, 생성이 실패하면 되돌린다.
+ *
+ * 한도는 생성 **전에** 깎는다 — 비용 상한이라 먼저 잠가야 한다. 그런데 우리 쪽 사고로
+ * 생성이 실패해도 깎인 채로 뒀다. 2026-09-05 Blob 스토어가 멈춰 샘플이 줄줄이 실패한 날,
+ * 재시도하던 손님이 기기당 3회를 다 태우고 끝내 "오늘 다 쓰셨어요"까지 봤다(시작 7 · 실패 11).
+ * 손님 잘못이 아닌 실패는 되돌려준다.
+ */
+export function quotaLedger() {
+  const spent: string[] = [];
+  return {
+    /** consumeQuota와 같되, 성공한 차감을 원장에 적어둔다. */
+    async take(bucket: string, limit: number): Promise<boolean> {
+      const ok = await consumeQuota(bucket, limit);
+      // 자정을 넘겨 되돌려도 엉뚱한 날을 깎지 않도록 버킷이 아니라 키로 적는다
+      if (ok) spent.push(quotaKey(bucket));
+      return ok;
+    },
+    /**
+     * 이 요청이 깎은 것을 전부 되돌린다. 두 번 불러도 안전하다.
+     * 되돌리기 실패는 삼킨다 — 손님 응답을 막을 이유가 없고, 키는 어차피 이틀 뒤 사라진다.
+     */
+    async refund(): Promise<void> {
+      const keys = spent.splice(0);
+      if (keys.length === 0 || !isStoreConfigured()) return;
+      try {
+        // 만료된 키를 되살렸을 수 있으니 TTL을 다시 걸어 영원히 남지 않게 한다
+        await pipeline(
+          keys.flatMap((k) => [
+            ["DECR", k],
+            ["EXPIRE", k, QUOTA_TTL_SEC],
+          ]),
+        );
+      } catch (err) {
+        console.warn("quota refund failed:", err);
+      }
+    },
+  };
 }
 
 // 요청 IP를 짧은 해시로 (프라이버시 보호 + 버킷 키로 사용)

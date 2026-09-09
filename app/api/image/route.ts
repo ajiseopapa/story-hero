@@ -7,11 +7,11 @@ import {
   IMAGE_DAILY_LIMIT,
   IMAGE_FREE_IP_DAILY_LIMIT,
   ORDER_IMAGE_LIMIT,
-  consumeQuota,
   couponDailyLimit,
   ipBucket,
+  quotaLedger,
 } from "@/lib/limits";
-import { ID_RE, consumeOrderImage, getOrder, tokenMatches } from "@/lib/orders";
+import { ID_RE, consumeOrderImage, getOrder, refundOrderImage, tokenMatches } from "@/lib/orders";
 import { alertAdmin } from "@/lib/alerts";
 import { hasTestPass } from "@/lib/test-pass";
 import { checkCoupon, normalizeCode } from "@/lib/coupons";
@@ -32,6 +32,18 @@ function parseDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null 
 }
 
 export async function POST(req: NextRequest) {
+  // 이 요청이 깎은 한도 — 삽화 생성이 실패하면 돌려준다(lib/limits.ts)
+  const quota = quotaLedger();
+  // 결제한 주문의 삽화 장수를 깎았다면 그 주문 번호. 실패 시 되돌리려고 들고 있는다.
+  let spentOrderId: string | null = null;
+  /** 실패로 끝날 때 깎아둔 한도를 모두 되돌린다. */
+  const refundAll = async () => {
+    await quota.refund();
+    if (spentOrderId) {
+      await refundOrderImage(spentOrderId);
+      spentOrderId = null;
+    }
+  };
   try {
     const { photo, photos, imagePrompt, kind, age, gender, children, art, order, coupon } =
       (await req.json()) as {
@@ -101,6 +113,7 @@ export async function POST(req: NextRequest) {
           { status: 429 },
         );
       }
+      spentOrderId = order.id;
       paidOrder = true;
     } else if (!testing) {
       // 쿠폰 손님은 IP 한도 대신 쿠폰별 한도 — 이야기가 쿠폰으로 통과했는데 삽화가 IP에 막히면
@@ -109,13 +122,13 @@ export async function POST(req: NextRequest) {
       const check = couponCode ? await checkCoupon(couponCode) : null;
       if (check?.ok) {
         const perDay = couponDailyLimit(check.coupon.maxUses, COUPON_IMAGE_DAILY_LIMIT);
-        if (!(await consumeQuota(`coupon-image/${couponCode}`, perDay))) {
+        if (!(await quota.take(`coupon-image/${couponCode}`, perDay))) {
           return NextResponse.json(
             { error: "이 쿠폰으로 오늘 그릴 수 있는 샘플 삽화를 다 썼어요. 마음에 드는 샘플을 열어주세요." },
             { status: 429 },
           );
         }
-      } else if (!(await consumeQuota(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))) {
+      } else if (!(await quota.take(`image-${ipBucket(req)}`, IMAGE_FREE_IP_DAILY_LIMIT))) {
         // 테스트 통행증은 IP 한도를 건너뛴다 (전체 한도는 아래에서 따로 센다)
         return NextResponse.json(
           { error: "오늘 무료로 그릴 수 있는 양을 다 쓰셨어요. 내일 다시 시도해주세요." },
@@ -127,13 +140,13 @@ export async function POST(req: NextRequest) {
     // 일일 삽화 생성 백스톱 (직접 호출 남용·폭주 방지, 정상 사용량보다 넉넉하게).
     // 통행증은 따로 센다 — 하루 확인하다 손님 몫을 깎아먹지 않게, 그러면서도 상한은 남게.
     if (testing) {
-      if (!(await consumeQuota("image-test", TEST_IMAGE_DAILY_LIMIT))) {
+      if (!(await quota.take("image-test", TEST_IMAGE_DAILY_LIMIT))) {
         return NextResponse.json(
           { error: "오늘 테스트로 그릴 수 있는 양을 다 썼어요(관리자용 한도)." },
           { status: 429 },
         );
       }
-    } else if (!(await consumeQuota("image", IMAGE_DAILY_LIMIT))) {
+    } else if (!(await quota.take("image", IMAGE_DAILY_LIMIT))) {
       return NextResponse.json(
         { error: "오늘 그림을 그릴 수 있는 양이 모두 소진됐어요. 잠시 후 다시 시도해주세요." },
         { status: 429 },
@@ -160,12 +173,15 @@ export async function POST(req: NextRequest) {
 
     const b64 = result.data?.[0]?.b64_json;
     if (!b64) {
+      await refundAll();
       return NextResponse.json({ error: "삽화 생성에 실패했어요." }, { status: 502 });
     }
 
     return NextResponse.json({ image: `data:image/png;base64,${b64}` });
   } catch (err) {
     console.error("image failed:", err instanceof Error ? err.message : err);
+    // 크레딧·정책 거부·타임아웃 모두 손님이 고칠 수 없는 실패다 — 깎은 몫을 돌려준다
+    await refundAll();
     const kind = classifyOpenAIError(err);
     const alert = adminAlert(kind, "삽화 생성");
     if (alert) await alertAdmin(kind, alert.subject, alert.body);
