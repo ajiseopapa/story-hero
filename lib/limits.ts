@@ -6,6 +6,7 @@
 // INCR는 원자적이라 동시 요청 레이스가 없고, 주문·쿠폰이 이미 같은 KV를 쓴다.
 import { createHash } from "node:crypto";
 import { isStoreConfigured, pipeline } from "@/lib/kv";
+import { alertAdmin } from "@/lib/alerts";
 
 // 날짜 경계는 한국 시간 기준
 function todayKST(): string {
@@ -37,6 +38,22 @@ export async function consumeQuota(bucket: string, limit: number): Promise<boole
       return true;
     } catch (err) {
       console.error("quota check failed (fail-closed):", err);
+      // fail-closed라 저장소가 죽으면 손님 전원이 "오늘 다 쓰셨어요"를 본다. 2026-09-05
+      // Blob 스토어가 멈췄을 때가 그랬고, 우리는 며칠 뒤 퍼널을 보고서야 알았다.
+      // 버킷 이름에는 기기 ID·IP 해시·쿠폰 코드가 들어 있어 메일에 싣지 않는다.
+      await alertAdmin(
+        "quota-store",
+        "한도 저장소가 응답하지 않아 샘플 생성이 전부 막혔어요",
+        `일일 한도 검사(KV)가 실패했습니다.
+
+한도는 fail-closed입니다 — 검사가 안 되면 막습니다(장애 중에 비용 상한이 통째로
+풀리지 않게). 그래서 지금 들어온 손님은 전원 '오늘 무료 샘플을 다 사용했어요'를
+보고 있습니다. 사이트는 열려 있지만 아무도 동화를 만들 수 없습니다.
+
+Upstash 콘솔에서 인스턴스 상태와 요청 한도를 확인해주세요.
+
+오류: ${String(err instanceof Error ? err.message : err).slice(0, 300)}`,
+      );
       return false;
     }
   }
