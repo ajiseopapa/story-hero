@@ -148,6 +148,23 @@ export function artStyle(id?: string) {
   return ART_STYLES.find((a) => a.id === id) ?? ART_STYLES[1];
 }
 
+// 사진에서 뽑아둔 얼굴 지문(lib/face-anchor.ts)을 프롬프트에 박아 넣는다 (2026-09-10).
+// 책 한 권에 한 번만 만들고 표지·장면 열한 장에 **토씨 하나 안 바꾸고** 똑같이 들어간다 —
+// 매번 같은 말이 앞에 서 있어야 모델이 같은 얼굴로 수렴한다.
+// ⚠️나이 규칙(castDescriptor) 뒤에 둔다. 앞에 두면 "볼이 통통하다" 같은 관찰이 나이 지시를
+// 밀어내 유아로 그려진다 — 2026-08-22에 고쳤던 문제가 되돌아온다.
+function faceAnchor(faces: string[], count: number): string {
+  const clean = faces.filter((f) => f && f.trim().length > 0);
+  if (clean.length === 0 || clean.length !== count) return "";
+  const head =
+    "FACE NOTES — these describe the SAME child(ren) as the reference photograph(s) and are identical on every page of this book. Follow them exactly so the face does not drift from page to page. They describe identity only; the AGE rule above still decides how old the face and body look.";
+  if (count === 1) return `${head} The child: ${clean[0]}`;
+  return [
+    head,
+    ...clean.map((f, i) => `Main character ${i + 1} (from the ${ORDINALS[i]} reference photo): ${f}`),
+  ].join(" ");
+}
+
 // 표지 삽화를 이후 장면에 함께 넣을 때 붙이는 지문 (2026-09-10).
 // 사진만 앵커로 쓰면 장면마다 모델이 사진을 "다시 해석"해서 얼굴이 조금씩 달라진다 —
 // 이미 확정된 그림 한 장을 같이 보여주면 해석이 아니라 참조가 되어 편차가 줄어든다.
@@ -204,16 +221,25 @@ function styleBase(count: number, artId?: string, anchored = false): string {
 
 // 표지용: 아이를 가장 사랑스럽게, 제목 공간을 위해 여백 살짝.
 // 나이 지시를 스타일 지문보다 앞에 둔다 — 뒤에 두면 "그림책 스타일"이 이겨서 유아처럼 그림.
-export function buildCoverPrompt(scene: string, children: ChildSpec[], artId?: string): string {
+export function buildCoverPrompt(
+  scene: string,
+  children: ChildSpec[],
+  artId?: string,
+  faces: string[] = [],
+): string {
   return [
     castDescriptor(children),
-    // 표지는 이 책의 첫 그림이라 참조할 앵커가 없다 — 여기서 나온 얼굴이 나머지의 기준이 된다.
+    // 표지엔 참조할 그림 앵커가 없다(여기서 나온 얼굴이 나머지의 기준이 된다) — 대신 얼굴 지문이
+    // 표지부터 들어가서, 표지가 사진에서 벗어나는 것 자체를 줄인다.
+    faceAnchor(faces, children.length),
     styleBase(children.length, artId),
     `Cover illustration. Scene: ${scene}.`,
     children.length === 1
       ? "Slightly more space around the child, magical inviting mood, like the front cover of a beloved picture book."
       : "Slightly more space around the children, magical inviting mood, like the front cover of a beloved picture book.",
-  ].join(" ");
+  ]
+    .filter(Boolean) // 얼굴 지문이 없으면 빈 칸이 남는다
+    .join(" ");
 }
 
 // 각 장면용.
@@ -223,12 +249,16 @@ export function buildScenePrompt(
   children: ChildSpec[],
   artId?: string,
   anchored = false,
+  faces: string[] = [],
 ): string {
   return [
     castDescriptor(children),
+    faceAnchor(faces, children.length),
     styleBase(children.length, artId, anchored),
     `Scene: ${scene}.`,
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 // 이야기(글) 생성을 위한 시스템 프롬프트.

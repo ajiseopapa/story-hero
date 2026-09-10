@@ -92,6 +92,9 @@ type Draft = {
   photos?: string[];
   children?: { name: string; age: number; gender: Gender }[];
   art?: string; // 그림체 (예전 초안엔 없음 → 수채화)
+  // 아이별 얼굴 지문(2026-09-10). 표지를 그릴 때 서버가 한 번 만들어 준 걸 보관했다가
+  // 결제 후 이어그리기에서도 같은 말로 그리게 한다. 예전 초안엔 없다 → 그때는 지문 없이.
+  faces?: string[];
 };
 
 // 초안(신·구버전)에서 아이 배열 복원
@@ -264,13 +267,17 @@ async function fetchImage(
   // 이 책의 표지 삽화. 장면을 그릴 때 함께 보내면 서버가 마지막 참조 이미지로 붙여
   // 얼굴·그림체를 표지에 고정한다 (2026-09-10). 표지를 그릴 땐 넘기지 않는다.
   anchor?: string,
-): Promise<string> {
+  // 아이별 얼굴 지문. 표지 응답으로 받아 두었다가 모든 장면에 그대로 되돌려준다 —
+  // 없으면 서버가 표지 요청에서 새로 만든다(책 한 권에 한 번).
+  faces?: string[],
+): Promise<{ image: string; faces?: string[] }> {
   const small = kind === "scene" && anchor ? await shrinkAnchor(anchor) : undefined;
   const res = await postLong(
     "/api/image",
     {
       photos: await fitPhotosToBudget(photos, small?.length ?? 0),
       anchor: small,
+      faces,
       imagePrompt,
       kind,
       children,
@@ -284,7 +291,7 @@ async function fetchImage(
   if (!res.ok) {
     throw new SampleError((json.error as string) || "삽화 생성 실패", reasonFromStatus(res.status));
   }
-  return json.image as string;
+  return { image: json.image as string, faces: json.faces as string[] | undefined };
 }
 
 export default function Home() {
@@ -293,6 +300,9 @@ export default function Home() {
   // 기본 주제·그림체를 미리 골라둔다 — 안 고른 사람도 바로 무료 샘플을 만들 수 있어야 한다.
   const [theme, setTheme] = useState<ThemeId | null>(DEFAULT_THEME);
   const [art, setArt] = useState<string>(DEFAULT_ART); // 그림체
+  // 아이별 얼굴 지문(2026-09-10). 표지를 그릴 때 서버가 한 번 만들어 준 것을 들고 있다가
+  // 장면·결제 후 이어그리기까지 같은 말로 그리게 한다. 초안에도 함께 저장한다.
+  const [faces, setFaces] = useState<string[] | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const [progressStep, setProgressStep] = useState("");
@@ -410,6 +420,7 @@ export default function Home() {
   const openDraft = useCallback((draft: Draft, isPaid: boolean) => {
     setTitle(draft.title);
     setArt(draft.art ?? "watercolor"); // 예전 초안은 수채화로 그렸다
+    setFaces(draft.faces); // 예전 초안엔 없다 — 그때는 지문 없이 이어 그린다
     setKids(draftToKids(draft));
     setPages(draft.pages);
     setCurrent(Math.min(draft.current, draft.pages.length - 1));
@@ -488,9 +499,12 @@ export default function Home() {
       // 같은 그림을 참조하므로 앞뒤 페이지의 아이가 갈리지 않는다.
       // missing은 페이지 순서라 표지(0)가 아직이면 먼저 그려지고, 그 결과가 앵커가 된다.
       let anchor = cur[0]?.kind === "cover" ? cur[0].image ?? undefined : undefined;
+      // 샘플을 만들 때 뽑아둔 얼굴 지문 — 며칠 뒤에 이어 그려도 같은 말로 그린다.
+      // 예전 초안엔 없다: 그때는 서버가 표지 요청에서만 새로 만들고 장면은 지문 없이 간다.
+      let bookFaces = draft.faces;
       for (const { p, i } of missing) {
         // 결제 전에 그리던 그림체를 그대로 이어간다 (예전 초안엔 값이 없어 수채화)
-        const img = await fetchImage(
+        const got = await fetchImage(
           photos,
           p.imagePrompt,
           p.kind,
@@ -499,11 +513,13 @@ export default function Home() {
           order,
           undefined,
           anchor,
+          bookFaces,
         );
-        if (i === 0 && p.kind === "cover") anchor = img;
-        cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
+        if (i === 0 && p.kind === "cover") anchor = got.image;
+        if (got.faces) bookFaces = got.faces;
+        cur = cur.map((pg, j) => (j === i ? { ...pg, image: got.image } : pg));
         setPages(cur);
-        await kvSet("draft", { ...draft, pages: cur });
+        await kvSet("draft", { ...draft, pages: cur, faces: bookFaces });
       }
     } catch {
       setError("남은 삽화를 그리다 오류가 났어요. 새로고침하면 이어서 그립니다.");
@@ -549,6 +565,8 @@ export default function Home() {
     }));
     const photos = kids.map((k) => k.photo as string);
     setError(null);
+    // 지난 책의 얼굴 지문이 남아 있으면 안 된다 — 다른 아이 얼굴로 그려진다
+    setFaces(undefined);
     trackStep("sample:start");
     // 그림체·주제·아이 수는 고를 때마다 센다(퍼널 전환율 계산에는 안 씀)
     trackEvery(`art:${art}`, `theme:${theme}`, `kids:${kids.length}`);
@@ -592,6 +610,8 @@ export default function Home() {
       let cur = skeleton;
       // 먼저 그린 표지가 이후 장면의 얼굴 앵커가 된다 (2026-09-10)
       let anchor: string | undefined;
+      // 표지 요청에서 서버가 만들어 보내주는 얼굴 지문 — 이후 장면에 그대로 되돌려준다
+      let bookFaces: string[] | undefined;
       stopRamp();
       stage = "image";
       for (let i = 0; i < freeCount; i++) {
@@ -606,7 +626,7 @@ export default function Home() {
         const base = 45 + (i * 55) / freeCount;
         const next = 45 + ((i + 1) * 55) / freeCount;
         stopRamp = ramp(setProgressPct, base, next, i === 0 ? 95 : 55);
-        const img = await fetchImage(
+        const got = await fetchImage(
           photos,
           cur[i].imagePrompt,
           cur[i].kind,
@@ -615,10 +635,12 @@ export default function Home() {
           undefined,
           couponCode || undefined,
           anchor,
+          bookFaces,
         );
         stopRamp();
-        if (i === 0) anchor = img;
-        cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
+        if (i === 0) anchor = got.image;
+        if (got.faces) bookFaces = got.faces;
+        cur = cur.map((pg, j) => (j === i ? { ...pg, image: got.image } : pg));
         setPages(cur);
         setProgressPct(Math.round(next));
       }
@@ -627,6 +649,7 @@ export default function Home() {
       await kvDel("paidOrder");
       await kvDel("recordings");
       setPaid(false);
+      setFaces(bookFaces);
       await kvSet("draft", {
         title: story.title,
         pages: cur,
@@ -634,6 +657,7 @@ export default function Home() {
         photos,
         children,
         art,
+        faces: bookFaces,
       } satisfies Draft);
 
       setCurrent(0);
@@ -722,6 +746,9 @@ export default function Home() {
         // 그림체를 빠뜨리면 결제 후 이어그리는 장면이 기본값(수채화)으로 그려져
         // 앞뒤 그림체가 다른 책이 나온다 — 반드시 함께 저장한다.
         art,
+        // 얼굴 지문도 같은 이유로 함께 저장한다 — 빠뜨리면 결제 후 그리는 열 장만
+        // 지문 없이 그려져 앞뒤 얼굴이 갈린다.
+        faces,
       } satisfies Draft);
 
       const { loadTossPayments, ANONYMOUS } = await import(
@@ -745,7 +772,7 @@ export default function Home() {
       if (e?.code === "USER_CANCEL") return; // 사용자가 결제창을 닫음
       setError(e?.message || "결제 연결 중 오류가 발생했습니다.");
     }
-  }, [title, pages, current, kids, art, resumed]);
+  }, [title, pages, current, kids, art, faces, resumed]);
 
   // 계좌이체 입금이 확인됐을 때 — 카드 결제 성공과 같은 자리로 합류시킨다.
   const unlockAfterBankPay = useCallback(

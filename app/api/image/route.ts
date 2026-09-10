@@ -16,6 +16,7 @@ import { alertAdmin } from "@/lib/alerts";
 import { hasTestPass } from "@/lib/test-pass";
 import { checkCoupon, normalizeCode } from "@/lib/coupons";
 import { adminAlert, classifyOpenAIError, userMessage } from "@/lib/openai-error";
+import { describeFaces } from "@/lib/face-anchor";
 
 export const runtime = "nodejs";
 // gpt-image-1은 한 장에 60~90초 걸릴 수 있음 (Vercel Fluid Compute에서 Hobby도 최대 300초 허용)
@@ -45,13 +46,28 @@ export async function POST(req: NextRequest) {
     }
   };
   try {
-    const { photo, photos, anchor, imagePrompt, kind, age, gender, children, art, order, coupon } =
-      (await req.json()) as {
+    const {
+      photo,
+      photos,
+      anchor,
+      faces: givenFaces,
+      imagePrompt,
+      kind,
+      age,
+      gender,
+      children,
+      art,
+      order,
+      coupon,
+    } = (await req.json()) as {
         photo?: string; // 구버전 단일 사진 (결제 복원 초안 호환)
         photos?: string[]; // 신버전: 아이별 사진 1~3장 (children과 같은 순서)
         // 이 책의 표지 삽화 — 장면 생성 시 마지막 참조 이미지로 같이 넣어 얼굴을 고정한다.
         // 없으면(옛 클라이언트·표지 자체 생성) 예전처럼 사진만으로 그린다.
         anchor?: string;
+        // 아이별 얼굴 지문(사진 순서). 표지 요청에서 서버가 만들어 응답에 실어 보내고,
+        // 이후 장면 요청은 그걸 그대로 되돌려준다 — 책 한 권에 한 번만 만든다.
+        faces?: string[];
         imagePrompt?: string;
         kind?: "cover" | "scene";
         age?: number;
@@ -164,12 +180,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const openai = getOpenAI();
+
+    // 얼굴 지문은 책 한 권에 한 번. 표지 요청에서 만들고(사진을 말로 옮기는 5초 남짓),
+    // 이후 장면들은 클라이언트가 되돌려준 걸 그대로 쓴다. 실패하면 빈 배열이라 예전 경로로 간다.
+    const reuse =
+      Array.isArray(givenFaces) && givenFaces.length === photoList.length
+        ? givenFaces.map((f) => String(f).slice(0, 1000))
+        : null;
+    // 새로 만든 경우에만 응답에 싣는다 — 받은 걸 그대로 메아리치면 열한 번 다시 오간다
+    const made = reuse || kind !== "cover" ? [] : await describeFaces(openai, photoList);
+    const faces = reuse ?? made;
+
     const prompt =
       kind === "cover"
-        ? buildCoverPrompt(imagePrompt, cast, art)
-        : buildScenePrompt(imagePrompt, cast, art, !!anchorParsed);
+        ? buildCoverPrompt(imagePrompt, cast, art, faces)
+        : buildScenePrompt(imagePrompt, cast, art, !!anchorParsed, faces);
 
-    const openai = getOpenAI();
     const result = await openai.images.edit({
       model: "gpt-image-1.5", // ChatGPT 이미지 생성과 같은 계열 모델
       image: files.length === 1 ? files[0] : files,
@@ -191,7 +218,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "삽화 생성에 실패했어요." }, { status: 502 });
     }
 
-    return NextResponse.json({ image: `data:image/png;base64,${b64}` });
+    // 표지 응답에 실어 보낸 지문을 클라이언트가 초안에 보관했다가 장면마다 되돌려준다
+    return NextResponse.json({
+      image: `data:image/png;base64,${b64}`,
+      ...(made.length > 0 ? { faces: made } : {}),
+    });
   } catch (err) {
     console.error("image failed:", err instanceof Error ? err.message : err);
     // 크레딧·정책 거부·타임아웃 모두 손님이 고칠 수 없는 실패다 — 깎은 몫을 돌려준다
