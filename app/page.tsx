@@ -180,18 +180,29 @@ async function recompressDataUrl(
 // 아이 3명 × 고화질 크롭이면 Vercel 함수 요청 한도(4.5MB)를 넘을 수 있고,
 // 넘으면 JSON 아닌 413이 와서 "서버 응답이 지연됐어요"만 반복되는 수수께끼 실패가 된다.
 const PHOTO_BUDGET = 3_400_000; // base64 문자 수 ≈ 전송 바이트. 프롬프트·JSON 여유분을 뺀 예산
-async function fitPhotosToBudget(photos: string[]): Promise<string[]> {
+async function fitPhotosToBudget(photos: string[], reserve = 0): Promise<string[]> {
   const steps: [number, number][] = [
     [0.8, 1536],
     [0.65, 1280],
     [0.55, 1024],
   ];
+  const budget = PHOTO_BUDGET - reserve; // 표지 앵커가 함께 갈 땐 그만큼 사진 예산을 줄인다
   let cur = photos;
   for (const [quality, maxSide] of steps) {
-    if (cur.reduce((n, p) => n + p.length, 0) <= PHOTO_BUDGET) return cur;
+    if (cur.reduce((n, p) => n + p.length, 0) <= budget) return cur;
     cur = await Promise.all(cur.map((p) => recompressDataUrl(p, quality, maxSide)));
   }
   return cur;
+}
+
+// 표지 삽화(1024×1536 PNG, 2MB 안팎)를 그대로 얹으면 Vercel 요청 한도(4.5MB)를 밀어낸다.
+// 얼굴·그림체를 참조시키는 용도라 이 정도면 충분하다 — 300KB 안팎으로 줄여서 보낸다.
+async function shrinkAnchor(dataUrl: string): Promise<string | undefined> {
+  try {
+    return await recompressDataUrl(dataUrl, 0.8, 1024);
+  } catch {
+    return undefined; // 앵커는 있으면 좋은 것 — 못 줄이면 앵커 없이 예전대로 그린다
+  }
 }
 
 // Vercel 타임아웃/오류 시 JSON이 아닌 텍스트("An error occurred...")가 오므로
@@ -250,11 +261,16 @@ async function fetchImage(
   art: string,
   order?: { id: string; token: string }, // 결제한 주문이면 서버가 IP 한도 대신 주문 한도를 쓴다
   coupon?: string, // 무료 샘플 단계의 쿠폰 코드 — 서버가 IP 한도 대신 쿠폰 한도를 쓴다
+  // 이 책의 표지 삽화. 장면을 그릴 때 함께 보내면 서버가 마지막 참조 이미지로 붙여
+  // 얼굴·그림체를 표지에 고정한다 (2026-09-10). 표지를 그릴 땐 넘기지 않는다.
+  anchor?: string,
 ): Promise<string> {
+  const small = kind === "scene" && anchor ? await shrinkAnchor(anchor) : undefined;
   const res = await postLong(
     "/api/image",
     {
-      photos: await fitPhotosToBudget(photos),
+      photos: await fitPhotosToBudget(photos, small?.length ?? 0),
+      anchor: small,
       imagePrompt,
       kind,
       children,
@@ -468,9 +484,23 @@ export default function Home() {
       // 결제한 주문의 자격 증명 — 서버가 이걸로 무료 IP 한도 대신 주문 한도를 적용한다
       const order = paidMarkToOrder(await kvGet<PaidMark>("paidOrder"));
       let cur = draft.pages;
+      // 결제 전에 그린 표지를 나머지 장면의 얼굴 앵커로 쓴다 — 이어그리기가 며칠 뒤여도
+      // 같은 그림을 참조하므로 앞뒤 페이지의 아이가 갈리지 않는다.
+      // missing은 페이지 순서라 표지(0)가 아직이면 먼저 그려지고, 그 결과가 앵커가 된다.
+      let anchor = cur[0]?.kind === "cover" ? cur[0].image ?? undefined : undefined;
       for (const { p, i } of missing) {
         // 결제 전에 그리던 그림체를 그대로 이어간다 (예전 초안엔 값이 없어 수채화)
-        const img = await fetchImage(photos, p.imagePrompt, p.kind, specs, draft.art ?? "", order);
+        const img = await fetchImage(
+          photos,
+          p.imagePrompt,
+          p.kind,
+          specs,
+          draft.art ?? "",
+          order,
+          undefined,
+          anchor,
+        );
+        if (i === 0 && p.kind === "cover") anchor = img;
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
         setPages(cur);
         await kvSet("draft", { ...draft, pages: cur });
@@ -560,16 +590,22 @@ export default function Home() {
       // 무료 범위만 생성: 표지(0) + 장면 1..FREE_SCENES
       const freeCount = FREE_SCENES + 1;
       let cur = skeleton;
+      // 먼저 그린 표지가 이후 장면의 얼굴 앵커가 된다 (2026-09-10)
+      let anchor: string | undefined;
       stopRamp();
       stage = "image";
       for (let i = 0; i < freeCount; i++) {
         setProgressStep(
-          i === 0 ? "표지 삽화를 그리고 있어요…" : `샘플 ${i} / ${FREE_SCENES} 장면을 그리고 있어요…`,
+          i === 0
+            ? "표지 삽화를 그리고 있어요… 가장 공들이는 한 장이에요"
+            : `샘플 ${i} / ${FREE_SCENES} 장면을 그리고 있어요…`,
         );
-        // 남은 55%를 삽화 장수로 나눠, 한 장 그리는 동안에도 막대가 움직이게 한다
+        // 남은 55%를 삽화 장수로 나눠, 한 장 그리는 동안에도 막대가 움직이게 한다.
+        // 표지는 high 품질이라 장면보다 눈에 띄게 오래 걸린다(2026-09-10) — 같은 55초로 밀면
+        // 막대가 일찍 목표에 붙어 멈춘 것처럼 보인다. 표지 구간만 감쇠를 늦춘다.
         const base = 45 + (i * 55) / freeCount;
         const next = 45 + ((i + 1) * 55) / freeCount;
-        stopRamp = ramp(setProgressPct, base, next, 55);
+        stopRamp = ramp(setProgressPct, base, next, i === 0 ? 95 : 55);
         const img = await fetchImage(
           photos,
           cur[i].imagePrompt,
@@ -578,8 +614,10 @@ export default function Home() {
           art,
           undefined,
           couponCode || undefined,
+          anchor,
         );
         stopRamp();
+        if (i === 0) anchor = img;
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: img } : pg));
         setPages(cur);
         setProgressPct(Math.round(next));

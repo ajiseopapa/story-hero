@@ -148,14 +148,39 @@ export function artStyle(id?: string) {
   return ART_STYLES.find((a) => a.id === id) ?? ART_STYLES[1];
 }
 
+// 표지 삽화를 이후 장면에 함께 넣을 때 붙이는 지문 (2026-09-10).
+// 사진만 앵커로 쓰면 장면마다 모델이 사진을 "다시 해석"해서 얼굴이 조금씩 달라진다 —
+// 이미 확정된 그림 한 장을 같이 보여주면 해석이 아니라 참조가 되어 편차가 줄어든다.
+// ⚠️구도·배경까지 베끼면 10장이 표지 복사본이 되므로, 가져올 것과 말 것을 못 박는다.
+function anchorRule(count: number): string {
+  const photos =
+    count === 1
+      ? "The FIRST reference image is the photograph of the real child."
+      : `The FIRST ${count} reference images are the photographs of the ${count} real children, in order.`;
+  const who = count === 1 ? "the same child" : "the same children";
+  return [
+    `REFERENCE IMAGES — read this before anything else. ${photos} The LAST reference image is NOT a photograph and does NOT add another character: it is a finished illustration of ${who}, already drawn for THIS same book.`,
+    `Treat that last image as the CHARACTER SHEET for this book. ${
+      count === 1
+        ? "The child's face, hairstyle, skin tone"
+        : "EACH child's own face, hairstyle and skin tone (matched to that same child in the character sheet — never to their sibling)"
+    }, and the drawing medium, linework and colour palette of your illustration must match it as closely as they match the photograph, so that every page looks like the same child drawn by the same artist on the same day. Keep the same basic outfit as in the character sheet unless the scene below explicitly describes different clothing.`,
+    "Do NOT copy the character sheet's pose, camera angle, framing, background, props or companion characters — those come ONLY from the scene description below. This is a NEW moment in the story, not a variation of that picture.",
+    // ⚠️앵커와 사진을 같은 급으로 두면 표지가 틀리게 그려진 부분(앞머리·나이)까지 10장에 복사된다.
+    // 비교 테스트(2026-09-10)에서 실제로 그랬다 — 신원은 사진, 그림은 앵커로 권위를 갈라둔다.
+    "AUTHORITY when the two references disagree: the PHOTOGRAPH is the final word on WHO this child is — facial proportions, eye shape, hairline, the exact fringe and parting, and how old the face looks. The character sheet is the final word on HOW this book is drawn — medium, palette, linework, level of stylisation, and the outfit. If the character sheet's face has drifted away from the photograph, correct it back toward the photograph rather than repeating the drift.",
+  ].join(" ");
+}
+
 // "그림책 캐릭터로 변환"이라고 하면 만화 얼굴로 뭉개짐 —
 // "실제 아이를 그린 초상"이라는 프레임이 닮음을 훨씬 잘 지킴.
 // 다인(형제·자매)일 때는 얼굴을 서로 섞거나 바꾸는 사고를 막는 지시가 핵심.
-function styleBase(count: number, artId?: string): string {
+function styleBase(count: number, artId?: string, anchored = false): string {
   const single = count === 1;
   const art = artStyle(artId);
   const m = art.medium;
   return [
+    ...(anchored ? [anchorRule(count)] : []),
     single
       ? `A skilled portrait artist depicts THIS real child (from the reference photo) in ${m} illustration, placing them inside a storybook scene. The face is a faithful ${m} PORTRAIT OF THE PHOTOGRAPH — the same face at the same proportions, only rendered in this medium.`
       : `A skilled portrait artist depicts THESE ${count} real children (one from each reference photo, in the same order) in ${m} illustration, placing them TOGETHER inside one storybook scene. Each child's face is a faithful ${m} PORTRAIT of that child's OWN photograph — the same face at the same proportions, only rendered in this medium.`,
@@ -182,6 +207,7 @@ function styleBase(count: number, artId?: string): string {
 export function buildCoverPrompt(scene: string, children: ChildSpec[], artId?: string): string {
   return [
     castDescriptor(children),
+    // 표지는 이 책의 첫 그림이라 참조할 앵커가 없다 — 여기서 나온 얼굴이 나머지의 기준이 된다.
     styleBase(children.length, artId),
     `Cover illustration. Scene: ${scene}.`,
     children.length === 1
@@ -191,10 +217,18 @@ export function buildCoverPrompt(scene: string, children: ChildSpec[], artId?: s
 }
 
 // 각 장면용.
-export function buildScenePrompt(scene: string, children: ChildSpec[], artId?: string): string {
-  return [castDescriptor(children), styleBase(children.length, artId), `Scene: ${scene}.`].join(
-    " ",
-  );
+// anchored = 표지 삽화가 마지막 참조 이미지로 함께 들어온 경우 (얼굴 일관성, 2026-09-10).
+export function buildScenePrompt(
+  scene: string,
+  children: ChildSpec[],
+  artId?: string,
+  anchored = false,
+): string {
+  return [
+    castDescriptor(children),
+    styleBase(children.length, artId, anchored),
+    `Scene: ${scene}.`,
+  ].join(" ");
 }
 
 // 이야기(글) 생성을 위한 시스템 프롬프트.

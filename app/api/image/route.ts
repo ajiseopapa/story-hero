@@ -45,10 +45,13 @@ export async function POST(req: NextRequest) {
     }
   };
   try {
-    const { photo, photos, imagePrompt, kind, age, gender, children, art, order, coupon } =
+    const { photo, photos, anchor, imagePrompt, kind, age, gender, children, art, order, coupon } =
       (await req.json()) as {
         photo?: string; // 구버전 단일 사진 (결제 복원 초안 호환)
         photos?: string[]; // 신버전: 아이별 사진 1~3장 (children과 같은 순서)
+        // 이 책의 표지 삽화 — 장면 생성 시 마지막 참조 이미지로 같이 넣어 얼굴을 고정한다.
+        // 없으면(옛 클라이언트·표지 자체 생성) 예전처럼 사진만으로 그린다.
+        anchor?: string;
         imagePrompt?: string;
         kind?: "cover" | "scene";
         age?: number;
@@ -81,6 +84,16 @@ export async function POST(req: NextRequest) {
       files.push(await toFile(parsed.buffer, `child${i + 1}.${ext}`, { type: parsed.mime }));
     }
 
+    // 표지 앵커는 사진 뒤에 딱 한 장 붙는다 — 프롬프트가 "마지막 이미지"로 가리키므로 순서가 중요하다.
+    // 표지 자체를 그릴 때는 참조할 앵커가 없다(그게 기준 그림이 된다).
+    const anchorParsed = kind === "scene" && anchor ? parseDataUrl(anchor) : null;
+    if (anchorParsed) {
+      const ext = anchorParsed.mime.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
+      files.push(
+        await toFile(anchorParsed.buffer, `anchor.${ext}`, { type: anchorParsed.mime }),
+      );
+    }
+
     // 나이/성별은 예전 초안(결제 복원)엔 없을 수 있어 기본값으로 보정 (0세는 유효)
     const clampAge = (v: unknown) => {
       const n = Number(v);
@@ -98,7 +111,6 @@ export async function POST(req: NextRequest) {
     // 결제한 주문(자격 증명 제시)은 주문별 상한, 그 외(무료 샘플)는 IP별 일일 한도.
     // 예전엔 전역 한도뿐이라 스크립트 하나가 하루치를 소진해 유료 고객까지 막을 수 있었다.
     const testing = hasTestPass(req);
-    let paidOrder = false;
     if (order?.id && order?.token) {
       const found = ID_RE.test(order.id) ? await getOrder(order.id) : null;
       if (!found || found.status !== "paid" || !tokenMatches(found.token, order.token)) {
@@ -114,7 +126,6 @@ export async function POST(req: NextRequest) {
         );
       }
       spentOrderId = order.id;
-      paidOrder = true;
     } else if (!testing) {
       // 쿠폰 손님은 IP 한도 대신 쿠폰별 한도 — 이야기가 쿠폰으로 통과했는데 삽화가 IP에 막히면
       // 같은 문제가 한 칸 뒤에서 되풀이된다. 유효하지 않은 쿠폰은 그냥 무시하고 IP 한도로 센다.
@@ -156,7 +167,7 @@ export async function POST(req: NextRequest) {
     const prompt =
       kind === "cover"
         ? buildCoverPrompt(imagePrompt, cast, art)
-        : buildScenePrompt(imagePrompt, cast, art);
+        : buildScenePrompt(imagePrompt, cast, art, !!anchorParsed);
 
     const openai = getOpenAI();
     const result = await openai.images.edit({
@@ -164,9 +175,12 @@ export async function POST(req: NextRequest) {
       image: files.length === 1 ? files[0] : files,
       prompt,
       size: "1024x1536", // 세로형 동화책 판형
-      // 돈 낸 책의 표지만 high로 그린다. 무료 샘플 표지는 medium — high는 한 장에 수십 초가
-      // 더 붙는데, 그 시간을 못 견디고 나가는 사람이 품질로 얻는 것보다 많았다(2026-09-01).
-      quality: paidOrder && kind === "cover" ? "high" : "medium",
+      // 표지는 무료 샘플이든 유료든 high, 장면은 medium.
+      // 2026-09-01엔 무료 샘플 표지를 medium으로 내렸다 — high가 붙이는 수십 초를 못 견디고
+      // 나가는 사람이 품질로 얻는 것보다 많다고 봤다. 표지 앵커를 넣은 2026-09-10부터 전제가
+      // 달라졌다: 표지 얼굴이 나머지 10장에 그대로 복제되므로, 표지가 흔들리면 책 전체가
+      // 흔들린다. 시간을 쓸 곳이 한 장으로 좁혀졌으니 그 한 장에 몰아준다.
+      quality: kind === "cover" ? "high" : "medium",
       // @ts-expect-error — SDK 타입에 아직 없지만 API가 지원: 사진 속 얼굴을 최대한 보존
       input_fidelity: "high",
     });
