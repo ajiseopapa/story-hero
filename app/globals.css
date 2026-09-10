@@ -2448,3 +2448,48 @@ a.btn {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* ---------- 첫 화면 CTA (Sprint 2, 2026-09-10) ---------- */
+/* 그림 바로 아래에 무료 미리보기 한 줄과 첫 행동 버튼을 둔다 — 폼 안쪽까지 내려가지 않아도
+   "사진 한 장"이라는 첫 행동이 첫 화면에서 보이게. */
+.hero-proof .hero-proof-note {
+  margin: 12px 0 0;
+}
+.hero-free {
+  text-align: center;
+  font-family: var(--text);
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.7;
+  color: var(--ink);
+  margin: 18px 0 12px;
+  word-break: keep-all;
+}
+.hero-cta {
+  display: block;
+  max-width: 440px;
+  margin: 0 auto;
+  font-size: 19px;
+}
+.hero-proof .hero-promise {
+  margin-top: 12px;
+}
+.hero-proof .hero-proof-note {
+  margin: 14px 0 0;
+}
+/* 폰에서는 세 번째 그림(다른 장면)이 한 화면을 통째로 차지해 CTA가 두 화면 아래로 밀렸다.
+   첫 화면은 사진 → 표지 한 줄로 끝내고, 다른 장면은 넓은 화면에서만 보여준다. */
+@media (max-width: 560px) {
+  .hero-proof .ba-row {
+    grid-template-areas: "photo arrow cover";
+  }
+  .hero-proof .ba-row figure:nth-of-type(3) {
+    display: none;
+  }
+  .hero {
+    padding-top: 16px;
+  }
+  .hero-free {
+    margin-top: 14px;
+  }
+}

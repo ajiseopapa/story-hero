@@ -7,6 +7,17 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const PRICE = Number(process.env.NEXT_PUBLIC_PRICE ?? "14900");
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** 구매자 정보 정리 — 계좌이체 주문(/api/order)과 같은 규칙으로 깎는다 */
+function clean(v: unknown, max: number): string {
+  return typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "";
+}
+
+/** 유입 꼬리표·호스트처럼 정해진 글자만 남기는 값 정리 */
+function tag(v: unknown, drop: RegExp, max: number): string {
+  return typeof v === "string" ? v.toLowerCase().replace(drop, "").slice(0, max) : "";
+}
 
 // 토스페이먼츠 결제 승인. 클라이언트 successUrl로 돌아온 뒤 반드시 서버에서 승인해야 결제 완료.
 export async function POST(req: NextRequest) {
@@ -16,11 +27,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "결제 설정이 없습니다." }, { status: 500 });
     }
 
-    const { paymentKey, orderId, amount } = (await req.json()) as {
+    const body = (await req.json()) as {
       paymentKey?: string;
       orderId?: string;
       amount?: number;
+      // 결제 직전 초안에 적어둔 구매자·유입 정보(/pay/success가 실어 보낸다).
+      // 토스 승인 응답에는 이메일이 없어 여기서 받아야 계좌이체 주문과 같은 기록이 남는다(2026-09-10).
+      name?: unknown;
+      email?: unknown;
+      bookTitle?: unknown;
+      source?: unknown;
+      referrer?: unknown;
     };
+    const { paymentKey, orderId, amount } = body;
     if (!paymentKey || !orderId || !amount) {
       return NextResponse.json({ error: "결제 정보가 부족합니다." }, { status: 400 });
     }
@@ -60,16 +79,26 @@ export async function POST(req: NextRequest) {
     let bookOrder: { id: string; token: string } | undefined;
     try {
       if (isStoreReady()) {
+        // 구매자 정보는 있으면 쓰고 없으면 예전 표식으로 남긴다 — 승인은 이미 끝났으니 여기서 막지 않는다
+        const name = clean(body.name, 40) || "카드결제";
+        const emailRaw = clean(body.email, 120);
+        const email = EMAIL_RE.test(emailRaw) ? emailRaw : "";
+        const bookTitle = clean(body.bookTitle, 120) || data.orderName || orderId;
+        const source = tag(body.source, /[^a-z0-9-]/g, 16);
+        const referrer = tag(body.referrer, /[^a-z0-9.-]/g, 40);
         const record: Order = {
           id: newOrderId(),
           token: newOrderToken(),
-          name: "카드결제",
-          email: "",
+          name,
+          email,
           amount: Number(amount),
-          bookTitle: `(카드) ${data.orderName ?? orderId}`,
+          // "(카드)" 접두어로 관리 화면에서 계좌이체와 구분한다
+          bookTitle: `(카드) ${bookTitle}`,
           status: "paid",
           createdAt: Date.now(),
           paidAt: Date.now(),
+          ...(source ? { source } : {}),
+          ...(referrer ? { referrer } : {}),
         };
         await saveOrder(record);
         bookOrder = { id: record.id, token: record.token };

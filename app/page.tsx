@@ -20,7 +20,7 @@ import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
-import { isTestBrowser, trackEvery, trackStep } from "@/lib/track";
+import { entrySource, isTestBrowser, trackEvery, trackStep } from "@/lib/track";
 import { ConnectionError, postLong, ramp } from "@/lib/long-fetch";
 import PhotoGuide from "./photo-guide";
 import BankOrderBox, {
@@ -95,6 +95,10 @@ type Draft = {
   // 아이별 얼굴 지문(2026-09-10). 표지를 그릴 때 서버가 한 번 만들어 준 걸 보관했다가
   // 결제 후 이어그리기에서도 같은 말로 그리게 한다. 예전 초안엔 없다 → 그때는 지문 없이.
   faces?: string[];
+  // 카드 결제 직전에 받은 구매자 정보와 유입 정보. 토스로 갔다가 /pay/success로 돌아오면
+  // 여기서 꺼내 승인 요청에 실어 보낸다 — 토스 승인 응답에는 이메일이 없다(2026-09-10).
+  buyer?: { name: string; email: string };
+  entry?: { source: string; referrer: string };
 };
 
 // 초안(신·구버전)에서 아이 배열 복원
@@ -536,6 +540,17 @@ export default function Home() {
     fileRefs.current[idx]?.click();
   }, []);
 
+  // 첫 화면 CTA — 폼을 거치지 않고 첫째 아이의 사진 선택창을 바로 연다.
+  // cta:hero는 세션당 한 번 세는 참고 지표(lib/stats.ts EXTRA) — 방문 대비 CTA를 누른 비율을
+  // 읽으려는 것이고, 퍼널 단계(photo:open)는 openPicker 안에서 예전과 똑같이 센다.
+  const formRef = useRef<HTMLElement | null>(null);
+  const heroPickRef = useRef(false);
+  const startFromHero = useCallback(() => {
+    trackStep("cta:hero");
+    heroPickRef.current = true;
+    openPicker(0);
+  }, [openPicker]);
+
   // 고른 사진은 바로 쓰지 않고 자르기 화면을 먼저 띄운다 (얼굴 비율이 닮음을 좌우)
   const handleFile = useCallback(async (idx: number, file: File | undefined) => {
     if (!file) return;
@@ -722,16 +737,20 @@ export default function Home() {
     // 이어보기·결제 복귀로 연 책이면 따로 센다(lib/stats.ts의 EXTRA 참고).
     trackStep(resumed ? "pay:click:resume" : "pay:click");
 
-    // 계좌이체 기간에는 토스를 부르지 않고 주문 창을 연다.
-    // 이 경우 리다이렉트가 없으므로 초안을 미리 저장할 필요도 없다.
-    if (PAY_MODE === "bank") {
-      setError(null);
-      setShowBank(true);
-      return;
-    }
+    // 결제 방식과 무관하게 먼저 주문 창을 연다. 계좌이체는 거기서 접수까지 끝나고,
+    // 카드는 이름·이메일을 받은 뒤 payWithCard로 토스에 넘어간다 — 예전엔 카드가 곧장
+    // 토스로 가서 주문에 이름 "카드결제"·이메일 빈 값만 남았다(2026-09-10).
+    setError(null);
+    setShowBank(true);
+  }, [resumed]);
 
+  // 카드 결제 — 주문 창에서 받은 구매자 정보를 초안에 함께 저장하고 토스로 넘어간다.
+  // 리다이렉트를 건너 돌아온 /pay/success가 초안에서 이 정보를 꺼내 승인 요청에 싣는다.
+  const payWithCard = useCallback(
+    async (buyer: { name: string; email: string }) => {
     try {
       setError(null);
+      setShowBank(false);
       // 리다이렉트 전에 현재 상태 저장
       await kvSet("draft", {
         title,
@@ -749,6 +768,9 @@ export default function Home() {
         // 얼굴 지문도 같은 이유로 함께 저장한다 — 빠뜨리면 결제 후 그리는 열 장만
         // 지문 없이 그려져 앞뒤 얼굴이 갈린다.
         faces,
+        // 구매자·유입 정보 — 계좌이체 주문(bank-order.tsx)과 같은 값을 카드 주문에도 남긴다
+        buyer,
+        entry: entrySource(),
       } satisfies Draft);
 
       const { loadTossPayments, ANONYMOUS } = await import(
@@ -766,13 +788,18 @@ export default function Home() {
         orderName: `${title} 그림동화책`,
         successUrl: `${window.location.origin}/pay/success`,
         failUrl: `${window.location.origin}/pay/fail`,
+        // 토스 결제창·결제내역 메일에 쓰인다. 우리 주문 기록은 초안(buyer)에서 채운다.
+        customerName: buyer.name,
+        customerEmail: buyer.email,
       });
     } catch (err) {
       const e = err as { code?: string; message?: string };
       if (e?.code === "USER_CANCEL") return; // 사용자가 결제창을 닫음
       setError(e?.message || "결제 연결 중 오류가 발생했습니다.");
     }
-  }, [title, pages, current, kids, art, faces, resumed]);
+    },
+    [title, pages, current, kids, art, faces],
+  );
 
   // 계좌이체 입금이 확인됐을 때 — 카드 결제 성공과 같은 자리로 합류시킨다.
   const unlockAfterBankPay = useCallback(
@@ -888,58 +915,25 @@ export default function Home() {
             키즈북 ✨
           </a>
         )}
+        {/* 첫 화면 순서(Sprint 2, 2026-09-10): 결과 → 가치 → 무료 미리보기 → CTA.
+            방문 388명 중 사진 선택창까지 온 사람이 35명(9%)이었다. 예전 첫 화면은 약속 알약 2개,
+            강점 상자 3개, 설명 문단이 그림보다 위에 있어 "사진을 올려야 하는 서비스"로 읽혔고,
+            첫 번째 행동 버튼은 이름·성별·나이 칸을 지난 폼 안쪽에 있었다. 릴스에서 본
+            "우리 아이 사진으로 동화책"이 첫 몇 초 안에 그대로 보여야 한다. */}
         <h1>
           우리 아이가
           <br />
-          주인공이 되는 그림동화
+          동화 속 주인공이 됩니다
         </h1>
         <p>
-          아이 사진 한 장으로, <b>우리 아이를 닮은 주인공</b>이 등장하는{" "}
-          <b>표지 포함 11페이지</b> 그림동화를 만들어요.
-          <br />
-          <b>표지와 첫 장면은 무료</b>로 먼저 보여드려요 — 마음에 들 때만 결제하시면 됩니다.
+          아이 사진 한 장으로 <b>11장의 맞춤 그림동화</b>를 만들어보세요.
         </p>
-        {/* 폼 위에 있던 "안심하고 만들어보세요" 박스를 지우고 여기로 압축했다 —
-            같은 약속을 히어로·박스·FAQ 세 군데서 되풀이하고 있었다 (2026-09-02). */}
-        <ul className="hero-promise">
-          <li>
-            <span aria-hidden="true">🔓</span> 회원가입 없음
-          </li>
-          <li>
-            <span aria-hidden="true">🔒</span> 사진 원본 저장 안 함
-          </li>
-        </ul>
-        <ul className="hero-points">
-          <li>
-            <span className="hp-emoji">👀</span>
-            결제 전<br />
-            결과 확인
-          </li>
-          <li>
-            <span className="hp-emoji">🔊</span>
-            엄마·아빠 목소리로
-            <br />
-            읽어주기
-          </li>
-          <li>
-            <span className="hp-emoji">💬</span>
-            카톡으로
-            <br />
-            조부모님께 바로
-          </li>
-        </ul>
       </header>
 
-      {/* 첫 화면의 유일한 증거 — 사진 한 장이 그림이 되는 장면.
-          예전엔 /samples 안에만 있어서, 처음 온 사람은 81px 썸네일만 보고 사진을 요구받았다. */}
+      {/* 첫 화면의 증거 — 사진 한 장이 그림이 되는 장면. 제목·설명보다 그림이 먼저 보이게
+          h2와 안내 문단을 그림 아래로 내리고, 무료 미리보기와 CTA를 바로 뒤에 붙였다. */}
       {phase === "form" && (
         <section className="before-after hero-proof">
-          <h2>사진 한 장이면 이렇게 돼요</h2>
-          <p className="hint">
-            아래 두 그림은 <b>왼쪽 사진 한 장</b>으로 만든 거예요.
-            <br />
-            장면이 바뀌어도 <b>같은 아이</b>가 주인공으로 이어집니다.
-          </p>
           <div className="ba-row">
             <figure className="ba-photo">
               <Image
@@ -977,6 +971,31 @@ export default function Home() {
               <figcaption>다른 장면, 같은 주인공</figcaption>
             </figure>
           </div>
+          <p className="hero-free">
+            <b>표지 + 첫 장면은 무료</b>로 미리 볼 수 있어요.
+            <br />
+            마음에 들 때만 결제하시면 됩니다.
+          </p>
+          {/* 첫 화면의 첫 행동 — 바로 사진 선택창을 연다(photo:open은 openPicker 안에서 센다).
+              사진을 고르면 자르기 화면이 뜨고, 끝나면 폼(이름·성별·나이)으로 내려간다. */}
+          <button type="button" className="btn hero-cta" onClick={startFromHero}>
+            무료로 우리 아이 동화책 만들기 📷
+          </button>
+          <ul className="hero-promise">
+            <li>
+              <span aria-hidden="true">🔓</span> 회원가입 없음
+            </li>
+            <li>
+              <span aria-hidden="true">🔒</span> 사진 원본 저장 안 함
+            </li>
+            <li>
+              <span aria-hidden="true">👀</span> 결제 전 결과 확인
+            </li>
+          </ul>
+          <p className="hint hero-proof-note">
+            위 그림은 <b>왼쪽 사진 한 장</b>으로 만든 거예요. 장면이 바뀌어도 <b>같은 아이</b>가
+            이어집니다.
+          </p>
         </section>
       )}
 
@@ -1007,7 +1026,7 @@ export default function Home() {
       )}
 
       {phase === "form" && (
-        <section className="card">
+        <section className="card" ref={formRef}>
           {kids.map((kid, idx) => (
             <div className="child-card" key={idx}>
               <div className="child-head">
@@ -1346,6 +1365,15 @@ export default function Home() {
             patchKid(cropping.idx, { photo: dataUrl });
             setCropping(null);
             trackStep("photo");
+            // 첫 화면 CTA로 사진을 올린 사람은 아직 화면 맨 위에 있다 — 이름·성별·나이 칸이
+            // 있는 폼으로 내려보내야 다음 할 일이 보인다.
+            if (heroPickRef.current) {
+              heroPickRef.current = false;
+              // 자르기 창이 닫힌 다음 프레임에 내린다 — 창이 열린 채로 부르면 스크롤이 먹지 않는다
+              window.setTimeout(() => {
+                formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 50);
+            }
           }}
         />
       )}
@@ -1361,10 +1389,12 @@ export default function Home() {
       {confirmDialog}
       {showBank && (
         <BankOrderBox
+          mode={PAY_MODE}
           bookTitle={title}
           price={PRICE}
           initialCoupon={coupon}
           onPaid={unlockAfterBankPay}
+          onCard={payWithCard}
           onClose={() => setShowBank(false)}
         />
       )}

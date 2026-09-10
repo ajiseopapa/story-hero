@@ -2,8 +2,16 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { kvSet } from "@/lib/store";
+import { kvGet, kvSet } from "@/lib/store";
 import { metaTrack } from "@/lib/meta-pixel";
+import { entrySource } from "@/lib/track";
+
+// 결제 직전에 첫 화면이 초안에 남겨둔 구매자·유입 정보 — 필요한 부분만 읽는다(app/page.tsx의 Draft)
+type DraftBits = {
+  title?: string;
+  buyer?: { name?: string; email?: string };
+  entry?: { source?: string; referrer?: string };
+};
 
 function SuccessInner() {
   const params = useSearchParams();
@@ -20,10 +28,24 @@ function SuccessInner() {
     }
     (async () => {
       try {
+        // 토스 승인 응답에는 이메일이 없다 — 결제 직전 초안에 적어둔 구매자·유입 정보를
+        // 승인 요청에 같이 실어, 서버가 계좌이체 주문과 같은 모양의 기록을 남기게 한다.
+        // 초안을 못 읽어도 승인은 진행한다(정보가 빈 주문이 승인 실패보다 낫다).
+        const draft = await kvGet<DraftBits>("draft").catch(() => null);
+        const entry = draft?.entry ?? entrySource();
         const res = await fetch("/api/pay/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) }),
+          body: JSON.stringify({
+            paymentKey,
+            orderId,
+            amount: Number(amount),
+            name: draft?.buyer?.name ?? "",
+            email: draft?.buyer?.email ?? "",
+            bookTitle: draft?.title ?? "",
+            source: entry.source ?? "",
+            referrer: entry.referrer ?? "",
+          }),
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "결제 승인 실패");
