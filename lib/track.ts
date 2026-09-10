@@ -217,11 +217,11 @@ function flush(): void {
  * 퍼널 단계 기록 — 세션당 한 번만 전송된다.
  * 예: trackStep("sample:done")
  */
-export function trackStep(...names: string[]): void {
-  if (typeof window === "undefined" || muted()) return;
+export function trackStep(...names: string[]): string[] {
+  if (typeof window === "undefined" || muted()) return [];
   const already = seen();
   const fresh = names.filter((n) => !already.has(n));
-  if (fresh.length === 0) return;
+  if (fresh.length === 0) return [];
   remember(fresh);
   queue.push(...fresh);
   // 광고 픽셀에도 같은 단계를 흘린다 — 세션당 한 번 규칙을 여기서 같이 얻는다
@@ -239,6 +239,9 @@ export function trackStep(...names: string[]): void {
   // 교차는 위 dev: 줄과 같은 값이라 키만 두 배로 늘어난다.
   if (src && dev) queue.push(...fresh.map((n) => `sd:${src}:${dev}:${n}`));
   if (!timer) timer = setTimeout(flush, FLUSH_MS);
+  // 이번에 처음 세어진 단계를 돌려준다(이미 센 단계는 빈 배열). 곁가지 지표를 "그 단계가
+  // 처음 잡힌 순간에만" 함께 남기려는 호출부가 쓴다 — 그래야 곁가지의 합이 단계 수와 맞는다.
+  return fresh;
 }
 
 /**

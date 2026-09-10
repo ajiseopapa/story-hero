@@ -57,9 +57,14 @@ export const LEAK_EXCLUDE = new Set(["pay:done"]);
 
 /** 퍼널 밖 참고 지표 — 이탈 원인·비용 추적용 */
 export const EXTRA: { key: string; label: string }[] = [
-  // 첫 화면 CTA(Sprint 2, 2026-09-10) — 세션당 한 번. 방문 대비 이 비율과 사진 선택창(photo:open)
-  // 비율을 나란히 보면 첫 화면 개선이 먹혔는지 읽힌다. CTA를 눌러 연 선택창도 photo:open에 든다.
+  // 첫 화면 CTA(Sprint 2, 2026-09-10) — 세션당 한 번, 퍼널 단계와 별개로 센다.
+  // cta:hero는 "버튼을 눌렀다"만, photo:open은 "선택창이 실제로 열렸다"만 뜻한다.
+  // 두 숫자를 나란히 놓으면 첫 화면이 손을 움직이게 했는지(방문 → cta:hero)와
+  // 그 손이 선택창까지 닿았는지(cta:hero → photo:open:hero)가 갈려 읽힌다.
   { key: "cta:hero", label: "첫 화면 CTA 누름(세션당 1회)" },
+  // 선택창을 '처음 연 자리'로 가른 것 — 두 줄의 합은 언제나 퍼널의 photo:open과 같다.
+  { key: "photo:open:hero", label: "└ 선택창: 첫 화면 CTA에서" },
+  { key: "photo:open:form", label: "└ 선택창: 아래 폼에서" },
   // 주문 창 안쪽 — 구매 의사(18)와 주문 접수(3) 사이가 어디서 끊기는지 (2026-09-09)
   { key: "order:open", label: "주문 창 열림" },
   { key: "order:name", label: "└ 이름 적음" },

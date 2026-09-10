@@ -20,6 +20,8 @@ const SESSION_STEPS = new Set([
   "visit",
   "cta:hero",
   "photo:open",
+  "photo:open:hero",
+  "photo:open:form",
   "photo:pick",
   "photo",
   "sample:start",

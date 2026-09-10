@@ -535,20 +535,32 @@ export default function Home() {
 
   // 파일 선택창을 여는 유일한 통로. 여기와 handleFile 사이가 인앱 브라우저에서 끊기는 구간이라
   // 두 지점을 따로 센다 — 안 그러면 "관심이 없어서 안 올렸다"와 "브라우저가 막았다"가 구별되지 않는다.
-  const openPicker = useCallback((idx: number) => {
-    trackStep("photo:open");
-    fileRefs.current[idx]?.click();
+  //
+  // photo:open은 오직 "선택창을 실제로 열었다"만 뜻한다(뜻·이름 그대로, 이번 Sprint의 KPI 축).
+  // 선택창을 열 자리가 없으면(입력 요소가 없으면) 아무것도 세지 않는다: 열지 못한 것을
+  // 열었다고 세면 KPI가 부풀고, 인앱 브라우저 진단선(photo:open → photo:pick)도 흐려진다.
+  const openPicker = useCallback((idx: number, from: "hero" | "form" = "form"): boolean => {
+    const input = fileRefs.current[idx];
+    if (!input) return false;
+    // 어디서 열었는지는 곁에 한 벌 더 남긴다. photo:open이 이번에 처음 잡혔을 때만 남겨야
+    // hero와 form의 합이 photo:open과 정확히 같다(sample:fail:* 와 같은 규칙) — 한 사람이
+    // CTA로 한 번, 폼에서 또 한 번 열어도 그 세션의 '처음 연 자리' 하나만 센다.
+    const firstOpen = trackStep("photo:open").length > 0;
+    if (firstOpen) trackStep(`photo:open:${from}`);
+    input.click();
+    return true;
   }, []);
 
   // 첫 화면 CTA — 폼을 거치지 않고 첫째 아이의 사진 선택창을 바로 연다.
-  // cta:hero는 세션당 한 번 세는 참고 지표(lib/stats.ts EXTRA) — 방문 대비 CTA를 누른 비율을
-  // 읽으려는 것이고, 퍼널 단계(photo:open)는 openPicker 안에서 예전과 똑같이 센다.
+  // cta:hero는 "CTA를 눌렀다"만 뜻한다 — 선택창이 열렸는지와는 별개로 센다(세션당 한 번,
+  // lib/stats.ts EXTRA). 선택창이 열린 시점은 openPicker의 photo:open이 따로 센다.
+  // 그래서 cta:hero − photo:open:hero 가 곧 "눌렀는데 선택창이 안 뜬" 수가 된다.
   const formRef = useRef<HTMLElement | null>(null);
   const heroPickRef = useRef(false);
   const startFromHero = useCallback(() => {
     trackStep("cta:hero");
-    heroPickRef.current = true;
-    openPicker(0);
+    // 선택창이 실제로 열렸을 때만 자르기 뒤 폼으로 내려보낸다
+    heroPickRef.current = openPicker(0, "hero");
   }, [openPicker]);
 
   // 고른 사진은 바로 쓰지 않고 자르기 화면을 먼저 띄운다 (얼굴 비율이 닮음을 좌우)
