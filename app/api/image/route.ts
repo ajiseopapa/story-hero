@@ -189,7 +189,9 @@ export async function POST(req: NextRequest) {
         ? givenFaces.map((f) => String(f).slice(0, 1000))
         : null;
     // 새로 만든 경우에만 응답에 싣는다 — 받은 걸 그대로 메아리치면 열한 번 다시 오간다
+    const faceStarted = Date.now();
     const made = reuse || kind !== "cover" ? [] : await describeFaces(openai, photoList);
+    const faceMs = made.length > 0 ? Date.now() - faceStarted : 0;
     const faces = reuse ?? made;
 
     const prompt =
@@ -197,6 +199,7 @@ export async function POST(req: NextRequest) {
         ? buildCoverPrompt(imagePrompt, cast, art, faces)
         : buildScenePrompt(imagePrompt, cast, art, !!anchorParsed, faces);
 
+    const imageStarted = Date.now();
     const result = await openai.images.edit({
       model: "gpt-image-1.5", // ChatGPT 이미지 생성과 같은 계열 모델
       image: files.length === 1 ? files[0] : files,
@@ -211,6 +214,23 @@ export async function POST(req: NextRequest) {
       // @ts-expect-error — SDK 타입에 아직 없지만 API가 지원: 사진 속 얼굴을 최대한 보존
       input_fidelity: "high",
     });
+
+    // 한 줄 계측(2026-09-14). 표지 high·얼굴 지문·그림 앵커가 각각 몇 초를 쓰는지는 퍼널로는
+    // 영영 안 보인다(하루 방문 5명). Vercel 로그에서 나중에 세려고 생성마다 한 줄만 남긴다.
+    // 사진·이름·이야기 본문은 남기지 않는다 — 나이와 켜짐 여부, 걸린 시간뿐이다.
+    console.log(
+      "[gen]",
+      JSON.stringify({
+        kind, // cover | scene
+        ages: cast.map((c) => c.age),
+        art: art ?? null,
+        anchored: !!anchorParsed, // 표지를 그림 앵커로 받았나 (장면만 해당)
+        faceAnchor: faces.length > 0, // 얼굴 지문이 붙었나
+        faceMs, // 지문 만드는 데 쓴 시간 (표지에서 한 번만 >0)
+        imageMs: Date.now() - imageStarted,
+        quality: kind === "cover" ? "high" : "medium",
+      }),
+    );
 
     const b64 = result.data?.[0]?.b64_json;
     if (!b64) {

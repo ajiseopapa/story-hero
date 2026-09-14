@@ -43,12 +43,24 @@ export function ageDescriptor(
       "Keep the baby safely nestled, seated with legs splayed, or gently held in the scene (never in a dangerous pose).",
     ].join(" ");
   }
+  if (age <= 3) {
+    return [
+      head,
+      source,
+      "Real toddler anatomy: the whole body is about five head-heights tall. This age still carries a lot of baby fat and must look SOFT and PLUMP, never lean. Full rounded cheeks are the widest part of the face, with a soft rounded chin and NO visible jawline or cheekbones; a small nose, a full set of small baby teeth, and a short but clearly visible neck. The body is softly padded: a rounded little tummy, chubby arms and legs with soft creases at the wrists, elbows and knees, dimpled hands, and plump feet. The head is NOT oversized — it is no wider than the shoulders.",
+      "STRICTLY FORBIDDEN: infant proportions (four head-heights, no neck, sparse hair) and any school-age slimness — no hollow, flat or sunken cheeks, no defined jawline or cheekbones, no thin wiry arms and legs, no lean athletic build. A toddler drawn slim looks gaunt and wrong; when in doubt, draw them SOFTER and ROUNDER (but never with a bigger head).",
+    ].join(" ");
+  }
+  // ⚠️2026-09-14: 예전엔 3세와 6세가 같은 "<=6" 구간이었다. 구간 텍스트가 3~4세 기준(손목 접힘,
+  // 보조개 손, 볼이 얼굴에서 제일 넓음)이라 6세가 3세로 그려졌다 — imagePrompt에 "A 6-year-old
+  // boy"라고 적혀 있어도 그랬다. 동점일 때 "더 부드럽고 둥글게"라는 옛 문장이 어린 쪽으로 한 번 더
+  // 밀었다. 그래서 4~6세를 떼어내고, 동점 규칙을 "그 나이 그대로"로 바꾼다.
   if (age <= 6) {
     return [
       head,
       source,
-      "Real preschooler anatomy: the whole body is about five head-heights tall. This age still carries a lot of baby fat and must look SOFT and PLUMP, never lean. Full rounded cheeks are the widest part of the face, with a soft rounded chin and NO visible jawline or cheekbones; a small nose, a full set of small baby teeth, and a short but clearly visible neck. The body is softly padded: a rounded little tummy, chubby arms and legs with soft creases at the wrists, elbows and knees, dimpled hands, and plump feet. The head is NOT oversized — it is no wider than the shoulders.",
-      "STRICTLY FORBIDDEN: infant proportions (four head-heights, no neck, sparse hair) and any school-age slimness — no hollow, flat or sunken cheeks, no defined jawline or cheekbones, no thin wiry arms and legs, no lean athletic build. A preschooler drawn slim looks gaunt and wrong; when in doubt, draw them SOFTER and ROUNDER (but never with a bigger head).",
+      "Real kindergartener anatomy: the whole body is about five and a half head-heights tall. Still soft and childlike, but NO LONGER A TODDLER — the baby fat has begun to go. The cheeks are still softly rounded yet they are no longer the widest part of the face, the chin is small and rounded, and there is no visible jawline or cheekbones; a small nose, a full set of small baby teeth, and a clearly visible neck. Arms and legs have lengthened and lost their baby creases — NO soft creases at the wrists, elbows or knees, and NO dimpled knuckles; the hands are small but have recognisable fingers. This must read instantly as a kindergartener about to start school, clearly OLDER than a toddler.",
+      "STRICTLY FORBIDDEN: toddler or infant features — round baby face with cheeks wider than the skull, creased wrists and elbows, dimpled hands, stubby arms and legs, oversized head, four- or five-head-height proportions. Equally forbidden is school-age slimness: no hollow or sunken cheeks, no defined jawline or cheekbones, no thin wiry limbs. When in doubt, draw them EXACTLY this age — do not fall back on a toddler.",
     ].join(" ");
   }
   if (age <= 9) {
