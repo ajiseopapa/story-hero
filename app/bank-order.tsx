@@ -69,19 +69,30 @@ function deadlineText(createdAt: number): string {
 }
 
 export default function BankOrderBox({
+  mode = "bank",
   bookTitle,
   price,
   initialCoupon = "",
   onPaid,
+  onCard,
   onClose,
 }: {
+  /**
+   * bank: 계좌이체 접수까지 여기서 끝낸다. card: 이름·이메일만 받고 onCard로 토스에 넘긴다.
+   * 카드도 같은 창을 쓰는 이유 — 예전엔 카드가 곧장 토스로 가서 주문에 이름·이메일이
+   * 안 남았다(2026-09-10). 쿠폰 경로는 두 모드가 같다.
+   */
+  mode?: "bank" | "card";
   bookTitle: string;
   price: number;
   /** 샘플 단계에서 미리 적어둔 쿠폰 코드 — 여기서 다시 적지 않게 채워 둔다 */
   initialCoupon?: string;
   onPaid: (order: BankOrder) => void; // 주문 id+token을 넘겨야 서버가 "돈 낸 주문"으로 검증한다
+  /** card 모드에서 이름·이메일이 갖춰지면 부른다 — 토스 결제창을 여는 건 부모 몫이다 */
+  onCard?: (buyer: { name: string; email: string }) => void | Promise<void>;
   onClose: () => void;
 }) {
+  const card = mode === "card";
   const [order, setOrder] = useState<BankOrder | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -157,6 +168,18 @@ export default function BankOrderBox({
     }
     if (!EMAIL_OK.test(email.trim())) {
       setError("이메일 주소를 다시 확인해주세요.");
+      return;
+    }
+    // 카드는 여기서 접수하지 않는다 — 구매자 정보만 넘기고 토스 결제창으로 간다.
+    // 현금영수증도 받지 않는다(카드 매출전표가 그 역할을 한다).
+    if (card) {
+      setError(null);
+      setBusy(true);
+      try {
+        await onCard?.({ name: name.trim(), email: email.trim() });
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (wantReceipt && !receiptNo.replace(/[^0-9]/g, "")) {
@@ -284,12 +307,14 @@ export default function BankOrderBox({
         {!order ? (
           <>
             <h3 style={{ marginTop: 0 }}>
-              {couponFirst ? "쿠폰으로 전체 열기" : "계좌이체로 주문하기"}
+              {couponFirst ? "쿠폰으로 전체 열기" : card ? "카드로 결제하기" : "계좌이체로 주문하기"}
             </h3>
             <p className="hint" style={{ marginTop: 4 }}>
               {couponFirst
                 ? "입금 없이 쿠폰으로 열어드려요. 이름과 이메일만 적어주세요. 누가 열었는지 남기고 안내 메일을 보내기 위해서예요."
-                : "계좌이체로 받고 있어요. 이름과 이메일을 남기고 아래 계좌로 입금해 주시면, 확인되는 대로 나머지 장면과 PDF·소리책이 모두 열립니다. 확인은 보통 몇 시간 안에 끝나요."}
+                : card
+                  ? "이름과 이메일을 남기면 카드 결제창으로 이어져요. 결제가 끝나면 나머지 장면과 PDF·소리책이 바로 열리고, 보관 링크 안내를 이 이메일로 보내드려요."
+                  : "계좌이체로 받고 있어요. 이름과 이메일을 남기고 아래 계좌로 입금해 주시면, 확인되는 대로 나머지 장면과 PDF·소리책이 모두 열립니다. 확인은 보통 몇 시간 안에 끝나요."}
             </p>
 
             <div className="order-amount">
@@ -306,7 +331,7 @@ export default function BankOrderBox({
               )}
             </div>
 
-            {couponFirst ? null : BANK_ACCOUNT ? (
+            {couponFirst || card ? null : BANK_ACCOUNT ? (
               <div className="order-bank">
                 <div className="hint">입금 계좌</div>
                 <div className="order-bank-row">
@@ -324,7 +349,7 @@ export default function BankOrderBox({
             )}
 
             <div className="field">
-              <label>{couponFirst ? "이름" : "입금하실 분 이름"}</label>
+              <label>{couponFirst || card ? "이름" : "입금하실 분 이름"}</label>
               <input
                 type="text"
                 value={name}
@@ -332,7 +357,7 @@ export default function BankOrderBox({
                 placeholder="이름을 적어주세요"
                 onChange={(e) => onName(e.target.value)}
               />
-              {!couponFirst && (
+              {!couponFirst && !card && (
                 <div className="hint" style={{ marginTop: 6 }}>
                   입금하실 때 이 이름으로 보내주시면 가장 빨리 찾아요. 가족 계좌처럼 다른
                   이름으로 보내셔도 주문번호로 찾아드리니 괜찮아요.
@@ -381,7 +406,7 @@ export default function BankOrderBox({
                 <p className="hint" style={{ marginTop: 12 }}>
                   쿠폰이 없다면{" "}
                   <button type="button" className="link-btn" onClick={() => setCouponFirst(false)}>
-                    계좌이체로 주문하기
+                    {card ? "카드로 결제하기" : "계좌이체로 주문하기"}
                   </button>
                 </p>
               </>
@@ -391,6 +416,7 @@ export default function BankOrderBox({
                 필요한 사람만 펼치게 접어 둔다: 안 쓰는 손님에게 칸을 늘리면
                 지금 고치려는 그 마찰이 도로 늘어난다. 여기서 받는 건 번호뿐이고
                 실제 발급은 입금 확인 뒤 홈택스에서 한다. */}
+            {!card && (
             <div className="receipt-box">
               <label className="receipt-toggle">
                 <input
@@ -443,18 +469,26 @@ export default function BankOrderBox({
                 </>
               )}
             </div>
+            )}
 
             <div className="share-actions">
               <button className="btn" onClick={submit} disabled={busy}>
-                {busy ? "접수하는 중…" : "주문 접수하기"}
+                {busy
+                  ? card
+                    ? "결제창 여는 중…"
+                    : "접수하는 중…"
+                  : card
+                    ? `카드로 ${price.toLocaleString()}원 결제하기`
+                    : "주문 접수하기"}
               </button>
               <button className="btn secondary" onClick={onClose} disabled={busy}>
                 닫기
               </button>
             </div>
             <p className="hint" style={{ marginTop: 12 }}>
-              이름과 이메일은 입금 확인과 안내에만 씁니다. 자세한 내용은 개인정보처리방침을
-              봐주세요.
+              {card
+                ? "이름과 이메일은 결제 확인과 안내에만 씁니다. 카드 정보는 토스페이먼츠가 처리하며 저희는 받지 않아요."
+                : "이름과 이메일은 입금 확인과 안내에만 씁니다. 자세한 내용은 개인정보처리방침을 봐주세요."}
             </p>
 
             <div className="coupon-box">

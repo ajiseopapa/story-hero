@@ -18,7 +18,10 @@
 /** 이벤트가 "사람 수"인지 "행동 수"인지. 섞어서 읽으면 전환율이 무너진다. */
 const SESSION_STEPS = new Set([
   "visit",
+  "cta:hero",
   "photo:open",
+  "photo:open:hero",
+  "photo:open:form",
   "photo:pick",
   "photo",
   "sample:start",
