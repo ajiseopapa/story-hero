@@ -2455,6 +2455,13 @@ a.btn {
 .hero-proof .hero-proof-note {
   margin: 12px 0 0;
 }
+/* PC에서만 뜨는 안내 한 줄 (2026-09-14). 버튼 바로 아래, 약속 배지 위.
+   PC에만 나오므로 좁은 화면 규칙은 필요 없다. */
+.hero-pc-note {
+  margin: 10px 0 0;
+  text-align: center;
+  line-height: 1.55;
+}
 .hero-free {
   text-align: center;
   font-family: var(--text);

@@ -20,7 +20,7 @@ import { downloadStoryPdf } from "@/lib/pdf";
 import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
-import { entrySource, isTestBrowser, trackEvery, trackStep } from "@/lib/track";
+import { deviceBucket, entrySource, isTestBrowser, trackEvery, trackStep } from "@/lib/track";
 import { ConnectionError, postLong, ramp } from "@/lib/long-fetch";
 import PhotoGuide from "./photo-guide";
 import BankOrderBox, {
@@ -379,6 +379,22 @@ export default function Home() {
   // 퍼널 시작점. 세션당 한 번만 집계된다(lib/track.ts).
   useEffect(() => {
     trackStep("visit");
+  }, []);
+
+  /**
+   * PC로 보고 있는가 — 안내 문구 한 줄을 PC에서만 띄우려고 둔다(2026-09-14).
+   *
+   * 왜: 09-01 이후 방문 → 사진 선택창이 PC만 9%다. 인앱 브라우저는 19~38%로 잘 넘어간다.
+   * 방문의 43%가 PC인데 거기서 막히니 전체가 눌린다. 버튼을 누르면 무슨 일이 생기는지
+   * 한 줄로 말해주는 것부터 해본다.
+   *
+   * 판별은 lib/track.ts의 deviceBucket 하나로 끝낸다 — 퍼널 기기 꼬리표와 같은 기준이라야
+   * 나중에 `dev:pc:*` 숫자와 이 문구를 본 사람이 같은 집합이 된다. 새 판별 로직은 만들지 않는다.
+   * 첫 렌더에는 false다(서버엔 UA가 없다) — 마운트 뒤에 켜야 하이드레이션이 어긋나지 않는다.
+   */
+  const [isPc, setIsPc] = useState(false);
+  useEffect(() => {
+    setIsPc(deviceBucket(navigator.userAgent || "") === "pc");
   }, []);
 
   /**
@@ -993,6 +1009,16 @@ export default function Home() {
           <button type="button" className="btn hero-cta" onClick={startFromHero}>
             무료로 우리 아이 동화책 만들기 📷
           </button>
+          {/* PC에서만 뜨는 한 줄. 버튼을 누르면 무엇이 일어나는지 미리 말해준다 —
+              PC의 방문 → 사진 선택창이 9%로, 인앱 브라우저(19~38%)의 절반도 안 된다.
+              버튼 동작과 이벤트는 건드리지 않는다. 이 문구는 읽히기만 한다. */}
+          {isPc && (
+            <p className="hint hero-pc-note">
+              PC에서는 버튼을 누르면 사진 선택창이 열려요.
+              <br />
+              사진을 고르면 자르기 화면이 열리고, 이름만 적으면 끝이에요.
+            </p>
+          )}
           <ul className="hero-promise">
             <li>
               <span aria-hidden="true">🔓</span> 회원가입 없음
