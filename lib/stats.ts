@@ -21,7 +21,7 @@ export function kstDate(offsetDays = 0): string {
  * 퍼널 단계 — 순서가 곧 화면에 그려지는 순서다.
  * 각 단계는 브라우저 세션당 한 번만 센다(lib/track.ts). 즉 값은 "사람 수"에 가깝다.
  */
-export const FUNNEL: { key: string; label: string; note: string }[] = [
+export const FUNNEL: { key: string; label: string; note: string; since?: string }[] = [
   { key: "visit", label: "방문", note: "첫 화면에 도착" },
   {
     key: "photo:open",
@@ -37,14 +37,44 @@ export const FUNNEL: { key: string; label: string; note: string }[] = [
   { key: "sample:start", label: "샘플 생성 시작", note: "주제까지 고르고 만들기를 누름" },
   { key: "sample:done", label: "샘플 완성", note: "표지+장면을 실제로 봄 — 여기가 감정 최고점" },
   {
+    key: "offer:view",
+    label: "구매 제안 노출",
+    note: "샘플 아래 구매 영역이 실제로 화면에 들어온 사람 — 스크롤해서 보지 못했으면 세지 않는다",
+    since: "2026-09-23",
+  },
+  {
     key: "pay:click",
-    label: "구매 의사",
-    note: "방금 만든 샘플을 보고 결제/구매를 누름 — 검증 기간의 핵심 지표",
+    label: "구매 버튼 클릭",
+    note: "구매 CTA(내 책 주문하기 · 잠금 화면 열기)를 실제로 누름. 옛 이름은 '구매 의사'",
+  },
+  {
+    key: "order:open",
+    label: "주문서 열림",
+    note: "주문 창이 실제로 떴다. 구매 버튼과 이 숫자의 차이가 곧 창이 안 뜬 사고다",
+  },
+  { key: "order:name", label: "이름 입력", note: "이름 칸에 실제로 값이 들어옴" },
+  { key: "order:email", label: "이메일 입력", note: "형식이 맞는 이메일이 실제로 들어옴" },
+  {
+    key: "order:try",
+    label: "주문 접수 클릭",
+    note: "접수 버튼을 실제로 누름 — 빈 칸이 있어 막힌 경우도 포함한다",
+  },
+  {
+    key: "order:created",
+    label: "주문 생성",
+    note: "서버가 주문번호를 돌려줌. 세션당 1회로 센다 — 실제 건수는 운영 지표의 '계좌이체 주문 접수'",
+    since: "2026-09-23",
+  },
+  {
+    key: "pay:start",
+    label: "결제 시작",
+    note: "계좌이체는 입금 안내(계좌·금액) 화면이 실제로 뜬 순간, 카드는 토스 결제창을 띄운 순간. ⚠️카드 모드에서는 결제가 끝난 뒤 주문이 만들어져서 '주문 생성'보다 먼저 잡힌다",
+    since: "2026-09-23",
   },
   {
     key: "pay:done",
-    label: "카드 결제 완료",
-    note: "토스 카드결제만 잡힙니다. 계좌이체는 수동 확인이라 여기 안 올라와요",
+    label: "결제 완료",
+    note: "토스 카드결제만 잡힙니다. 계좌이체 입금은 관리자가 수동 확인하므로 여기 안 올라와요 — 실제 매출은 '실제 주문' 칸에서 봅니다",
   },
 ];
 
@@ -65,19 +95,23 @@ export const EXTRA: { key: string; label: string }[] = [
   // 선택창을 '처음 연 자리'로 가른 것 — 두 줄의 합은 언제나 퍼널의 photo:open과 같다.
   { key: "photo:open:hero", label: "└ 선택창: 첫 화면 CTA에서" },
   { key: "photo:open:form", label: "└ 선택창: 아래 폼에서" },
-  // 주문 창 안쪽 — 구매 의사(18)와 주문 접수(3) 사이가 어디서 끊기는지 (2026-09-09)
-  { key: "order:open", label: "주문 창 열림" },
-  { key: "order:name", label: "└ 이름 적음" },
-  { key: "order:email", label: "└ 이메일 적음" },
+  // 인스타 인앱 브라우저 안내(2026-09-23) — 인앱 방문 4명이 사진 선택창까지 못 갔다.
+  // 안내를 본 사람 중 몇 %가 실제로 밖으로 나갔는지 본다.
+  { key: "inapp:notice", label: "인앱 브라우저 안내 봄" },
+  { key: "inapp:open", label: "└ 브라우저에서 열기 누름" },
+  { key: "inapp:copy", label: "└ 주소 복사 누름" },
+  // 주문 창 안쪽 — 퍼널에 올라간 단계를 뺀 나머지.
+  // order:open·name·email·try는 2026-09-23에 퍼널 단계가 되어 여기서 뺐다(두 번 보이면 안 된다).
   { key: "order:ready", label: "└ 접수 버튼 열림" },
-  { key: "order:try", label: "└ 접수 눌러봄" },
-  { key: "order:submit", label: "계좌이체 주문 접수" },
+  // 퍼널의 '주문 생성'은 세션당 1회, 이 값은 서버가 건별로 센 실제 접수 건수다. 두 기준을 섞지 않는다.
+  { key: "order:submit", label: "계좌이체 주문 접수(건수)" },
   { key: "order:receipt", label: "└ 현금영수증 신청" },
   { key: "coupon:use", label: "무료 쿠폰 사용" },
   // 지난 동화 '이어서 보기'·결제 복귀로 책을 연 사람의 구매 클릭.
   // 퍼널에 넣지 않는다 — 이 사람들은 이번 세션에 샘플을 만들지 않았으므로
   // 직전 단계(샘플 완성) 대비 전환율에 섞이면 200% 같은 숫자가 나온다.
   { key: "pay:click:resume", label: "구매 의사(이어보기·복귀)" },
+  { key: "offer:view:resume", label: "구매 제안 노출(이어보기·복귀)" },
   { key: "sample:fail", label: "샘플 생성 실패" },
   // 실패를 두 축으로 가른다 — 단계별 합도, 원인별 합도 sample:fail과 같다.
   { key: "sample:fail:story", label: "└ 단계: 이야기" },
@@ -87,6 +121,8 @@ export const EXTRA: { key: string; label: string }[] = [
   { key: "sample:fail:network", label: "└ 원인: 연결 끊김" },
   { key: "sample:fail:input", label: "└ 원인: 입력·쿠폰(4xx)" },
   { key: "sample:fail:other", label: "└ 원인: 그 밖" },
+  // 실패 안내의 '다시 만들기'를 실제로 누른 횟수 — 실패 뒤 사람이 돌아오는지 본다(2026-09-23)
+  { key: "sample:retry", label: "└ 실패 후 다시 만들기" },
   { key: "share:create", label: "공유 링크 생성" },
   // 공유 책(/book/…)이 바이럴 루프로 얼마나 일하는지 — 열람 → 재공유·카드 → 새 방문(src:book:visit)
   { key: "book:view", label: "공유 책 열람" },
@@ -100,9 +136,15 @@ const memory: Map<string, Map<string, number>> =
   new Map();
 (globalThis as { __kidsbookStats?: Map<string, Map<string, number>> }).__kidsbookStats = memory;
 
-/** 이벤트 이름은 화이트리스트 문자만 허용해 임의 키 생성이 안 되게 막는다. */
+/**
+ * 이벤트 이름은 화이트리스트 문자만 허용해 임의 키 생성이 안 되게 막는다.
+ *
+ * 길이 상한을 48 → 64로 늘렸다(2026-09-23). 교차 집계 키는
+ * `sd:<출처 16>:<기기 11>:<단계>` 라서 단계 이름이 길면(offer:view:resume) 49자가 되어
+ * **조용히 버려졌다.** 걸러지는 걸 눈치챌 방법이 없는 자리라 여유를 둔다.
+ */
 export function isValidEvent(name: unknown): name is string {
-  return typeof name === "string" && /^[a-z0-9_:-]{1,48}$/.test(name);
+  return typeof name === "string" && /^[a-z0-9_:-]{1,64}$/.test(name);
 }
 
 /**

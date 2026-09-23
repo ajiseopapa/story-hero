@@ -220,6 +220,14 @@ export default function BankOrderBox({
       };
       await kvSet(STORE_KEY, saved);
       setOrder(saved);
+      // 서버가 주문번호를 돌려준 순간 — 퍼널의 '주문 생성'(세션당 1회).
+      // 서버가 /api/order에서 세는 order:submit은 실제 건수라 기준이 다르다. 둘을 섞지 않는다.
+      trackStep("order:created");
+      // 계좌이체의 '결제 시작' — 입금 안내(계좌·금액·기한) 화면이 이 순간 뜬다.
+      // ⚠️여기서만 센다. 저장된 주문을 다시 열어 입금을 확인하러 온 것은 결제 시작이 아니다
+      // (그 자리에서 세면 pay:start가 order:created보다 커진다). 카드는 page.tsx가 토스
+      // 결제창을 띄우기 직전에 같은 이벤트를 남긴다.
+      trackStep("pay:start");
       // 계좌이체 기간의 최종 전환 신호. 입금은 나중에 수동 확인되지만 그 순간을 잡을
       // 클라이언트가 없으므로, 주문 접수를 구매로 본다(착오 주문은 광고 학습에 묻힐 만큼 적다).
       metaTrack("Purchase", { value: META_PRICE, currency: "KRW" });

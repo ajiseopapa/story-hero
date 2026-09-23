@@ -21,7 +21,8 @@ import { blobToDataUrl, downloadSoundBook } from "@/lib/soundbook";
 import { createShareLink, deleteShareLink, newShareId } from "@/lib/sharebook-client";
 import { CONSENT_VERSION, REQUIRED_CONSENT_IDS } from "@/lib/consent";
 import { deviceBucket, entrySource, isTestBrowser, trackEvery, trackStep } from "@/lib/track";
-import { ConnectionError, postLong, ramp } from "@/lib/long-fetch";
+import InAppNotice from "@/app/inapp-notice";
+import { ConnectionError, postLong } from "@/lib/long-fetch";
 import PhotoGuide from "./photo-guide";
 import BankOrderBox, {
   clearBankOrder,
@@ -240,6 +241,27 @@ function reasonFromStatus(status: number): FailReason {
   return "other";
 }
 
+/**
+ * 손님에게 보일 실패 문구 (2026-09-23).
+ *
+ * 규칙 하나: **429·rate limit·API 같은 말은 화면에 올리지 않는다.**
+ * 다만 서버가 이미 한국어로 이유를 말해준 경우(하루 한도·쿠폰 오류)는 그 문장을 살린다 —
+ * "잠시 후 다시"로 덮으면 오늘 몫을 다 쓴 사람이 영원히 다시 눌러보게 된다.
+ */
+function failMessage(reason: FailReason, serverMessage: string): string {
+  const said = serverMessage.trim();
+  switch (reason) {
+    case "network":
+      return "연결이 잠시 끊어졌어요. 다시 시도해 주세요.";
+    case "quota":
+      return said || "지금 요청이 많아 잠시 시간이 걸리고 있어요. 잠시 후 다시 만들어 주세요.";
+    case "input":
+      return said || "입력하신 내용을 다시 확인해 주세요.";
+    default:
+      return said || "그림책을 만드는 중 문제가 발생했어요. 다시 만들어 주세요.";
+  }
+}
+
 /** 던져진 오류에서 원인 꼬리표를 읽는다. */
 function reasonOf(err: unknown): FailReason {
   if (err instanceof SampleError) return err.reason;
@@ -252,9 +274,9 @@ async function safeJson(res: Response): Promise<Record<string, unknown>> {
   try {
     return JSON.parse(text);
   } catch {
+    // 손님에게 상태 코드를 보여주지 않는다 — 원인은 sample:fail:<reason> 으로 이미 집계된다(2026-09-23)
     throw new SampleError(
-      "서버 응답이 지연됐어요. 잠시 후 다시 시도해주세요." +
-        (res.status ? ` (오류 코드 ${res.status})` : ""),
+      "서버 응답이 지연됐어요. 잠시 후 다시 시도해주세요.",
       reasonFromStatus(res.status),
     );
   }
@@ -293,7 +315,9 @@ async function fetchImage(
   );
   const json = await safeJson(res);
   if (!res.ok) {
-    throw new SampleError((json.error as string) || "삽화 생성 실패", reasonFromStatus(res.status));
+    // 서버가 할 말이 없으면 빈 문자열로 둔다 — 화면 문구는 failMessage가 원인별로 정한다.
+    // "삽화 생성 실패" 같은 개발용 문구가 손님 화면에 그대로 뜨면 안 된다(2026-09-23).
+    throw new SampleError((json.error as string) || "", reasonFromStatus(res.status));
   }
   return { image: json.image as string, faces: json.faces as string[] | undefined };
 }
@@ -310,7 +334,10 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [progressStep, setProgressStep] = useState("");
-  const [progressPct, setProgressPct] = useState(0);
+  // 실패 원인 — 안내 문구를 고르고, '다시 만들기' 버튼을 띄울지 정한다(2026-09-23)
+  const [failReason, setFailReason] = useState<FailReason | null>(null);
+  // 사진 선택창을 한 번이라도 연 사람에게는 인앱 브라우저 안내를 다시 보이지 않는다
+  const [photoTouched, setPhotoTouched] = useState(false);
 
   const [title, setTitle] = useState("");
   const [pages, setPages] = useState<BookPage[]>([]);
@@ -587,6 +614,7 @@ export default function Home() {
       return;
     }
     trackStep("photo:pick"); // 선택창을 연 사람 중 몇 %가 여기까지 오는가 — 인앱 브라우저 진단선
+    setPhotoTouched(true); // 사진이 넘어왔으면 인앱 안내는 할 일을 다했다
     try {
       setError(null);
       const dataUrl = await fileToScaledDataUrl(file, 1600); // 자르기 화면용 원본
@@ -608,15 +636,16 @@ export default function Home() {
     }));
     const photos = kids.map((k) => k.photo as string);
     setError(null);
+    setFailReason(null);
     // 지난 책의 얼굴 지문이 남아 있으면 안 된다 — 다른 아이 얼굴로 그려진다
     setFaces(undefined);
     trackStep("sample:start");
     // 그림체·주제·아이 수는 고를 때마다 센다(퍼널 전환율 계산에는 안 씀)
     trackEvery(`art:${art}`, `theme:${theme}`, `kids:${kids.length}`);
     setPhase("generating");
-    setProgressStep("이야기를 짓고 있어요… 1분쯤 걸려요");
-    // 이야기 구간은 서버가 진행을 알려주지 않는다 — 시간으로 채운다(4 → 45%)
-    let stopRamp = ramp(setProgressPct, 4, 45, 80);
+    // 진행 문구는 실제로 넘어간 단계만 말한다. 시간으로 밀어올리던 퍼센트 막대는 뺐다
+    // (2026-09-23) — 서버가 알려주지 않는 진행을 숫자로 꾸며 보여주지 않기로 했다.
+    setProgressStep("사진을 바탕으로 이야기를 만드는 중이에요…");
     // 실패가 어느 단계에서 났는지 — 이야기에서 시작해 삽화로 넘어간다
     let stage: "story" | "image" = "story";
 
@@ -628,7 +657,7 @@ export default function Home() {
       );
       const story = (await safeJson(storyRes)) as unknown as StoryData & { error?: string };
       if (!storyRes.ok) {
-        throw new SampleError(story.error || "이야기 생성 실패", reasonFromStatus(storyRes.status));
+        throw new SampleError(story.error || "", reasonFromStatus(storyRes.status));
       }
 
       const skeleton: BookPage[] = [
@@ -655,20 +684,13 @@ export default function Home() {
       let anchor: string | undefined;
       // 표지 요청에서 서버가 만들어 보내주는 얼굴 지문 — 이후 장면에 그대로 되돌려준다
       let bookFaces: string[] | undefined;
-      stopRamp();
       stage = "image";
       for (let i = 0; i < freeCount; i++) {
         setProgressStep(
           i === 0
-            ? "표지 삽화를 그리고 있어요… 가장 공들이는 한 장이에요"
-            : `샘플 ${i} / ${FREE_SCENES} 장면을 그리고 있어요…`,
+            ? "표지 삽화를 그리는 중이에요… 가장 공들이는 한 장이에요"
+            : `샘플 ${i} / ${FREE_SCENES} 장면을 그리는 중이에요…`,
         );
-        // 남은 55%를 삽화 장수로 나눠, 한 장 그리는 동안에도 막대가 움직이게 한다.
-        // 표지는 high 품질이라 장면보다 눈에 띄게 오래 걸린다(2026-09-10) — 같은 55초로 밀면
-        // 막대가 일찍 목표에 붙어 멈춘 것처럼 보인다. 표지 구간만 감쇠를 늦춘다.
-        const base = 45 + (i * 55) / freeCount;
-        const next = 45 + ((i + 1) * 55) / freeCount;
-        stopRamp = ramp(setProgressPct, base, next, i === 0 ? 95 : 55);
         const got = await fetchImage(
           photos,
           cur[i].imagePrompt,
@@ -680,12 +702,10 @@ export default function Home() {
           anchor,
           bookFaces,
         );
-        stopRamp();
         if (i === 0) anchor = got.image;
         if (got.faces) bookFaces = got.faces;
         cur = cur.map((pg, j) => (j === i ? { ...pg, image: got.image } : pg));
         setPages(cur);
-        setProgressPct(Math.round(next));
       }
 
       // 새 책이므로 이전 결제 기록·녹음 제거 후 초안 저장
@@ -708,13 +728,14 @@ export default function Home() {
       setPhase("book");
       trackStep("sample:done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "문제가 발생했어요. 다시 시도해주세요.");
+      const reason = reasonOf(err);
+      // 사진·이름·주제는 그대로 둔다 — 다시 올리게 하지 않는다. 폼으로 돌아가면 그대로 있다.
+      setFailReason(reason);
+      setError(failMessage(reason, err instanceof Error ? err.message : ""));
       setPhase("form");
       // 실패는 매번 센다 — 재시도 횟수까지 알아야 원인이 보인다.
       // 총계·단계·원인 세 벌로 남긴다: 단계별 합도 원인별 합도 sample:fail과 같아야 한다.
-      trackEvery("sample:fail", `sample:fail:${stage}`, `sample:fail:${reasonOf(err)}`);
-    } finally {
-      stopRamp(); // 성공·실패 어느 쪽이든 타이머가 남으면 안 된다
+      trackEvery("sample:fail", `sample:fail:${stage}`, `sample:fail:${reason}`);
     }
   }, [canSubmit, kids, theme, art, saved, ask, couponCode]);
 
@@ -809,6 +830,9 @@ export default function Home() {
       const toss = await loadTossPayments(clientKey);
       const payment = toss.payment({ customerKey: ANONYMOUS });
       const orderId = `story-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      // 결제 프로세스가 실제로 시작되는 순간 — 결제창을 띄우기 직전에만 센다(2026-09-23).
+      // 계좌이체는 입금 안내 화면이 뜰 때 bank-order.tsx가 같은 이벤트를 남긴다.
+      trackStep("pay:start");
       await payment.requestPayment({
         method: "CARD",
         amount: { currency: "KRW", value: PRICE },
@@ -882,9 +906,10 @@ export default function Home() {
     setCurrent(0);
     setPaid(false);
     setSaved(null);
-    setProgressPct(0);
     setProgressStep("");
     setError(null);
+    setFailReason(null);
+    setPhotoTouched(false); // 새로 시작하면 인앱 브라우저 안내도 처음부터 다시
     window.scrollTo({ top: 0 });
     kvDel("draft");
     kvDel("paidOrder");
@@ -1012,6 +1037,9 @@ export default function Home() {
           {/* PC에서만 뜨는 한 줄. 버튼을 누르면 무엇이 일어나는지 미리 말해준다 —
               PC의 방문 → 사진 선택창이 9%로, 인앱 브라우저(19~38%)의 절반도 안 된다.
               버튼 동작과 이벤트는 건드리지 않는다. 이 문구는 읽히기만 한다. */}
+          {/* 인스타그램 인앱 브라우저 안내(2026-09-23). 사진을 한 번이라도 고른 뒤에는 뜨지 않는다.
+              PC 안내와는 서로 배타적이다 — 인앱이면 PC가 아니다. */}
+          {!photoTouched && <InAppNotice coupon={coupon} />}
           {isPc && (
             <p className="hint hero-pc-note">
               PC에서는 버튼을 누르면 사진 선택창이 열려요.
@@ -1272,7 +1300,25 @@ export default function Home() {
 
           <ConsentBox checked={consents} onChange={setConsents} />
 
-          {error && <div className="error">{error}</div>}
+          {error && (
+            <div className="error">
+              {error}
+              {/* 실패했을 때만 뜬다. 사진·이름·주제는 그대로 남아 있어 한 번만 누르면 된다. */}
+              {failReason && (
+                <button
+                  type="button"
+                  className="btn retry-btn"
+                  disabled={!canSubmit}
+                  onClick={() => {
+                    trackEvery("sample:retry");
+                    void start();
+                  }}
+                >
+                  다시 만들기
+                </button>
+              )}
+            </div>
+          )}
 
           <button className="btn" disabled={!canSubmit} onClick={start}>
             무료 샘플 만들기 🪄
@@ -1348,14 +1394,12 @@ export default function Home() {
           <div className="progress-wrap">
             <div className="spinner" />
             <h2>
-              {joinCallNames(kids.map((k) => k.name.trim()).filter(Boolean))}의 동화책 샘플을
-              만드는 중…
+              {joinCallNames(kids.map((k) => k.name.trim()).filter(Boolean))}의 그림책을 만들고
+              있어요
             </h2>
+            {/* 서버가 중간 진행을 알려주지 않는 구간의 퍼센트 막대는 뺐다(2026-09-23).
+                여기 남은 문구는 실제로 넘어간 단계(이야기 → 표지 → 장면)만 말한다. */}
             <div className="step">{progressStep}</div>
-            <div className="bar">
-              <i style={{ width: `${progressPct}%` }} />
-            </div>
-            <div className="step">{progressPct}%</div>
             <p
               style={{
                 color: "var(--ink-soft)",
@@ -1381,6 +1425,7 @@ export default function Home() {
           current={current}
           setCurrent={setCurrent}
           paid={paid}
+          resumed={resumed}
           unlocking={unlocking}
           onPay={pay}
           onReset={reset}
@@ -1472,6 +1517,125 @@ export default function Home() {
 // 콘텐츠 제공이 개시된 경우"에만 환불 제한을 인정하므로, 결제 버튼은 이 동의 없이 눌리지 않는다.
 // 이용약관·환불정책 동의도 여기서 함께 받는다 — 무료 샘플 단계에서 결제 규정을 먼저
 // 동의시키던 것을 돈이 오가는 이 지점으로 옮겼다 (2026-08-26).
+/**
+ * 샘플 아래 구매 영역 (2026-09-23).
+ *
+ * 왜 여기인가: 최근 7일 샘플 완성 12 → 구매 의사 1이었다. 구매 버튼은 읽어주기 패널과
+ * 페이지 넘김 아래에 있어서, 모바일에서 샘플을 본 사람이 다음 행동을 찾으려면 한참
+ * 스크롤해야 했다. 샘플 바로 아래로 올린다 — 팝업으로 덮거나 샘플을 가리지는 않는다.
+ *
+ * 쿠폰 손님에게는 14,900원 화면을 보이지 않는다(2026-09-05에 실제로 "결제해야 하는 줄 알았다"는
+ * 일이 있었다) — 문구·버튼이 쿠폰 쪽으로 갈린다.
+ *
+ * 노출은 **실제로 화면에 들어왔을 때만** 센다. 렌더된 것과 사람이 본 것은 다르다.
+ */
+function BuyBox({
+  withCoupon,
+  couponCode,
+  agreed,
+  onAgree,
+  onPay,
+  resumed,
+}: {
+  withCoupon: boolean;
+  couponCode: string;
+  agreed: boolean;
+  onAgree: (v: boolean) => void;
+  onPay: () => void;
+  resumed: boolean;
+}) {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    // 이어보기·결제 복귀로 연 책은 이번 세션에 샘플을 만든 사람이 아니다 —
+    // 퍼널에 섞으면 직전 단계(샘플 완성) 대비 전환율이 100%를 넘는다(pay:click:resume과 같은 규칙).
+    const step = resumed ? "offer:view:resume" : "offer:view";
+    // 자리 계산으로 직접 본다. IntersectionObserver는 화면을 실제로 그리지 않는 환경에서
+    // 콜백이 영영 오지 않는 경우가 있어(2026-09-23 확인) 노출이 통째로 0이 될 수 있다 —
+    // 노출이 0이면 퍼널이 여기를 가짜 이탈 구간으로 지목한다.
+    const shown = (): boolean => {
+      const el = boxRef.current;
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const visible = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+      // 화면 안에 들어온 높이가 상자의 40% 이상(상자가 화면보다 크면 화면의 40%)
+      return visible > 0 && visible >= Math.min(r.height, vh) * 0.4;
+    };
+    let done = false;
+    let io: IntersectionObserver | null = null;
+    const stop = () => {
+      window.removeEventListener("scroll", look);
+      window.removeEventListener("resize", look);
+      io?.disconnect();
+      io = null;
+    };
+    function look(): void {
+      if (done || !shown()) return;
+      done = true;
+      trackStep(step);
+      stop();
+    }
+    look(); // 이미 보이는 자리에 그려졌으면 스크롤을 기다리지 않는다
+    window.addEventListener("scroll", look, { passive: true });
+    window.addEventListener("resize", look);
+    // 관측기도 함께 건다 — 스크롤 없이 위쪽 그림이 늦게 로드되며 상자가 화면으로 밀려
+    // 들어오는 경우는 스크롤 이벤트가 없다. 둘 중 무엇이 먼저 알아채도 한 번만 센다.
+    if (typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(() => look(), { threshold: [0, 0.4] });
+      if (boxRef.current) io.observe(boxRef.current);
+    }
+    return stop;
+  }, [resumed]);
+
+  return (
+    <div className="buy-box" ref={boxRef}>
+      <h3 className="bb-title">
+        {withCoupon
+          ? "쿠폰으로 전체 이야기를 열어보세요"
+          : "우리 아이의 이야기를 실제 그림책으로 만들어 보세요."}
+      </h3>
+      <p className="bb-sub">
+        {withCoupon
+          ? "입금 없이 쿠폰으로 열어드려요. 이름과 이메일만 적으면 바로 열립니다."
+          : "지금 만든 이야기를 실제 그림책으로 주문할 수 있어요."}
+      </p>
+      <ul className="bb-points">
+        <li>우리 아이가 주인공</li>
+        <li>나만의 이야기</li>
+        <li>AI 그림책 제작</li>
+        <li>실제 책으로 주문</li>
+      </ul>
+      <div className="price-anchor">
+        {withCoupon ? (
+          <>
+            <s>{PRICE.toLocaleString()}원</s>
+            <b>쿠폰 {couponCode} 적용 · 0원</b>
+          </>
+        ) : (
+          <>
+            <s>정가 {LIST_PRICE.toLocaleString()}원</s>
+            <b>출시 기념 {PRICE.toLocaleString()}원</b>
+          </>
+        )}
+      </div>
+      <PayConsent checked={agreed} onChange={onAgree} compact />
+      <button className="btn bb-cta" onClick={onPay} disabled={!agreed}>
+        {withCoupon ? "쿠폰으로 전체 열기 🎟️" : "내 책 주문하기"}
+      </button>
+      <p className="bb-note">
+        표지 포함 11페이지가 모두 열리고, PDF·소리책으로 저장할 수 있어요. 종이책 인쇄는 책이
+        열린 뒤 <b>인쇄본 신청</b>으로 따로 받습니다.
+        {!withCoupon && PAY_MODE === "bank" && (
+          <>
+            <br />
+            지금은 계좌이체로 받고 있어요 · 입금이 확인되면 바로 열립니다.
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function PayConsent({
   checked,
   onChange,
@@ -1638,6 +1802,7 @@ function BookViewer({
   current,
   setCurrent,
   paid,
+  resumed,
   unlocking,
   onPay,
   onReset,
@@ -1650,6 +1815,8 @@ function BookViewer({
   current: number;
   setCurrent: (n: number) => void;
   paid: boolean;
+  /** 이번 세션에 만든 책이 아니라 '이어서 보기'·결제 복귀로 연 책인가 — 퍼널에 섞지 않는다 */
+  resumed: boolean;
   unlocking: boolean;
   onPay: () => void;
   onReset: () => void;
@@ -2214,6 +2381,19 @@ function BookViewer({
         )}
       </div>
 
+      {/* 구매 영역 — 샘플을 본 직후, 읽어주기 패널보다 위. 여기가 감정 최고점이다(2026-09-23).
+          예전엔 가격·동의·구매 버튼이 읽어주기·페이지 넘김 아래에 있어 모바일에서 묻혔다. */}
+      {!paid && (
+        <BuyBox
+          withCoupon={withCoupon}
+          couponCode={couponCode}
+          agreed={agreed}
+          onAgree={setAgreed}
+          onPay={onPay}
+          resumed={resumed}
+        />
+      )}
+
       <div className="read-aloud">
         <div className="read-title">🔊 누가 읽어줄까요?</div>
 
@@ -2329,32 +2509,10 @@ function BookViewer({
         </div>
       )}
 
-      {!paid && (
-        <div className="price-anchor" style={{ marginTop: 18 }}>
-          {withCoupon ? (
-            <>
-              <s>{PRICE.toLocaleString()}원</s>
-              <b>쿠폰 {couponCode} 적용 · 0원</b>
-            </>
-          ) : (
-            <>
-              <s>정가 {LIST_PRICE.toLocaleString()}원</s>
-              <b>출시 기념 {PRICE.toLocaleString()}원</b>
-            </>
-          )}
-        </div>
-      )}
-      {!paid && <PayConsent checked={agreed} onChange={setAgreed} />}
+      {/* 가격·동의·구매 버튼은 위 구매 영역으로 올렸다(2026-09-23).
+          같은 버튼을 아래에 한 번 더 두면 어느 쪽이 주된 행동인지 흐려진다. */}
       <div className="actions">
-        {!paid ? (
-          <button className="btn" onClick={onPay} disabled={!agreed}>
-            {withCoupon
-              ? "쿠폰으로 전체 보기 🎟️"
-              : PAY_MODE === "bank"
-                ? `${PRICE.toLocaleString()}원 계좌이체로 전체 보기 🔓`
-                : `${PRICE.toLocaleString()}원 결제하고 전체 보기 🔓`}
-          </button>
-        ) : (
+        {paid && (
           <>
             <button className="btn" onClick={savePdf} disabled={saving || !allDone}>
               {saving

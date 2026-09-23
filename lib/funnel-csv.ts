@@ -26,8 +26,21 @@ const SESSION_STEPS = new Set([
   "photo",
   "sample:start",
   "sample:done",
+  // 구매 퍼널(2026-09-23) — 전부 브라우저 세션당 1회다(lib/track.ts)
+  "offer:view",
+  "offer:view:resume",
   "pay:click",
   "pay:click:resume",
+  "order:open",
+  "order:name",
+  "order:email",
+  "order:ready",
+  "order:try",
+  "order:created",
+  "pay:start",
+  "inapp:notice",
+  "inapp:open",
+  "inapp:copy",
   "book:view",
 ]);
 

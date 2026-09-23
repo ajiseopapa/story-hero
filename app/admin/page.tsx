@@ -23,6 +23,8 @@ interface Step {
   key: string;
   label: string;
   note: string;
+  /** 이 이벤트가 코드에 들어간 날(YYYY-MM-DD). 전환율을 이 날부터만 계산하려고 쓴다. */
+  since?: string;
   count: number;
   fromPrev: number | null;
   fromTop: number | null;
@@ -62,7 +64,7 @@ const RANGES = [7, 30, 90];
 const METRICS = [
   { key: "visit", label: "방문" },
   { key: "sample:done", label: "샘플 완성" },
-  { key: "pay:click", label: "구매 의사" },
+  { key: "pay:click", label: "구매 버튼 클릭" },
   { key: "order:submit", label: "주문" },
 ] as const;
 
@@ -174,6 +176,27 @@ export default function AdminOverviewPage() {
     return orders.filter((o) => o.createdAt >= start && o.createdAt < end);
   }, [orders, days]);
 
+  /**
+   * 실제 주문 — 퍼널 카운터가 아니라 주문 기록에서 그대로 센다(2026-09-23).
+   *
+   * 위 KPI의 "온라인 주문·확인된 매출"은 고른 기간(최근 N일)만 본다. 그래서 09-15에 마지막
+   * 주문이 들어온 뒤 최근 7일을 고르면 "주문 0건"이 뜨는데, 주문 목록에는 입금 확인된 주문이
+   * 그대로 남아 있어 두 값이 어긋나 보였다. 기간을 안 자른 값을 따로 둬서 그 차이를 없앤다.
+   */
+  const orderBook = useMemo(() => {
+    const all = orders ?? [];
+    const paid = all.filter((o) => o.status === "paid");
+    return {
+      all: all.length,
+      paid: paid.length,
+      pending: all.filter((o) => o.status === "pending").length,
+      canceled: all.filter((o) => o.status === "canceled").length,
+      // 취소는 빼고, 입금 확인된 주문의 실제 금액만 더한다(쿠폰 주문은 0원이라 저절로 빠진다)
+      revenue: paid.reduce((a, o) => a + o.amount, 0),
+      free: paid.filter((o) => o.amount === 0).length,
+    };
+  }, [orders]);
+
   // 사이드바 뱃지 — 처리할 일만 센다
   const pendingOrders = (orders ?? []).filter((o) => o.status === "pending").length;
   const pendingReviews = (reviews ?? []).filter((r) => !r.approved).length;
@@ -199,23 +222,25 @@ export default function AdminOverviewPage() {
         fmt: (n: number) => `${n}`,
       },
       {
-        label: "구매 의사",
+        label: "구매 버튼 클릭",
         now: sum(cur, "pay:click"),
         was: sum(prev, "pay:click"),
         fmt: (n: number) => `${n}`,
         note: "세션당 1회 — 사람 수가 아니다",
       },
       {
-        label: "주문",
+        label: "온라인 주문",
         now: ordersIn.length,
         was: ordersPrev.length,
         fmt: (n: number) => `${n}건`,
+        note: "이 기간에 접수된 주문만 — 아래 '실제 주문'은 전체 기간이다",
       },
       {
         label: "확인된 매출",
         now: paidIn.reduce((a, o) => a + o.amount, 0),
         was: paidPrev.reduce((a, o) => a + o.amount, 0),
         fmt: won,
+        note: "이 기간 · 입금 확인된 주문의 실제 금액만(쿠폰 0원 주문은 0원)",
       },
       {
         label: "방문→주문",
@@ -261,15 +286,28 @@ export default function AdminOverviewPage() {
     if (!stats || !period) return null;
     const { cur } = period;
     const total = (k: string) => cur.reduce((a, d) => a + (d.counts[k] ?? 0), 0);
+    // 이벤트가 태어난 날 이후만 더한다 — 태어나기 전 날짜가 분모에 섞이면 전환율이 거짓말을
+    // 한다(2026-09-14에 데었다). since가 있는 단계에만 쓴다.
+    const totalFrom = (k: string, from: string) =>
+      cur.reduce((a, d) => (d.date >= from ? a + (d.counts[k] ?? 0) : a), 0);
     const top = total(stats.steps[0]?.key ?? "visit");
     const steps = stats.steps.map((s, i, arr) => {
       const count = total(s.key);
-      const prev = i === 0 ? count : total(arr[i - 1].key);
+      const prevStep = i === 0 ? null : arr[i - 1];
+      // 이 단계와 직전 단계 중 더 늦게 태어난 쪽에 창을 맞춘다
+      const win =
+        prevStep && (prevStep.since ?? "") > (s.since ?? "")
+          ? (prevStep.since ?? "")
+          : (s.since ?? "");
+      const mine = win ? totalFrom(s.key, win) : count;
+      const prev = prevStep ? (win ? totalFrom(prevStep.key, win) : total(prevStep.key)) : 0;
+      const topIn = s.since ? totalFrom(stats.steps[0]?.key ?? "visit", s.since) : top;
+      const mineTop = s.since ? totalFrom(s.key, s.since) : count;
       return {
         ...s,
         count,
-        fromPrev: i === 0 ? null : prev > 0 ? count / prev : null,
-        fromTop: top > 0 ? count / top : null,
+        fromPrev: i === 0 ? null : prev > 0 ? mine / prev : null,
+        fromTop: topIn > 0 ? mineTop / topIn : null,
       };
     });
     const extra = stats.extra.map((e) => ({ ...e, count: total(e.key) }));
@@ -315,7 +353,9 @@ export default function AdminOverviewPage() {
   const worst =
     view?.steps
       .slice(1)
-      .filter((s) => s.fromPrev !== null && !exclude.has(s.key))
+      // 아직 한 건도 안 들어온 새 지표(since가 있고 count 0)는 지목하지 않는다 —
+      // 배포 전 날짜가 기간에 섞여 있을 뿐인데 "여기가 가장 크게 샌다"로 읽히면 안 된다(2026-09-23).
+      .filter((s) => s.fromPrev !== null && !exclude.has(s.key) && !(s.since && s.count === 0))
       .sort((a, b) => (a.fromPrev ?? 1) - (b.fromPrev ?? 1))[0] ?? null;
 
   const top = view?.top ?? 0;
@@ -424,6 +464,53 @@ export default function AdminOverviewPage() {
             ))}
           </div>
 
+          {/* 실제 주문 — 데이터 출처가 퍼널과 다르다. 한 화면에서 섞이지 않게 칸을 나눈다. */}
+          <section className="card">
+            <div className="adm-cardhead">
+              <div>
+                <h2>실제 주문 (전체 기간)</h2>
+                <div className="hint">
+                  주문 기록에서 그대로 셉니다. 위 <b>최근 {days}일</b> 칸과는 <b>출처도 기간도</b>{" "}
+                  다릅니다 — 위는 브라우저가 보낸 퍼널 카운터(세션당 1회), 여기는 손님이 실제로
+                  넣은 주문이에요. 최근 7일에 주문이 없어도 여기 숫자는 남아 있습니다.
+                </div>
+              </div>
+              <a className="btn secondary" href="/admin/orders">
+                주문 화면
+              </a>
+            </div>
+            <div className="adm-kpis" style={{ marginTop: 0 }}>
+              <div className="adm-kpi">
+                <div className="k-top">전체 주문</div>
+                <div className="k-val">{orderBook.all}건</div>
+                <div className="hint" style={{ fontSize: 11, marginTop: 6 }}>
+                  입금 대기 {orderBook.pending}건
+                </div>
+              </div>
+              <div className="adm-kpi">
+                <div className="k-top">입금 확인</div>
+                <div className="k-val">{orderBook.paid}건</div>
+                <div className="hint" style={{ fontSize: 11, marginTop: 6 }}>
+                  이 중 쿠폰 0원 {orderBook.free}건
+                </div>
+              </div>
+              <div className="adm-kpi">
+                <div className="k-top">취소</div>
+                <div className="k-val">{orderBook.canceled}건</div>
+                <div className="hint" style={{ fontSize: 11, marginTop: 6 }}>
+                  확인 매출에서 빠집니다
+                </div>
+              </div>
+              <div className="adm-kpi">
+                <div className="k-top">확인 매출</div>
+                <div className="k-val">{won(orderBook.revenue)}</div>
+                <div className="hint" style={{ fontSize: 11, marginTop: 6 }}>
+                  입금 확인된 주문의 실제 금액만
+                </div>
+              </div>
+            </div>
+          </section>
+
           <div className="adm-grid two">
             {/* 추이 */}
             <section className="card">
@@ -455,8 +542,11 @@ export default function AdminOverviewPage() {
             <section className="card">
               <div className="adm-cardhead">
                 <div>
-                  <h2>퍼널 (최근 {days}일)</h2>
-                  <div className="hint">세션당 한 번씩 셉니다. 사람 수에 가깝습니다.</div>
+                  <h2>최근 {days}일 퍼널</h2>
+                  <div className="hint">
+                    세션당 한 번씩 셉니다. 사람 수에 가깝습니다. 주문·매출은 여기가 아니라 위
+                    <b> 실제 주문</b> 칸을 보세요.
+                  </div>
                 </div>
                 <a className="btn secondary" href="/admin/funnel">
                   자세히

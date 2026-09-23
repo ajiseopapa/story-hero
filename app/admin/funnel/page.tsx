@@ -18,6 +18,8 @@ interface Step {
   key: string;
   label: string;
   note: string;
+  /** 이 이벤트가 코드에 들어간 날 — 전환율은 이 날 이후로만 계산된다(서버에서 이미 반영) */
+  since?: string;
   count: number;
   fromPrev: number | null;
   fromTop: number | null;
@@ -241,7 +243,8 @@ export default function FunnelAdminPage() {
   const worst =
     data?.steps
       .slice(1)
-      .filter((s) => s.fromPrev !== null && !exclude.has(s.key))
+      // 아직 한 건도 안 들어온 새 지표는 지목하지 않는다 — 배포 전 날짜가 섞였을 뿐이다(2026-09-23)
+      .filter((s) => s.fromPrev !== null && !exclude.has(s.key) && !(s.since && s.count === 0))
       .sort((a, b) => (a.fromPrev ?? 1) - (b.fromPrev ?? 1))[0] ?? null;
 
   return (

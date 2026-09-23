@@ -22,15 +22,38 @@ export async function GET(req: Request): Promise<Response> {
   const totals = sumCounts(daily);
 
   // 퍼널: 각 단계 인원 + 직전 단계 대비 전환율
+  //
+  // ⭐전환율은 **두 단계가 함께 살아 있던 날**만으로 낸다. 이벤트마다 코드에 들어간 날이
+  // 다르므로(2026-09-14에 크게 데었다) 누적으로 나누면 "방문 500 → 구매 제안 0" 같은
+  // 거짓 이탈이 생긴다. FUNNEL의 since가 그 태어난 날이다.
+  const firstDay = daily[0]?.date ?? "";
+  const sumFrom = (key: string, from: string): number =>
+    daily.reduce((a, d) => (d.date >= from ? a + (d.counts[key] ?? 0) : a), 0);
+
   const steps = FUNNEL.map((s, i) => {
     const count = totals[s.key] ?? 0;
-    const prev = i === 0 ? count : (totals[FUNNEL[i - 1].key] ?? 0);
+    const prevStep = i === 0 ? null : FUNNEL[i - 1];
+    // 이 단계와 직전 단계 중 더 늦게 태어난 쪽에 창을 맞춘다
+    const win =
+      prevStep && (prevStep.since ?? "") > (s.since ?? "")
+        ? (prevStep.since ?? "")
+        : (s.since ?? "");
+    const mine = win ? sumFrom(s.key, win) : count;
+    const prev = prevStep ? (win ? sumFrom(prevStep.key, win) : (totals[prevStep.key] ?? 0)) : 0;
+    const topKey = FUNNEL[0].key;
+    const top = s.since ? sumFrom(topKey, s.since) : (totals[topKey] ?? 0);
+    const mineTop = s.since ? sumFrom(s.key, s.since) : count;
+    // 이 단계가 태어나기 전 날짜가 기간에 섞여 있으면 화면에 그 사실을 적는다
+    const late = s.since && firstDay && firstDay < s.since;
     return {
       ...s,
+      note: late
+        ? s.note + " · " + s.since!.slice(5).replace("-", "/") + "부터 기록(전환율은 그 뒤 날짜만)"
+        : s.note,
       count,
       // 직전 단계가 0이면 전환율은 계산 불가 — 0%로 속이지 않고 null
-      fromPrev: i === 0 ? null : prev > 0 ? count / prev : null,
-      fromTop: (totals[FUNNEL[0].key] ?? 0) > 0 ? count / totals[FUNNEL[0].key] : null,
+      fromPrev: i === 0 ? null : prev > 0 ? mine / prev : null,
+      fromTop: top > 0 ? mineTop / top : null,
     };
   });
 

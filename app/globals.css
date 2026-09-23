@@ -2449,6 +2449,123 @@ a.btn {
   cursor: pointer;
 }
 
+/* ---------- 인스타 인앱 브라우저 안내 (2026-09-23) ---------- */
+/* 안내는 눈에 띄어야 하지만 첫 화면을 가리면 안 된다 — 카드 한 장 높이로 묶는다. */
+.inapp-note {
+  max-width: 440px;
+  margin: 14px auto 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff6e8;
+  border: 1px solid rgba(224, 138, 123, 0.35);
+  text-align: center;
+}
+.inapp-note .ia-title {
+  font-family: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: keep-all;
+}
+.inapp-note .ia-sub {
+  font-family: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  word-break: keep-all;
+}
+.inapp-note .ia-btn {
+  display: block;
+  width: 100%;
+  margin: 12px 0 0;
+  font-size: 16px;
+}
+.inapp-note .ia-url {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  font-size: 12px;
+  word-break: break-all;
+  user-select: all;
+}
+
+/* ---------- 샘플 아래 구매 영역 (2026-09-23) ---------- */
+/* 샘플 완성 12 → 구매 의사 1. 구매 버튼이 읽어주기 패널 아래에 묻혀 있어서, 샘플을 본 직후의
+   감정 최고점에서 다음 행동이 보이지 않았다. 결과 바로 아래로 올린다. 팝업으로 덮지 않는다. */
+.buy-box {
+  margin: 18px 0 4px;
+  padding: 20px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fffaf0 0%, #fdf2e2 100%);
+  border: 1.5px solid rgba(227, 177, 95, 0.55);
+  box-shadow: 0 6px 18px var(--shadow);
+  text-align: center;
+}
+.buy-box .bb-title {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0;
+  word-break: keep-all;
+}
+.buy-box .bb-sub {
+  font-family: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 8px 0 0;
+  word-break: keep-all;
+}
+.buy-box .bb-points {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.buy-box .bb-points li {
+  font-family: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(74, 63, 53, 0.12);
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+.buy-box .price-anchor {
+  margin: 16px 0 0;
+}
+.buy-box .bb-cta {
+  display: block;
+  width: 100%;
+  margin: 14px 0 0;
+  font-size: 19px;
+}
+.buy-box .bb-note {
+  font-family: var(--text);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 10px 0 0;
+  word-break: keep-all;
+}
+
+/* ---------- 샘플 생성 실패 안내 (2026-09-23) ---------- */
+/* 실패해도 사진·주제는 그대로 남아 있다 — 한 번 더 누르면 그대로 다시 만든다. */
+.retry-btn {
+  display: block;
+  width: 100%;
+  margin: 10px 0 0;
+}
+
 /* ---------- 첫 화면 CTA (Sprint 2, 2026-09-10) ---------- */
 /* 그림 바로 아래에 무료 미리보기 한 줄과 첫 행동 버튼을 둔다 — 폼 안쪽까지 내려가지 않아도
    "사진 한 장"이라는 첫 행동이 첫 화면에서 보이게. */
